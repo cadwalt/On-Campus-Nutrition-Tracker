@@ -14,7 +14,7 @@ const client = new OpenAI({
 export async function getChatGptResponse(prompt: string): Promise<string> {
   try {
     const response = await client.responses.create({
-      model: 'gpt-4', // Use the desired model (e.g., gpt-4, gpt-3.5-turbo)
+      model: 'gpt-3.5-turbo', // Use the desired model (e.g., gpt-4, gpt-3.5-turbo)
       instructions: 'You are a helpful nutritional assistant to University of Oklahoma students seeking to meet their nutritional goals.',
       input: prompt,
     });
