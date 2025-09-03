@@ -1,21 +1,90 @@
+/* Reset and base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+  min-height: 100vh;
+  color: #e2e8f0;
+}
+
 #root {
-  max-width: 1280px;
+  max-width: 800px;
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
 }
 
+/* App container */
+.app-container {
+  background: rgba(15, 15, 35, 0.8);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  min-height: 80vh;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Header */
+.app-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 3rem 2rem 2rem;
+  text-align: center;
+  position: relative;
+}
+
+.app-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.9) 0%, rgba(118, 75, 162, 0.9) 100%);
+  z-index: 1;
+}
+
+.app-header > * {
+  position: relative;
+  z-index: 2;
+}
+
+.app-header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.subtitle {
+  font-size: 1.1rem;
+  opacity: 0.9;
+  font-weight: 400;
+}
+
+/* Logo styling */
 .logo {
-  height: 6em;
-  padding: 1.5em;
+  height: 4em;
+  padding: 1em;
   will-change: filter;
-  transition: filter 300ms;
+  transition: all 0.3s ease;
+  margin: 0 0.5em;
+  filter: brightness(1.1);
 }
+
 .logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+  filter: drop-shadow(0 0 1em rgba(255, 255, 255, 0.4)) brightness(1.2);
+  transform: scale(1.05);
 }
+
 .logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+  filter: drop-shadow(0 0 1em rgba(97, 219, 251, 0.6)) brightness(1.2);
 }
 
 @keyframes logo-spin {
@@ -33,10 +102,169 @@
   }
 }
 
-.card {
-  padding: 2em;
+/* Main content */
+.app-main {
+  padding: 3rem 2rem;
 }
 
-.read-the-docs {
-  color: #888;
+.card {
+  background: rgba(26, 26, 46, 0.9);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  padding: 2.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+/* Input styling */
+.prompt-input {
+  width: 100%;
+  min-height: 120px;
+  padding: 1.25rem;
+  border: 2px solid #374151;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-family: inherit;
+  color: #e2e8f0;
+  background: rgba(17, 17, 27, 0.8);
+  transition: all 0.3s ease;
+  resize: vertical;
+  margin-bottom: 1.5rem;
+}
+
+.prompt-input:focus {
+  outline: none;
+  border-color: #667eea;
+  background: rgba(17, 17, 27, 0.95);
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+  transform: translateY(-2px);
+}
+
+.prompt-input::placeholder {
+  color: #6b7280;
+  font-style: italic;
+}
+
+/* Button styling */
+.button-container {
+  margin-bottom: 2rem;
+}
+
+.response-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 1rem 2.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: inherit;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+}
+
+.response-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+}
+
+.response-button:active {
+  transform: translateY(0);
+}
+
+.response-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Response container */
+.response-container {
+  text-align: left;
+  background: rgba(17, 17, 27, 0.8);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.response-container h2 {
+  color: #e2e8f0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.response-container h2::before {
+  content: "💬";
+  font-size: 1.1em;
+}
+
+.response-text {
+  color: #d1d5db;
+  line-height: 1.6;
+  font-size: 1rem;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* Footer */
+.app-footer {
+  background: rgba(15, 15, 35, 0.9);
+  padding: 1.5rem;
+  text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.app-footer p {
+  color: #9ca3af;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  #root {
+    padding: 1rem;
+  }
+  
+  .app-header {
+    padding: 2rem 1.5rem 1.5rem;
+  }
+  
+  .app-header h1 {
+    font-size: 2rem;
+  }
+  
+  .app-main {
+    padding: 2rem 1.5rem;
+  }
+  
+  .card {
+    padding: 2rem 1.5rem;
+  }
+  
+  .logo {
+    height: 3em;
+    padding: 0.75em;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-header h1 {
+    font-size: 1.75rem;
+  }
+  
+  .response-button {
+    padding: 0.875rem 2rem;
+    font-size: 1rem;
+  }
+  
+  .prompt-input {
+    min-height: 100px;
+    padding: 1rem;
+  }
 }
