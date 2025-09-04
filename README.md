@@ -8,32 +8,20 @@ A React-based web application designed to help University of Oklahoma students t
 
 ## 🚀 Features
 
-### Current Features
 - Interactive ChatGPT integration for nutritional advice
+- Integration with campus dining hall menus and schedules
 - Modern React-based user interface
 - Responsive design for various devices
-- Real-time AI-powered nutrition recommendations
-
-### Planned Features
-- Comprehensive database of OU campus dining hall nutrition information
 - Nutritional analysis and tracking tools
-- Personalized meal recommendations based on dietary preferences
-- Integration with campus dining hall menus and schedules
 
 ## 🛠️ Technology Stack
 
-### Current Stack
 - **Frontend:** React 19.1.1 with TypeScript
 - **Build Tool:** Vite 7.1.2
 - **AI Integration:** OpenAI API (GPT-3.5-turbo)
 - **Styling:** CSS3
 - **Linting:** ESLint
 
-### Planned Database Integration
-- **Database:** PostgreSQL or MongoDB for nutrition data storage
-- **Backend API:** Node.js/Express or Python/FastAPI
-- **Data Sources:** OU Dining Services, USDA Food Database
-- **Real-time Updates:** Automated menu synchronization with campus dining halls
 
 ## 📋 Prerequisites
 
@@ -69,7 +57,6 @@ First, make sure you have Git installed in your code editor. Then,
     cd On-Campus-Nutrition-Tracker
     ```
 
-You're all set! 🎉
 
 
 ## 🚀 Getting Started
@@ -104,17 +91,6 @@ This will start the Vite development server, typically at `http://localhost:5173
 
 *(If this url does not work, use the URL that comes up next to `Local:` when you run this command in your terminal)
 
-#### Production Build
-```bash
-npm run build
-```
-This creates an optimized production build in the `dist` folder.
-
-#### Preview Production Build
-```bash
-npm run preview
-```
-This serves the production build locally for testing.
 
 ## 📁 Project Structure
 
@@ -127,45 +103,6 @@ src/
 ├── chatGptService.ts    # OpenAI API integration
 └── assets/              # Static assets (images, icons)
 ```
-
-## 🗄️ Database Implementation Plans
-
-### Overview
-We plan to implement a comprehensive nutrition database that will serve as the foundation for our campus nutrition tracking system. This database will contain detailed nutritional information about all food items served across University of Oklahoma dining facilities.
-
-### Database Schema Design
-
-#### Core Tables
-- **Food Items**: Complete nutritional profiles of campus food items
-- **Dining Locations**: OU dining halls, cafes, and food service locations
-- **Menu Items**: Daily/weekly menu offerings with availability
-- **Nutritional Data**: Macronutrients, micronutrients, allergens, and dietary restrictions
-- **User Preferences**: Dietary goals, restrictions, and meal preferences
-
-### Implementation Phases
-
-#### Phase 1: Data Collection & Validation
-- Establish partnerships with OU Dining Services
-- Create data collection protocols for nutrition information
-- Implement data validation and quality assurance processes
-- Build initial database schema and relationships
-
-#### Phase 2: API Development
-- Develop RESTful API endpoints for nutrition data access
-- Implement search and filtering capabilities
-- Create real-time menu synchronization system
-- Build data import/export functionality
-
-#### Phase 3: Frontend Integration
-- Integrate database queries with existing React application
-- Implement food search and filtering interfaces
-- Create nutritional analysis and tracking features
-- Develop personalized recommendation algorithms
-
-#### Phase 4: Advanced Features
-- Real-time menu updates and notifications
-- Integration with campus dining hall schedules
-- Advanced nutritional analysis and goal tracking
 
 ## 🤝 Contributing
 
@@ -208,4 +145,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Note:** This project is currently in development. Features and functionality may change as development progresses.
+**Note:** This project is currently in development. Features and functionality will change as development progresses.
