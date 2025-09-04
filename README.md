@@ -28,7 +28,6 @@ A React-based web application designed to help University of Oklahoma students t
 Before you begin, ensure you have the following installed:
 - [Node.js](https://nodejs.org/) (version 16 or higher)
 - [Git](https://git-scm.com/)
-- OpenAI API key
 
 ## 🔧 Environment Setup
 
