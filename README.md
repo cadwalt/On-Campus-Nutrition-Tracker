@@ -2,7 +2,7 @@
 
 A React-based web application designed to help University of Oklahoma students track their nutrition and meet their dietary goals. The app integrates with OpenAI's ChatGPT to provide personalized nutritional guidance and recommendations.
 
-**Course:** ICS-3203-001 Software Engineering  
+**Course:** CS-3203-001 Software Engineering  
 **Instructor:** Dr. Mansoor Abdulhak  
 **Team:** Group I
 
