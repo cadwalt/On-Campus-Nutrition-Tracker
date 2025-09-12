@@ -29,15 +29,6 @@ Before you begin, ensure you have the following installed:
 - [Node.js](https://nodejs.org/) (version 16 or higher)
 - [Git](https://git-scm.com/)
 
-## 🔧 Environment Setup
-
-1. Create a `.env` file in the root directory
-2. Add your OpenAI API key:
-   ```
-   VITE_OPENAI_API_KEY=your_api_key_here
-   ```
-   **Note:** Never commit your `.env` file or any of its contents to version control.
-
 ## 📥 Cloning the Repository
 
 To get started with the project, follow these steps:
@@ -57,7 +48,6 @@ First, make sure you have Git installed in your code editor. Then,
     ```
 
 
-
 ## 🚀 Getting Started
 
 ### Installing Dependencies
@@ -70,6 +60,16 @@ First, make sure you have Git installed in your code editor. Then,
     ```bash
     npm install
     ```
+
+## 🔧 Environment Setup
+
+1. Create a `.env` file in the root directory
+2. Add your OpenAI API key:
+   ```
+   VITE_OPENAI_API_KEY=your_api_key_here
+   ```
+   **Note:** Never commit your `.env` file or any of its contents to version control.
+
 
 ### Available Scripts
 
