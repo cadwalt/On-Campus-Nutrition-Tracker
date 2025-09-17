@@ -225,6 +225,135 @@ body {
   font-weight: 500;
 }
 
+/* Authentication forms */
+.auth-section {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 3rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.auth-form {
+  background: rgba(26, 26, 46, 0.9);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  flex: 1;
+  min-width: 300px;
+  max-width: 400px;
+}
+
+.auth-title {
+  color: #e2e8f0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.auth-form-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  color: #d1d5db;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.auth-input {
+  padding: 0.875rem 1rem;
+  border: 2px solid #374151;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  color: #e2e8f0;
+  background: rgba(17, 17, 27, 0.8);
+  transition: all 0.3s ease;
+}
+
+.auth-input:focus {
+  outline: none;
+  border-color: #667eea;
+  background: rgba(17, 17, 27, 0.95);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.auth-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 0.875rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: inherit;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+  margin-top: 0.5rem;
+}
+
+.auth-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+}
+
+.user-welcome {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.user-welcome h3 {
+  color: #e2e8f0;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+
+.sign-out-btn {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: inherit;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
+}
+
+.sign-out-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+}
+
+.error-message {
+  color: #ef4444;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+.success-message {
+  color: #10b981;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   #root {
@@ -250,6 +379,16 @@ body {
   .logo {
     height: 3em;
     padding: 0.75em;
+  }
+  
+  .auth-section {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  
+  .auth-form {
+    min-width: unset;
+    max-width: unset;
   }
 }
 
