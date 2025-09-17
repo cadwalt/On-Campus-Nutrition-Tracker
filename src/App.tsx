@@ -4,6 +4,8 @@ import viteLogo from '/vite.svg';
 import './App.css';
 import { getChatGptResponse } from './chatGptService';
 import RestaurantDisplay from './components/RestaurantDisplay';
+import SignInForm from './components/SignInForm';
+import SignUpForm from './components/SignUpForm';
 
 function App() {
   const [prompt, setPrompt] = useState('');
@@ -37,7 +39,13 @@ function App() {
       </header>
 
       <main className="app-main">
+        <div className="auth-section">
+          <SignInForm />
+          <SignUpForm />
+        </div>
+        
         <RestaurantDisplay />
+        
         <div className="card">
           <textarea
             className="prompt-input"
