@@ -3,6 +3,7 @@ import reactLogo from './assets/react.svg';
 import viteLogo from '/vite.svg';
 import './App.css';
 import { getChatGptResponse } from './chatGptService';
+import RestaurantDisplay from './components/RestaurantDisplay';
 
 function App() {
   const [prompt, setPrompt] = useState('');
@@ -36,6 +37,7 @@ function App() {
       </header>
 
       <main className="app-main">
+        <RestaurantDisplay />
         <div className="card">
           <textarea
             className="prompt-input"
