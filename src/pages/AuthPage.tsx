@@ -6,7 +6,7 @@ import SignUpForm from '../components/SignUpForm';
 const AuthPage: React.FC = () => {
   return (
     <div className="auth-page">
-      <div className="auth-page-header">
+      <div className="page-header">
         <h1>Welcome to On-Campus Nutrition Tracker</h1>
         <p>Sign in to your account or create a new one to get started</p>
       </div>
