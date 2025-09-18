@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';
 import { signOut, updateProfile } from 'firebase/auth';
+import { doc, updateDoc } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 
 const ProfilePage: React.FC = () => {
@@ -54,13 +55,23 @@ const ProfilePage: React.FC = () => {
     setUpdateSuccess(false);
 
     try {
+      // Update Firebase Auth profile
       await updateProfile(user, {
         displayName: newDisplayName.trim()
       });
       
-      console.log("Display name updated successfully!");
-      // Now, check the user object directly
-      console.log("Current user's display name:", user.displayName); // <-- This will show the updated name!
+      console.log("Display name updated in Firebase Auth!");
+      console.log("Current user's display name:", user.displayName);
+      
+      // Update Firestore document
+      const userDocRef = doc(db, 'users', user.uid);
+      await updateDoc(userDocRef, {
+        name: newDisplayName.trim(),
+        updated_at: new Date()
+      });
+      
+      console.log("✅ User document updated in Firestore!");
+      console.log("Updated name in Firestore:", newDisplayName.trim());
       
       // Force a reload to ensure the user object is fully updated
       await user.reload();
@@ -73,7 +84,7 @@ const ProfilePage: React.FC = () => {
       // Update the local user state to reflect the change
       setUser({ ...user, displayName: newDisplayName.trim() });
     } catch (error: any) {
-      console.error("Error updating display name:", error);
+      console.error("❌ Error updating profile:", error);
       setUpdateError(error.message || 'Failed to update profile');
     } finally {
       setUpdateLoading(false);
