@@ -30,7 +30,9 @@ A React-based web application designed to help University of Oklahoma students t
 ## 📋 Prerequisites
 
 Before you begin, ensure you have the following installed:
-- [Node.js](https://nodejs.org/) (version 16 or higher)
+- [Node.js](https://nodejs.org/en/download) (version 16 or higher)*
+
+*(If you're on Mac, I recommend installing using Brew with npm. If you're on Windows, I recommend installing using Chocolatey with npm.)
 - [Git](https://git-scm.com/)
 
 ## 📥 Cloning the Repository
