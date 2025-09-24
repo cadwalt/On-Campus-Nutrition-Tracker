@@ -8,6 +8,8 @@ const SignUpForm: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [allergens, setAllergens] = useState<string[]>([]);
+  const [selectedAllergens, setSelectedAllergens] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -32,6 +34,7 @@ const SignUpForm: React.FC = () => {
       await setDoc(doc(db, 'users', user.uid), {
         name: name.trim(),
         email: email,
+        allergens: selectedAllergens, // <-- use selectedAllergens here
         profile_picture: null, // Will be null initially, can be updated later
         created_at: new Date(),
         updated_at: new Date()
@@ -52,6 +55,27 @@ const SignUpForm: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const handleAllergenChange = (allergen: string) => {
+    setSelectedAllergens(prev =>
+      prev.includes(allergen)
+        ? prev.filter(a => a !== allergen)
+        : [...prev, allergen]
+    );
+  };
+
+    // Top 9 allergens
+  const ALLERGENS = [
+    "Milk",
+    "Eggs",
+    "Fish",
+    "Crustacean shellfish",
+    "Tree nuts",
+    "Peanuts",
+    "Wheat",
+    "Soybeans",
+    "Sesame"
+  ];
 
   return (
     <div className="auth-form">
@@ -90,6 +114,21 @@ const SignUpForm: React.FC = () => {
             required
           />
         </div>
+                  <div className="allergen-section">
+            <h3>Allergens</h3>
+            <div className="allergen-checkboxes">
+              {ALLERGENS.map(allergen => (
+                <label key={allergen}>
+                  <input
+                    type="checkbox"
+                    checked={selectedAllergens.includes(allergen)}
+                    onChange={() => handleAllergenChange(allergen)}
+                  />
+                  {allergen}
+                </label>
+              ))}
+            </div>
+          </div>
         <button type="submit" className="auth-button" disabled={loading}>
           {loading ? 'Creating Account...' : 'Sign Up'}
         </button>

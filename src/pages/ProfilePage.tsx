@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { signOut, updateProfile } from 'firebase/auth';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 
 const ProfilePage: React.FC = () => {
@@ -13,12 +13,22 @@ const ProfilePage: React.FC = () => {
   const [updateLoading, setUpdateLoading] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [updateSuccess, setUpdateSuccess] = useState(false);
+  const [selectedAllergens, setSelectedAllergens] = useState<string[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
       setUser(user);
       setLoading(false);
+      if (user) {
+        // Load allergens from Firestore
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          const data = userDocSnap.data();
+          setSelectedAllergens(data.allergens || []);
+        }
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -91,6 +101,28 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const handleAllergenChange = (allergen: string) => {
+    setSelectedAllergens(prev =>
+      prev.includes(allergen)
+        ? prev.filter(a => a !== allergen)
+        : [...prev, allergen]
+    );
+  };
+
+  const handleSaveAllergens = async () => {
+    if (!user) return;
+    try {
+      const userDocRef = doc(db, 'users', user.uid);
+      await updateDoc(userDocRef, {
+        allergens: selectedAllergens,
+        updated_at: new Date()
+      });
+      setUpdateSuccess(true);
+    } catch (error: any) {
+      setUpdateError(error.message || 'Failed to update allergens');
+    }
+  };
+
   if (loading) {
     return (
       <div className="profile-page">
@@ -111,6 +143,19 @@ const ProfilePage: React.FC = () => {
       </div>
     );
   }
+
+  // Top 9 allergens
+  const ALLERGENS = [
+    "Milk",
+    "Eggs",
+    "Fish",
+    "Crustacean shellfish",
+    "Tree nuts",
+    "Peanuts",
+    "Wheat",
+    "Soybeans",
+    "Sesame"
+  ];
 
   return (
     <div className="profile-page">
@@ -181,6 +226,25 @@ const ProfilePage: React.FC = () => {
               {updateError}
             </div>
           )}
+
+          <div className="allergen-section">
+            <h3>Allergens</h3>
+            <div className="allergen-checkboxes">
+              {ALLERGENS.map(allergen => (
+                <label key={allergen}>
+                  <input
+                    type="checkbox"
+                    checked={selectedAllergens.includes(allergen)}
+                    onChange={() => handleAllergenChange(allergen)}
+                  />
+                  {allergen}
+                </label>
+              ))}
+            </div>
+            <button onClick={handleSaveAllergens} className="save-allergens-button">
+              Save Allergens
+            </button>
+          </div>
 
           <div className="profile-actions">
             <button className="logout-button" onClick={handleLogout}>
