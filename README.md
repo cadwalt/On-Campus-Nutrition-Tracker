@@ -123,8 +123,7 @@ src/
 pages/
 ├── Dashboard.tsx        # Nutrition dashboard (ChatGPT, stats, recent meals)
 ├── AuthPage.tsx         # Sign in / Sign up hub
-├── ProfilePage.tsx      # Profile management (edit display name, sign out)
-└── MainPage.tsx         # Landing or main view (if used)
+└── ProfilePage.tsx      # Profile management (edit display name, sign out)
 
 components/
 ├── GlobalSidebar.tsx    # App-wide navigation with user-aware CTA/profile
