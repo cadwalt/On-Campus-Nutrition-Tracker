@@ -8,17 +8,21 @@ A React-based web application designed to help University of Oklahoma students t
 
 ## 🚀 Features
 
-- Interactive ChatGPT integration for nutritional advice
-- Integration with campus dining hall menus and schedules
-- Modern React-based user interface
-- Responsive design for various devices
-- Nutritional analysis and tracking tools
+- Interactive ChatGPT integration for nutritional advice (Ask questions, meal planning)
+- Firebase Authentication (Email/Password): Sign up, sign in, sign out
+- Profile management: Update display name and view account details
+- Firestore integration: Sample dining data fetch (e.g., `restaurants/testRestaurant`)
+- Dashboard with Quick Stats and Recent Meals sections
+- Global sidebar navigation with user-aware CTA/profile link
+- Modern React + TypeScript UI with responsive styling
 
 ## 🛠️ Technology Stack
 
 - **Frontend:** React 19.1.1 with TypeScript
+- **Routing:** react-router-dom 7.9.1
 - **Build Tool:** Vite 7.1.2
-- **AI Integration:** OpenAI API (GPT-3.5-turbo)
+- **Auth & Database:** Firebase (Auth, Firestore, Analytics)
+- **AI Integration:** OpenAI API (gpt-3.5-turbo)
 - **Styling:** CSS3
 - **Linting:** ESLint
 
@@ -64,9 +68,19 @@ First, make sure you have Git installed in your code editor. Then,
 ## 🔧 Environment Setup
 
 1. Create a `.env` file in the root directory
-2. Add your OpenAI API key:
+2. Add your OpenAI and Firebase keys:
    ```
-   VITE_OPENAI_API_KEY=your_api_key_here
+   # OpenAI
+   VITE_OPENAI_API_KEY=your_openai_api_key
+
+   # Firebase
+   VITE_FIREBASE_API_KEY=your_firebase_api_key
+   VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+   VITE_FIREBASE_PROJECT_ID=your_project_id
+   VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+   VITE_FIREBASE_MESSAGING_SENDER_ID=1234567890
+   VITE_FIREBASE_APP_ID=1:1234567890:web:abcdef123456
+   VITE_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
    ```
    **Note:** Never commit your `.env` file or any of its contents to version control.
 
@@ -100,8 +114,31 @@ src/
 ├── main.tsx             # Application entry point
 ├── index.css            # Global styles
 ├── chatGptService.ts    # OpenAI API integration
+├── firebase.ts          # Firebase initialization (Auth, Firestore, Analytics)
 └── assets/              # Static assets (images, icons)
+
+pages/
+├── Dashboard.tsx        # Nutrition dashboard (ChatGPT, stats, recent meals)
+├── AuthPage.tsx         # Sign in / Sign up hub
+├── ProfilePage.tsx      # Profile management (edit display name, sign out)
+└── MainPage.tsx         # Landing or main view (if used)
+
+components/
+├── GlobalSidebar.tsx    # App-wide navigation with user-aware CTA/profile
+├── RestaurantDisplay.tsx# Firestore example: fetches `restaurants/testRestaurant`
+├── SignInForm.tsx       # Email/password sign-in
+└── SignUpForm.tsx       # Account creation and user doc bootstrap
 ```
+
+## 🙌 Using the App
+
+1. Start the dev server and open the app.
+2. Go to Auth to create an account or sign in.
+3. After signing in, open Profile to edit your display name.
+4. Visit Dashboard to:
+   - Ask the Nutrition Assistant questions (uses OpenAI).
+   - View Quick Stats and Recent Meals sections.
+   - See sample dining data from Firestore in Restaurant Info.
 
 ## 🤝 Contributing
 
