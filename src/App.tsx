@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
-import GlobalSidebar from './components/GlobalSidebar';
+import GlobalSidebar from './components/ui/GlobalSidebar';
 import AuthPage from './pages/AuthPage';
 import Dashboard from './pages/Dashboard';
 import ProfilePage from './pages/ProfilePage';

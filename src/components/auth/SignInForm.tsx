@@ -1,7 +1,7 @@
 // src/components/SignInForm.tsx
 import React, { useState } from 'react';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { auth } from '../firebase'; // Import your initialized auth instance
+import { auth } from '../../firebase'; // Import your initialized auth instance
 
 const SignInForm: React.FC = () => {
   const [email, setEmail] = useState('');
