@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { auth } from '../firebase';
+import { auth } from '../../firebase';
 import type { User } from 'firebase/auth';
 
 const GlobalSidebar: React.FC = () => {

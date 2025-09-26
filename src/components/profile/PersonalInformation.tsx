@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { updateProfile } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db } from '../../firebase';
 import type { User } from 'firebase/auth';
 
 interface PersonalInformationProps {
