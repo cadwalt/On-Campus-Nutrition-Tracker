@@ -4,6 +4,7 @@ import { auth, db } from '../firebase';
 import { signOut, updateProfile } from 'firebase/auth';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
+import Toast from '../components/Toast';
 
 const ProfilePage: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -11,10 +12,22 @@ const ProfilePage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [newDisplayName, setNewDisplayName] = useState('');
   const [updateLoading, setUpdateLoading] = useState(false);
-  const [updateError, setUpdateError] = useState<string | null>(null);
-  const [updateSuccess, setUpdateSuccess] = useState(false);
   const [selectedAllergens, setSelectedAllergens] = useState<string[]>([]);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
+  const [showToast, setShowToast] = useState(false);
   const navigate = useNavigate();
+
+  const showToastNotification = (message: string, type: 'success' | 'error') => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+  };
+
+  const hideToast = () => {
+    setShowToast(false);
+    setToastMessage(null);
+  };
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
@@ -45,15 +58,11 @@ const ProfilePage: React.FC = () => {
   const handleEditClick = () => {
     setIsEditing(true);
     setNewDisplayName(user?.displayName || '');
-    setUpdateError(null);
-    setUpdateSuccess(false);
   };
 
   const handleCancelEdit = () => {
     setIsEditing(false);
     setNewDisplayName('');
-    setUpdateError(null);
-    setUpdateSuccess(false);
   };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -61,8 +70,6 @@ const ProfilePage: React.FC = () => {
     if (!user || !newDisplayName.trim()) return;
 
     setUpdateLoading(true);
-    setUpdateError(null);
-    setUpdateSuccess(false);
 
     try {
       // Update Firebase Auth profile
@@ -87,15 +94,15 @@ const ProfilePage: React.FC = () => {
       await user.reload();
       console.log("Reloaded user display name:", user.displayName);
       
-      setUpdateSuccess(true);
+      showToastNotification('Profile updated successfully!', 'success');
       setIsEditing(false);
       setNewDisplayName('');
       
       // Update the local user state to reflect the change
       setUser({ ...user, displayName: newDisplayName.trim() });
     } catch (error: any) {
-      console.error("❌ Error updating profile:", error);
-      setUpdateError(error.message || 'Failed to update profile');
+      console.error("Error updating profile:", error);
+      showToastNotification(error.message || 'Failed to update profile', 'error');
     } finally {
       setUpdateLoading(false);
     }
@@ -117,9 +124,9 @@ const ProfilePage: React.FC = () => {
         allergens: selectedAllergens,
         updated_at: new Date()
       });
-      setUpdateSuccess(true);
+      showToastNotification('Allergens saved successfully!', 'success');
     } catch (error: any) {
-      setUpdateError(error.message || 'Failed to update allergens');
+      showToastNotification(error.message || 'Failed to save allergens', 'error');
     }
   };
 
@@ -219,18 +226,6 @@ const ProfilePage: React.FC = () => {
                 )}
               </div>
             </div>
-
-            {updateSuccess && (
-              <div className="success-message">
-                Profile updated successfully!
-              </div>
-            )}
-
-            {updateError && (
-              <div className="error-message">
-                {updateError}
-              </div>
-            )}
           </div>
         </div>
 
@@ -288,6 +283,16 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
       </main>
+      
+      {/* Toast Notification */}
+      {toastMessage && (
+        <Toast
+          message={toastMessage}
+          type={toastType}
+          isVisible={showToast}
+          onClose={hideToast}
+        />
+      )}
     </div>
   );
 };
