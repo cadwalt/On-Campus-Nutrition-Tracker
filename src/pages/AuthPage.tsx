@@ -7,7 +7,7 @@ const AuthPage: React.FC = () => {
   return (
     <div className="auth-page">
       <div className="page-header">
-        <h1>Welcome to On-Campus Nutrition Tracker</h1>
+        <h1>Welcome to the On-Campus Nutrition Tracker</h1>
         <p>Sign in to your account or create a new one to get started</p>
       </div>
       
