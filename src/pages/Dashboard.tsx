@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { getChatGptResponse } from '../chatGptService';
-import RestaurantDisplay from '../components/RestaurantDisplay';
+import RestaurantDisplay from '../components/features/RestaurantDisplay';
 
 const Dashboard: React.FC = () => {
   const [prompt, setPrompt] = useState('');

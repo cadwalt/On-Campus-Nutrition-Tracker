@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import SignInForm from '../components/SignInForm';
-import SignUpForm from '../components/SignUpForm';
+import SignInForm from '../components/auth/SignInForm';
+import SignUpForm from '../components/auth/SignUpForm';
 
 const AuthPage: React.FC = () => {
   return (
