@@ -30,7 +30,6 @@ const GlobalSidebar: React.FC = () => {
         
         <nav className="sidebar-nav">
           <Link to="/dashboard" className={`nav-link ${location.pathname === '/dashboard' ? 'active' : ''}`}>
-            <span className="nav-icon">📊</span>
             <span className="nav-text">Dashboard</span>
           </Link>
         </nav>

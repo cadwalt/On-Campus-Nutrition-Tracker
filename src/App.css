@@ -27,7 +27,7 @@ body {
 /* Global Sidebar */
 .global-sidebar {
   width: 200px;
-  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+  background: rgba(26, 26, 46, 0.9);
   color: white;
   position: fixed;
   top: 0;
