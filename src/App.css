@@ -321,9 +321,34 @@ body {
 .profile-content {
   flex: 1;
   padding: 2rem 1rem;
-  max-width: 600px;
+  max-width: 800px;
   margin: 0 auto;
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Profile Sections */
+.profile-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.section-header {
+  padding: 0 0.5rem;
+}
+
+.section-header h2 {
+  color: #e2e8f0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .profile-card {
@@ -364,7 +389,7 @@ body {
   font-weight: 600;
 }
 
-.user-details h2 {
+.user-details h3 {
   color: #e2e8f0;
   font-size: 1.5rem;
   font-weight: 600;
@@ -533,6 +558,112 @@ body {
   margin: 1rem 0;
   font-weight: 500;
 }
+
+/* Allergens Section */
+.allergen-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.section-description {
+  margin-bottom: 0.5rem;
+}
+
+.section-description p {
+  color: #d1d5db;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+  opacity: 0.9;
+}
+
+.allergen-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.allergen-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgba(17, 17, 27, 0.6);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.allergen-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: #667eea;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.allergen-label {
+  color: #e2e8f0;
+  font-weight: 500;
+  font-size: 0.95rem;
+  cursor: pointer;
+  flex: 1;
+}
+
+.allergen-item:has(.allergen-checkbox:checked) {
+  background: rgba(102, 126, 234, 0.1);
+  border-color: rgba(102, 126, 234, 0.4);
+}
+
+.allergen-item:has(.allergen-checkbox:checked) .allergen-label {
+  color: #667eea;
+  font-weight: 600;
+}
+
+.section-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.save-section-button {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: inherit;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+}
+
+.save-section-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+}
+
+.save-section-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.section-status {
+  color: #9ca3af;
+  font-size: 0.85rem;
+  font-weight: 500;
+  font-style: italic;
+}
+
 
 /* App Layout */
 .app-layout {
@@ -1324,5 +1455,38 @@ body {
   
   .meal-name {
     margin: 0;
+  }
+  
+  /* Profile responsive */
+  .profile-content {
+    padding: 1rem 0.5rem;
+    gap: 1.5rem;
+  }
+  
+  .profile-card {
+    padding: 1.5rem;
+  }
+  
+  .section-header h2 {
+    font-size: 1.25rem;
+  }
+  
+  .allergen-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .allergen-item {
+    padding: 0.875rem;
+  }
+  
+  .section-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  
+  .section-status {
+    text-align: center;
   }
 }

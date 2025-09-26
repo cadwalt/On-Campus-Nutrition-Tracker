@@ -161,95 +161,130 @@ const ProfilePage: React.FC = () => {
     <div className="profile-page">
       <div className="page-header">
         <h1>Profile</h1>
-        <p>Manage your account settings</p>
+        <p>Manage your account settings and preferences</p>
       </div>
 
       <main className="profile-content">
-        <div className="profile-card">
-          <div className="profile-info-section">
-            <div className="profile-picture-large">
-              <div className="profile-picture-placeholder-large">
-                {user.displayName ? user.displayName.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase() || 'U'}
+        {/* Profile Information Section */}
+        <div className="profile-section">
+          <div className="section-header">
+            <h2>Personal Information</h2>
+          </div>
+          <div className="profile-card">
+            <div className="profile-info-section">
+              <div className="profile-picture-large">
+                <div className="profile-picture-placeholder-large">
+                  {user.displayName ? user.displayName.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase() || 'U'}
+                </div>
+              </div>
+              
+              <div className="user-details">
+                {isEditing ? (
+                  <form onSubmit={handleUpdateProfile} className="edit-form">
+                    <input
+                      type="text"
+                      value={newDisplayName}
+                      onChange={(e) => setNewDisplayName(e.target.value)}
+                      placeholder="Enter your name"
+                      className="name-input"
+                      disabled={updateLoading}
+                      required
+                    />
+                    <div className="edit-buttons">
+                      <button 
+                        type="submit" 
+                        className="save-button"
+                        disabled={updateLoading || !newDisplayName.trim()}
+                      >
+                        {updateLoading ? 'Saving...' : 'Save'}
+                      </button>
+                      <button 
+                        type="button" 
+                        className="cancel-button"
+                        onClick={handleCancelEdit}
+                        disabled={updateLoading}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <>
+                    <h3>{user.displayName || 'User'}</h3>
+                    <p className="user-email">{user.email}</p>
+                    <button className="edit-name-button" onClick={handleEditClick}>
+                      Edit Name
+                    </button>
+                  </>
+                )}
               </div>
             </div>
-            
-            <div className="user-details">
-              {isEditing ? (
-                <form onSubmit={handleUpdateProfile} className="edit-form">
-                  <input
-                    type="text"
-                    value={newDisplayName}
-                    onChange={(e) => setNewDisplayName(e.target.value)}
-                    placeholder="Enter your name"
-                    className="name-input"
-                    disabled={updateLoading}
-                    required
-                  />
-                  <div className="edit-buttons">
-                    <button 
-                      type="submit" 
-                      className="save-button"
-                      disabled={updateLoading || !newDisplayName.trim()}
-                    >
-                      {updateLoading ? 'Saving...' : 'Save'}
-                    </button>
-                    <button 
-                      type="button" 
-                      className="cancel-button"
-                      onClick={handleCancelEdit}
-                      disabled={updateLoading}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <>
-                  <h2>{user.displayName || 'User'}</h2>
-                  <p className="user-email">{user.email}</p>
-                  <button className="edit-name-button" onClick={handleEditClick}>
-                    Edit Name
-                  </button>
-                </>
-              )}
+
+            {updateSuccess && (
+              <div className="success-message">
+                Profile updated successfully!
+              </div>
+            )}
+
+            {updateError && (
+              <div className="error-message">
+                {updateError}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Allergens Section */}
+        <div className="profile-section">
+          <div className="section-header">
+            <h2>Dietary Restrictions</h2>
+          </div>
+          <div className="profile-card">
+            <div className="allergen-section">
+              <div className="section-description">
+                <p>Select any allergens to help us provide better meal recommendations.</p>
+              </div>
+              
+              <div className="allergen-grid">
+                {ALLERGENS.map(allergen => (
+                  <label key={allergen} className="allergen-item">
+                    <input
+                      type="checkbox"
+                      checked={selectedAllergens.includes(allergen)}
+                      onChange={() => handleAllergenChange(allergen)}
+                      className="allergen-checkbox"
+                    />
+                    <span className="allergen-label">{allergen}</span>
+                  </label>
+                ))}
+              </div>
+              
+              <div className="section-actions">
+                <button onClick={handleSaveAllergens} className="save-section-button">
+                  Save Allergens
+                </button>
+                <span className="section-status">
+                  {selectedAllergens.length > 0 
+                    ? `${selectedAllergens.length} allergen${selectedAllergens.length > 1 ? 's' : ''} selected`
+                    : 'No allergens selected'
+                  }
+                </span>
+              </div>
             </div>
           </div>
+        </div>
 
-          {updateSuccess && (
-            <div className="success-message">
-              Profile updated successfully!
-            </div>
-          )}
-
-          {updateError && (
-            <div className="error-message">
-              {updateError}
-            </div>
-          )}
-
-          <div className="allergen-section">
-            <h3>Allergens</h3>
-            <div className="allergen-checkboxes">
-              {ALLERGENS.map(allergen => (
-                <label key={allergen}>
-                  <input
-                    type="checkbox"
-                    checked={selectedAllergens.includes(allergen)}
-                    onChange={() => handleAllergenChange(allergen)}
-                  />
-                  {allergen}
-                </label>
-              ))}
-            </div>
-            <button onClick={handleSaveAllergens} className="save-allergens-button">
-              Save Allergens
-            </button>
+        {/* Account Actions */}
+        <div className="profile-section">
+          <div className="section-header">
+            <h2>Account</h2>
           </div>
-
-          <div className="profile-actions">
-            <button className="logout-button" onClick={handleLogout}>
-              Sign Out
-            </button>
+          <div className="profile-card">
+            <div className="profile-actions">
+              <button className="logout-button" onClick={handleLogout}>
+                Sign Out
+              </button>
+            </div>
           </div>
         </div>
       </main>
