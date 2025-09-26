@@ -99,7 +99,7 @@ const ProfilePage: React.FC = () => {
       setNewDisplayName('');
       
       // Update the local user state to reflect the change
-      setUser({ ...user, displayName: newDisplayName.trim() });
+      setUser(user);
     } catch (error: any) {
       console.error("Error updating profile:", error);
       showToastNotification(error.message || 'Failed to update profile', 'error');
