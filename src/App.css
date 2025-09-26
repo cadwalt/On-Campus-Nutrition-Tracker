@@ -27,7 +27,7 @@ body {
 /* Global Sidebar */
 .global-sidebar {
   width: 200px;
-  background: linear-gradient(180deg, #4c63d2 0%, #6b46c1 100%);
+  background: rgba(26, 26, 46, 0.9);
   color: white;
   position: fixed;
   top: 0;
@@ -97,9 +97,13 @@ body {
 }
 
 .brand-icon {
-  font-size: 1.5rem;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
   transition: all 0.3s ease;
+  /* Ensure transparent background */
+  background: transparent;
 }
 
 .brand-link:hover .brand-icon {
@@ -1398,7 +1402,8 @@ body {
   }
   
   .brand-icon {
-    font-size: 1.25rem;
+    width: 36px;
+    height: 36px;
   }
   
   .auth-link {
@@ -1477,7 +1482,8 @@ body {
   }
   
   .brand-icon {
-    font-size: 1rem;
+    width: 32px;
+    height: 32px;
   }
   
   .auth-link {
