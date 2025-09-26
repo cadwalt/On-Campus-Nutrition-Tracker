@@ -1,7 +1,7 @@
 // src/components/RestaurantDisplay.tsx
 import React, { useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db } from '../../firebase';
 
 interface Restaurant {
   name: string;
