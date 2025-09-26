@@ -19,7 +19,11 @@ const GlobalSidebar: React.FC = () => {
       <div className="sidebar-content">
         <div className="sidebar-brand">
           <Link to="/dashboard" className="brand-link">
-            <div className="brand-icon">🍎</div>
+            <img 
+              src="/ou-logo.png" 
+              alt="OU Sooners Logo" 
+              className="brand-icon"
+            />
             <h1>Nutrition Tracker</h1>
           </Link>
         </div>
