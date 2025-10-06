@@ -1244,6 +1244,38 @@ body {
   max-width: 400px;
 }
 
+.auth-form-centered {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: inherit; /* Use your app's background */
+}
+
+/* Keep the form styling minimal and inherit colors */
+.auth-form {
+  padding: 2rem 2.5rem;
+  max-width: 350px;
+  width: 100%;
+  background: none;      /* Remove background color */
+  box-shadow: none;      /* Remove box shadow */
+  border-radius: 0;      /* Remove border radius */
+  color: inherit;        /* Inherit text color */
+}
+
+/* Optional: style inputs and buttons as before, or remove these if you want to use your global styles */
+.auth-input {
+  width: 100%;
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  /* background: inherit; */
+  /* color: inherit; */
+}
+
+.auth-button, .auth-link {
+  /* Use your original button styles here */
+}
+
 .auth-title {
   color: #e2e8f0;
   font-size: 1.5rem;
@@ -1255,7 +1287,7 @@ body {
 .auth-form-content {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  align-items: center;
 }
 
 .form-group {
@@ -1311,6 +1343,16 @@ body {
 .user-welcome {
   text-align: center;
   padding: 1rem 0;
+  opacity: 0;
+  transition: opacity 1.5s;
+}
+.user-welcome.visible {
+  opacity: 1;
+  transition: opacity 1.5s;
+}
+.user-welcome.fade-out {
+  opacity: 0;
+  transition: opacity 1.5s;
 }
 
 .user-welcome h3 {
@@ -1350,6 +1392,41 @@ body {
   font-size: 0.875rem;
   margin-top: 0.5rem;
   text-align: center;
+}
+
+/* App.css or index.css */
+
+/* Center the button(s) in the form */
+.auth-form-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Add spacing below the main button */
+.auth-button {
+  margin-bottom: 1rem;
+  width: 100%;
+  max-width: 200px;
+}
+
+/* Style the switch section and add spacing */
+.auth-switch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem; /* Adds space between text and button */
+  margin-top: 0.5rem;
+}
+
+.auth-link {
+  background: none;
+  border: none;
+  color: #007bff;
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: 1rem;
+  padding: 0;
 }
 
 /* Responsive design */
