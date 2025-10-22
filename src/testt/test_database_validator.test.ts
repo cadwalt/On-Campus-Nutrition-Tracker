@@ -19,7 +19,8 @@ const FAKE_DB: Record<string, { calories: number; protein_g: number } | null> = 
 };
 
 function getItemNutrients(itemName: string) {
-  return FAKE_DB[itemName] ?? undefined;
+  const result = FAKE_DB[itemName];
+  return result === undefined ? undefined : result;
 }
 
 describe('TestDatabaseValidator', () => {
