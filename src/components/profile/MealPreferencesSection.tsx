@@ -295,7 +295,7 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
                             fontWeight: '500'
                           }}
                         >
-                          {nutritionGoals.preferences.meal_frequency == 1 ? `${nutritionGoals.preferences.meal_frequency} meal per day` : `${nutritionGoals.preferences.meal_frequency} meals per day`}
+                          {nutritionGoals.preferences.meal_frequency === 1 ? `${nutritionGoals.preferences.meal_frequency} meal per day` : `${nutritionGoals.preferences.meal_frequency} meals per day`}
                         </p>
                       </div>
                     </div>
