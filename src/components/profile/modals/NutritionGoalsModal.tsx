@@ -77,7 +77,7 @@ const NutritionGoalsModal: React.FC<NutritionGoalsModalProps> = ({
       return () => {
         document.removeEventListener('keydown', handleKeyDown);
         // Restore original overflow value
-        document.body.style.overflow = originalOverflow || 'unset';
+        document.body.style.overflow = originalOverflow;
       };
     }
 
