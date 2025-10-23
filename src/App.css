@@ -325,7 +325,7 @@ body {
 .profile-content {
   flex: 1;
   padding: 2rem 1rem;
-  max-width: 800px;
+  max-width: 1200px;
   margin: 0 auto;
   width: 100%;
   display: flex;
@@ -1100,7 +1100,7 @@ body {
   gap: 1.5rem;
   height: 100%;
   width: 100%;
-  max-width: 1400px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 0 1rem;
 }
@@ -1270,10 +1270,6 @@ body {
   margin-bottom: 1rem;
   /* background: inherit; */
   /* color: inherit; */
-}
-
-.auth-button, .auth-link {
-  /* Use your original button styles here */
 }
 
 .auth-title {
@@ -2298,6 +2294,303 @@ body {
   
   .preference-card {
     padding: 1rem;
+  }
+}
+
+/* Onboarding Page Styles */
+.onboarding-form {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  background: rgba(26, 26, 46, 0.9);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.onboarding-form h2 {
+  color: #e2e8f0;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  text-align: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.onboarding-section {
+  margin-bottom: 2.5rem;
+  padding: 1.5rem;
+  background: rgba(17, 17, 27, 0.6);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.onboarding-section h3 {
+  color: #e2e8f0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+}
+
+.onboarding-section p {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  margin: 0 0 1rem 0;
+  line-height: 1.5;
+}
+
+.onboarding-form button {
+  width: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: inherit;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+  margin-top: 1rem;
+}
+
+.onboarding-form button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+}
+
+.onboarding-form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.onboarding-form .error-message {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  text-align: center;
+  margin: 1rem 0;
+  font-weight: 500;
+}
+
+/* Onboarding specific styles for dietary restrictions */
+.dietary-restrictions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0.75rem;
+}
+
+.dietary-restriction-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgba(26, 26, 46, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.dietary-restriction-item:hover {
+  background: rgba(26, 26, 46, 0.8);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.dietary-restriction-item.selected {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: #10b981;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+}
+
+.dietary-restriction-item input[type="checkbox"] {
+  margin: 0;
+  accent-color: #10b981;
+  margin-top: 0.125rem;
+}
+
+.dietary-restriction-content {
+  flex: 1;
+}
+
+.dietary-restriction-content strong {
+  color: #e2e8f0;
+  font-size: 1rem;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.dietary-restriction-content p {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Onboarding specific styles for cooking skill */
+.cooking-skill-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cooking-skill-option {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(26, 26, 46, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.cooking-skill-option:hover {
+  background: rgba(26, 26, 46, 0.8);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.cooking-skill-option.selected {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: #f59e0b;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+}
+
+.cooking-skill-option input[type="radio"] {
+  margin: 0;
+  accent-color: #f59e0b;
+}
+
+.cooking-skill-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.skill-icon {
+  font-size: 1.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(245, 158, 11, 0.1);
+  border-radius: 50%;
+  border: 2px solid rgba(245, 158, 11, 0.3);
+}
+
+.skill-details {
+  flex: 1;
+}
+
+.skill-details strong {
+  color: #e2e8f0;
+  font-size: 1rem;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.skill-details p {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* Onboarding specific styles for meal frequency */
+.frequency-selector {
+  background: rgba(26, 26, 46, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.frequency-selector label {
+  display: block;
+  color: #e2e8f0;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.frequency-slider {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: transparent;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  z-index: 2;
+}
+
+.slider-track {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+.slider-progress {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.2s ease;
+  background: linear-gradient(90deg, #8b5cf6 0%, #a855f7 100%);
+}
+
+.frequency-range {
+  color: #64748b;
+  font-size: 0.8rem;
+  text-align: center;
+  font-weight: 400;
+}
+
+/* Responsive Design for Onboarding */
+@media (max-width: 768px) {
+  .onboarding-form {
+    padding: 1rem;
+    margin: 1rem;
+  }
+  
+  .onboarding-form h2 {
+    font-size: 1.5rem;
+  }
+  
+  .onboarding-section {
+    padding: 1rem;
+    margin-bottom: 2rem;
+  }
+  
+  .goal-options-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .physical-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .dietary-restrictions-grid {
+    grid-template-columns: 1fr;
   }
 }
 
