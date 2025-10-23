@@ -5,6 +5,9 @@ import type { User } from 'firebase/auth';
 import Toast from '../components/ui/Toast';
 import PersonalInformation from '../components/profile/PersonalInformation';
 import AllergensSection from '../components/profile/AllergensSection';
+import NutritionGoalsSection from '../components/profile/NutritionGoalsSection';
+import DietaryRestrictionsSection from '../components/profile/DietaryRestrictionsSection';
+import MealPreferencesSection from '../components/profile/MealPreferencesSection';
 import AccountSection from '../components/profile/AccountSection';
 
 const ProfilePage: React.FC = () => {
@@ -74,6 +77,24 @@ const ProfilePage: React.FC = () => {
         />
 
         <AllergensSection 
+          user={user} 
+          onSuccess={(message) => showToastNotification(message, 'success')}
+          onError={(message) => showToastNotification(message, 'error')}
+        />
+
+        <DietaryRestrictionsSection 
+          user={user} 
+          onSuccess={(message) => showToastNotification(message, 'success')}
+          onError={(message) => showToastNotification(message, 'error')}
+        />
+
+        <NutritionGoalsSection 
+          user={user} 
+          onSuccess={(message) => showToastNotification(message, 'success')}
+          onError={(message) => showToastNotification(message, 'error')}
+        />
+
+        <MealPreferencesSection 
           user={user} 
           onSuccess={(message) => showToastNotification(message, 'success')}
           onError={(message) => showToastNotification(message, 'error')}
