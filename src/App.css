@@ -269,6 +269,13 @@ body {
   border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
+.profile-image-small {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
 .profile-picture-placeholder {
   width: 100%;
   height: 100%;
@@ -325,7 +332,7 @@ body {
 .profile-content {
   flex: 1;
   padding: 2rem 1rem;
-  max-width: 800px;
+  max-width: 1200px;
   margin: 0 auto;
   width: 100%;
   display: flex;
@@ -338,6 +345,176 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+/* Profile Picture Styles */
+.profile-picture-large {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  background: rgba(26, 26, 46, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 1;
+}
+
+.profile-picture-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.profile-picture-large:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.02);
+}
+
+.profile-picture-placeholder-large {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: rgba(26, 26, 46, 0.8);
+  color: #64748b;
+  font-size: 2.5rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.profile-image-large {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.profile-picture-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.3s ease;
+  border-radius: 50%;
+  z-index: 10;
+}
+
+.profile-picture-large:hover .profile-picture-overlay {
+  opacity: 1;
+}
+
+.profile-picture-overlay svg {
+  color: white;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.upload-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  z-index: 15;
+}
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+
+.profile-picture-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-10px) scale(0.95);
+  background: rgba(8, 12, 20, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(24px);
+  z-index: 1000;
+  min-width: 180px;
+  overflow: hidden;
+  opacity: 0;
+  animation: dropdownFadeIn 0.2s ease-out forwards;
+}
+
+@keyframes dropdownFadeIn {
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+.dropdown-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 16px 20px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.dropdown-option:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.dropdown-option:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.dropdown-option.remove-option {
+  color: rgba(248, 113, 113, 0.85);
+}
+
+.dropdown-option.remove-option:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.06);
+  color: #f87171;
+}
+
+.dropdown-option svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+
+.dropdown-option:hover svg {
+  opacity: 1;
 }
 
 .section-header {
@@ -1100,7 +1277,7 @@ body {
   gap: 1.5rem;
   height: 100%;
   width: 100%;
-  max-width: 1400px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 0 1rem;
 }
@@ -1270,10 +1447,6 @@ body {
   margin-bottom: 1rem;
   /* background: inherit; */
   /* color: inherit; */
-}
-
-.auth-button, .auth-link {
-  /* Use your original button styles here */
 }
 
 .auth-title {
@@ -1697,5 +1870,948 @@ body {
   
   .section-status {
     text-align: center;
+  }
+}
+
+/* Nutrition Goals Modal Styles */
+.nutrition-goals-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.goal-selection-section {
+  margin-bottom: 2rem;
+}
+
+.goal-selection-section h3 {
+  color: #e2e8f0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+}
+
+.goal-options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.goal-option-card {
+  background: rgba(26, 26, 46, 0.6);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+  position: relative;
+}
+
+.goal-option-card:hover {
+  background: rgba(26, 26, 46, 0.8);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.goal-option-card.selected {
+  background: rgba(26, 26, 46, 0.9);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.goal-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.goal-option-card h4 {
+  color: #e2e8f0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+}
+
+.goal-option-card p {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.activity-level-section {
+  margin-bottom: 2rem;
+}
+
+.activity-level-section h3 {
+  color: #e2e8f0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+}
+
+.activity-level-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.activity-level-option {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(26, 26, 46, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.activity-level-option:hover {
+  background: rgba(26, 26, 46, 0.8);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.activity-level-option.selected {
+  background: rgba(26, 26, 46, 0.9);
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+.activity-level-option input[type="radio"] {
+  margin: 0;
+  accent-color: #667eea;
+}
+
+.activity-level-content {
+  flex: 1;
+}
+
+.activity-level-content strong {
+  color: #e2e8f0;
+  font-size: 1rem;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.activity-level-content p {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* Physical Metrics Section Styles */
+.physical-metrics-section {
+  margin: 2rem 0;
+}
+
+.physical-metrics-section .section-header {
+  margin-bottom: 1.5rem;
+}
+
+.physical-metrics-section h3 {
+  color: #e2e8f0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+}
+
+.physical-metrics-section p {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.physical-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.metric-card {
+  background: rgba(26, 26, 46, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.25rem;
+  transition: all 0.2s ease;
+}
+
+.metric-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.metric-card-title {
+  color: #e2e8f0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.metric-input-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.metric-input {
+  width: 70px;
+  padding: 0.4rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: #e2e8f0;
+  font-size: 1rem;
+  font-weight: 500;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.metric-unit {
+  color: #94a3b8;
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
+/* Macro Targets Section Styles */
+.macro-targets-container {
+  margin: 1rem 0;
+}
+
+.macro-targets-header {
+  margin-bottom: 1rem;
+}
+
+.macro-targets-title {
+  color: #e2e8f0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+}
+
+.macro-targets-description {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.macro-cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.macro-card {
+  background: rgba(26, 26, 46, 0.6);
+  border-radius: 12px;
+  padding: 1.25rem;
+  transition: all 0.2s ease;
+}
+
+.macro-card.protein {
+  border: 1px solid rgba(239, 68, 68, 0.15);
+}
+
+.macro-card.carbs {
+  border: 1px solid rgba(59, 130, 246, 0.15);
+}
+
+.macro-card.fat {
+  border: 1px solid rgba(245, 158, 11, 0.15);
+}
+
+.macro-card-header {
+  margin-bottom: 0.75rem;
+}
+
+.macro-card-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.macro-card-title {
+  color: #e2e8f0;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.macro-percentage-badge {
+  font-weight: 600;
+  font-size: 1rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  min-width: 3rem;
+  text-align: center;
+}
+
+.macro-percentage-badge.protein {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.macro-percentage-badge.carbs {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.macro-percentage-badge.fat {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.macro-slider-container {
+  position: relative;
+  margin-bottom: 0.5rem;
+}
+
+.macro-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: transparent;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  z-index: 2;
+}
+
+.macro-slider-track {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+.macro-slider-progress {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.2s ease;
+}
+
+.macro-slider-progress.protein {
+  background: #ef4444;
+}
+
+.macro-slider-progress.carbs {
+  background: #3b82f6;
+}
+
+.macro-slider-progress.fat {
+  background: #f59e0b;
+}
+
+.macro-range-text {
+  color: #64748b;
+  font-size: 0.75rem;
+  text-align: center;
+  font-weight: 400;
+}
+
+/* Reset Button Styles */
+.reset-button-container {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.reset-button {
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  color: #8b5cf6;
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.reset-button:hover {
+  background: rgba(139, 92, 246, 0.2);
+  border-color: rgba(139, 92, 246, 0.5);
+}
+
+/* Responsive Design for Nutrition Goals Modal */
+@media (max-width: 768px) {
+  .goal-options-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .goal-option-card {
+    padding: 1rem;
+  }
+  
+  .goal-icon {
+    font-size: 2rem;
+  }
+  
+  .activity-level-option {
+    padding: 0.75rem;
+  }
+  
+  .physical-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .metric-card {
+    padding: 1rem;
+  }
+}
+
+/* Nutrition Goals Section Display Styles */
+.nutrition-goals-display {
+  padding: 1rem 0;
+}
+
+.goals-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.goal-summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.goal-summary-item:last-child {
+  border-bottom: none;
+}
+
+.goal-summary-item strong {
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.goal-summary-item span {
+  color: #94a3b8;
+}
+
+.no-goals-set {
+  text-align: center;
+  padding: 2rem;
+  color: #94a3b8;
+}
+
+.edit-section-button {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.edit-section-button:hover {
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Responsive Design for Nutrition Goals Display */
+@media (max-width: 768px) {
+  .goal-summary-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+}
+
+/* Dietary Restrictions Section Styles */
+.dietary-restrictions-display {
+  padding: 1rem 0;
+}
+
+.restrictions-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.restrictions-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.restriction-tag {
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem 1rem;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 8px;
+  min-width: 200px;
+}
+
+.restriction-label {
+  color: #10b981;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.restriction-description {
+  color: #94a3b8;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+/* Responsive Design for Dietary Restrictions */
+@media (max-width: 768px) {
+  .restrictions-list {
+    flex-direction: column;
+  }
+  
+  .restriction-tag {
+    min-width: auto;
+  }
+}
+
+/* Meal Preferences Section Styles (Combined Cooking Skill + Meal Frequency) */
+.meal-preferences-display {
+  padding: 1rem 0;
+}
+
+.preferences-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.preferences-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.preference-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: rgba(26, 26, 46, 0.6);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.preference-card.cooking-skill {
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.preference-card.meal-frequency {
+  border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.preference-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.preference-info {
+  flex: 1;
+}
+
+.preference-info h3 {
+  color: #e2e8f0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem 0;
+}
+
+.preference-info p {
+  color: #94a3b8;
+  font-size: 0.95rem;
+  margin: 0;
+  font-weight: 500;
+}
+
+.no-preferences-set {
+  text-align: center;
+  padding: 2rem;
+  color: #94a3b8;
+  font-size: 1rem;
+}
+
+/* Responsive Design for Meal Preferences */
+@media (max-width: 768px) {
+  .preferences-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .preference-card {
+    padding: 1rem;
+  }
+}
+
+/* Onboarding Page Styles */
+.onboarding-form {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  background: rgba(26, 26, 46, 0.9);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.onboarding-form h2 {
+  color: #e2e8f0;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  text-align: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.onboarding-section {
+  margin-bottom: 2.5rem;
+  padding: 1.5rem;
+  background: rgba(17, 17, 27, 0.6);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.onboarding-section h3 {
+  color: #e2e8f0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+}
+
+.onboarding-section p {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  margin: 0 0 1rem 0;
+  line-height: 1.5;
+}
+
+.onboarding-form button {
+  width: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: inherit;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+  margin-top: 1rem;
+}
+
+.onboarding-form button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+}
+
+.onboarding-form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.onboarding-form .error-message {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  text-align: center;
+  margin: 1rem 0;
+  font-weight: 500;
+}
+
+/* Onboarding specific styles for dietary restrictions */
+.dietary-restrictions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0.75rem;
+}
+
+.dietary-restriction-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgba(26, 26, 46, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.dietary-restriction-item:hover {
+  background: rgba(26, 26, 46, 0.8);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.dietary-restriction-item.selected {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: #10b981;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+}
+
+.dietary-restriction-item input[type="checkbox"] {
+  margin: 0;
+  accent-color: #10b981;
+  margin-top: 0.125rem;
+}
+
+.dietary-restriction-content {
+  flex: 1;
+}
+
+.dietary-restriction-content strong {
+  color: #e2e8f0;
+  font-size: 1rem;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.dietary-restriction-content p {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Onboarding specific styles for cooking skill */
+.cooking-skill-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cooking-skill-option {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(26, 26, 46, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.cooking-skill-option:hover {
+  background: rgba(26, 26, 46, 0.8);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.cooking-skill-option.selected {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: #f59e0b;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+}
+
+.cooking-skill-option input[type="radio"] {
+  margin: 0;
+  accent-color: #f59e0b;
+}
+
+.cooking-skill-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.skill-icon {
+  font-size: 1.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(245, 158, 11, 0.1);
+  border-radius: 50%;
+  border: 2px solid rgba(245, 158, 11, 0.3);
+}
+
+.skill-details {
+  flex: 1;
+}
+
+.skill-details strong {
+  color: #e2e8f0;
+  font-size: 1rem;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.skill-details p {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* Onboarding specific styles for meal frequency */
+.frequency-selector {
+  background: rgba(26, 26, 46, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.frequency-selector label {
+  display: block;
+  color: #e2e8f0;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.frequency-slider {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: transparent;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  z-index: 2;
+}
+
+.slider-track {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+.slider-progress {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.2s ease;
+  background: linear-gradient(90deg, #8b5cf6 0%, #a855f7 100%);
+}
+
+.frequency-range {
+  color: #64748b;
+  font-size: 0.8rem;
+  text-align: center;
+  font-weight: 400;
+}
+
+/* Responsive Design for Onboarding */
+@media (max-width: 768px) {
+  .onboarding-form {
+    padding: 1rem;
+    margin: 1rem;
+  }
+  
+  .onboarding-form h2 {
+    font-size: 1.5rem;
+  }
+  
+  .onboarding-section {
+    padding: 1rem;
+    margin-bottom: 2rem;
+  }
+  
+  .goal-options-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .physical-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .dietary-restrictions-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Allergens Section Styles */
+.allergens-display {
+  padding: 1rem 0;
+}
+
+.allergens-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.allergens-display .allergens-list {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 0.75rem !important;
+  justify-content: flex-start !important;
+}
+
+.allergen-tag {
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem 1rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  min-width: 200px;
+}
+
+.allergen-label {
+  color: #ef4444;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* Responsive Design for Allergens */
+@media (max-width: 768px) {
+  .allergens-display .allergens-list {
+    flex-direction: column !important;
+  }
+  
+  .allergen-tag {
+    min-width: auto;
   }
 }
