@@ -44,7 +44,7 @@ const MealPreferencesModal: React.FC<MealPreferencesModalProps> = ({
       return () => {
         document.removeEventListener('keydown', handleKeyDown);
         // Restore original overflow value
-        document.body.style.overflow = originalOverflow || 'unset';
+        document.body.style.overflow = originalOverflow || '';
       };
     }
 
