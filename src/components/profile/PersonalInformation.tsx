@@ -22,7 +22,7 @@ const PersonalInformation: React.FC<PersonalInformationProps> = ({ user, onSucce
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Load existing profile picture on component mount
-  React.useEffect(() => {
+  useEffect(() => {
     const loadProfilePicture = async () => {
       try {
         const userDocRef = doc(db, 'users', user.uid);
