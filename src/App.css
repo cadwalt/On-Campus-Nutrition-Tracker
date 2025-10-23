@@ -447,10 +447,6 @@ body {
   100% { transform: rotate(360deg); }
 }
 
-.profile-picture-wrapper {
-  position: relative;
-  display: inline-block;
-}
 
 .profile-picture-dropdown {
   position: absolute;
