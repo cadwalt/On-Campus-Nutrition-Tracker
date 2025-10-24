@@ -68,6 +68,18 @@ First, make sure you have Git installed in your code editor. Then,
     npm install
     ```
 
+### Running Tests
+1. Open a terminal or command prompt
+2. Run the following command to run **all** tests in the repo:
+    ```bash
+    npm test
+    ```
+3. To run a **specific** test file, e.g., `test_database_validator.test.ts`, run the following command:
+    ```bash
+    npx vitest run src/testt/test_database_validator.test.ts
+    ```
+
+
 ## 🔧 Environment Setup
 
 1. Create a `.env` file in the root directory
