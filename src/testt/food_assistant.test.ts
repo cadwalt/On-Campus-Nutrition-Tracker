@@ -61,6 +61,4 @@ describe('FoodAssistantChatBot Tests', () => {
       expect(meetsFoodCriteria(food, user)).toBe(true);
   });
 
-  // Add minimal tests for generateSuggestion if needed...
-
 });
