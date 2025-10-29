@@ -67,6 +67,10 @@ First, make sure you have Git installed in your code editor. Then,
     ```bash
     npm install
     ```
+4. Add vite + vitest as dev deps if not present
+    ```bash
+    npm install --save-dev vite vitest
+    ```
 
 ### Running Tests
 1. Open a terminal or command prompt
