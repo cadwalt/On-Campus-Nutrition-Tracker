@@ -15,26 +15,16 @@ type ApiPayload = {
 
 export type NutritionClient = (q: string) => Promise<ApiPayload>;
 
-/**
- * getNutritionInfo
- * Validates input, normalizes query, calls client, returns normalized nutrition.
- * The client is injectable for unit testing.
- */
 export async function getNutritionInfo(
   item: string,
   client?: NutritionClient
 ): Promise<Nutrition> {
   const q = (item ?? "").trim().toLowerCase();
   if (!q) throw new Error("Invalid or empty food name");
-
-  if (!client) {
-    // Default throws to ensure tests inject a mock client.
-    throw new Error("No nutrition client provided");
-  }
+  if (!client) throw new Error("No nutrition client provided");
 
   const data = await client(q);
 
-  // Basic data type checks
   if (
     typeof data.calories !== "number" ||
     typeof data.protein_g !== "number" ||
