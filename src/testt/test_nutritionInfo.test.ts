@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { getNutritionInfo, type NutritionClient } from '../services/nutrition';
+import { getNutritionInfo, type NutritionClient } from '../components/services/nutrition';
 
 const okClient: NutritionClient = async (q) => {
   if (q === 'banana') {
