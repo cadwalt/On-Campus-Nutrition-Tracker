@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 
-// --- Types (Based on screenshots) ---
+// --- Types ---
 type UserProfile = {
   userID: string;
   preferences?: Record<string, any> | null; // Allow null
-  allergens?: string[] | null;        // Allow null
+  allergens?: string[] | null;              // Allow null
 };
 
 type FoodItem = {
@@ -13,7 +13,7 @@ type FoodItem = {
   nutritionInfo?: {
     calories?: number;
     protein_g?: number;
-    // ... other nutrients
+    // ... other nutrients when added
   } | null; // Allow null
 };
 
@@ -22,7 +22,7 @@ type Menu = {
   items: (FoodItem | null | undefined)[]; // Allow null/undefined items in list
 };
 
-// --- Mocks and Stubs (Based on screenshots) ---
+// --- Mocks and Stubs ---
 
 /**
  * Checks if a food item contains any of the user's allergens.
@@ -97,10 +97,10 @@ function meetsFoodCriteria(foodItem: FoodItem | null | undefined, user: UserProf
 
     return meets;
 }
-// --- End of FINAL REFINED meetsFoodCriteria ---
+// --- End of meetsFoodCriteria ---
 
 
-// --- Placeholder stubs for other functions mentioned ---
+// --- Placeholder stubs for other functions ---
 function getUserInfo(userID: string): UserProfile | null { return null; }
 function getRestaurantInfo(name: string): Menu | null { return null; }
 function startChat(userID: string): string { return "Chat started"; }
@@ -126,14 +126,14 @@ function generateSuggestion(user: UserProfile | null | undefined, menu: Menu | n
 
    // Filter based on criteria and allergens
    return menu.items.filter(item =>
-     item && // Ensure item is not null/undefined before passing to checkers
-     !hasAllergen(item, user) &&
-     meetsFoodCriteria(item, user) // Use the final refined version
-   ) as FoodItem[]; // Cast result to FoodItem[] assuming nulls are filtered
+     item &&                        // Ensure item is not null/undefined before passing to checkers
+     !hasAllergen(item, user) &&    // Exclude items with allergens
+     meetsFoodCriteria(item, user)  // Use the final refined version
+   ) as FoodItem[];                 // Cast result to FoodItem[] assuming nulls are filtered
 }
 
 
-// --- Mock Data Setup --- (Remains the same as previous version)
+// --- Mock Data Setup ---
 let userValid: UserProfile;
 let userInvalidId: UserProfile;
 let userNoId: any;
@@ -166,7 +166,7 @@ let menuWithNullItem: Menu;
 
 
 beforeEach(() => {
-  // Reset mock data before each test (remains the same)
+  // Reset mock data before each test
   userValid = { userID: 'user123', preferences: { max_calories: 800, min_protein: 10 }, allergens: ['nuts'] };
   userInvalidId = { userID: '', preferences: { max_calories: 500 }, allergens: [] };
   userNoId = { preferences: { max_calories: 500 }, allergens: [] };
@@ -225,7 +225,6 @@ describe('FoodAssistantChatBot Full Tests', () => {
   //-----------------------------------------------------
   describe('meetsFoodCriteria Functionality', () => {
   //-----------------------------------------------------
-    // Tests remain the same up to the corrected block
     it('Valid: True - Meets max calorie limit', () => { expect(meetsFoodCriteria(foodSafeLowCalHighProt, userValid)).toBe(true); });
     it('Valid: False - Exceeds max calorie limit', () => { expect(meetsFoodCriteria(foodHighCalHighProt, userValid)).toBe(false); });
     it('Valid: True - Meets min protein limit', () => { expect(meetsFoodCriteria(foodSafeLowCalHighProt, userValid)).toBe(true); });
@@ -234,27 +233,25 @@ describe('FoodAssistantChatBot Full Tests', () => {
     it('Valid: False - Fails one of multiple criteria (max cal)', () => { const highCalOkProt = { name: "High Cal OK Prot", allergens: [], nutritionInfo: { calories: 600, protein_g: 25 }}; expect(meetsFoodCriteria(highCalOkProt, userPrefsMaxCalMinProt)).toBe(false); expect(meetsFoodCriteria(foodAllergenNutsMidCalMidProt, userPrefsMaxCalMinProt)).toBe(false); }); // Fails protein
     it('Valid: True - User has no preferences', () => { expect(meetsFoodCriteria(foodHighCalHighProt, userNoPrefsAllergens)).toBe(true); });
 
-    // **** CORRECTED TEST BLOCK ****
+    // **** TEST BLOCK ****
     it('Valid: True - Food has no nutrition info AND user has NO nutrient criteria', () => {
         // User with preferences, but none related to nutrients (e.g., cuisine preference)
         const userNoNutrientPrefs = { userID: 'noNutPrefs', preferences: { preferred_cuisine: 'Italian' }, allergens: [] };
-        expect(meetsFoodCriteria(foodNoNutrition, userNoNutrientPrefs)).toBe(true); // Should pass
+        expect(meetsFoodCriteria(foodNoNutrition, userNoNutrientPrefs)).toBe(true);       // Should pass
 
         // Also test user with explicitly empty preferences object
         const userEmptyPrefs = { userID: 'emptyPrefs', preferences: {}, allergens: [] };
-        expect(meetsFoodCriteria(foodNoNutrition, userEmptyPrefs)).toBe(true); // Should pass
+        expect(meetsFoodCriteria(foodNoNutrition, userEmptyPrefs)).toBe(true);            // Should pass
     });
 
     it('Valid: False - Food has no nutrition info BUT user requires nutrients', () => {
-         // userValid requires max_cal and min_prot
-         expect(meetsFoodCriteria(foodNoNutrition, userValid)).toBe(false);
-         // userPrefsStrict requires max_cal and min_prot
-         expect(meetsFoodCriteria(foodNoNutrition, userPrefsStrict)).toBe(false);
+         expect(meetsFoodCriteria(foodNoNutrition, userValid)).toBe(false);               // userValid requires max_cal and min_prot
+         expect(meetsFoodCriteria(foodNoNutrition, userPrefsStrict)).toBe(false);         // userPrefsStrict requires max_cal and min_prot
     });
      it('Valid: False - Food has null nutrition object BUT user requires nutrients', () => {
-       expect(meetsFoodCriteria(foodNullNutrition, userPrefsStrict)).toBe(false); // Min protein required
+       expect(meetsFoodCriteria(foodNullNutrition, userPrefsStrict)).toBe(false);         // Min protein required
     });
-     // **** END CORRECTED BLOCK ****
+     // **** END BLOCK ****
 
      it('Invalid: True/Handles - Null/Undefined User', () => { expect(meetsFoodCriteria(foodSafeLowCalHighProt, null)).toBe(true); expect(meetsFoodCriteria(foodSafeLowCalHighProt, undefined)).toBe(true); });
      it('Invalid: True/Handles - Null/Undefined Food', () => { expect(meetsFoodCriteria(null, userValid)).toBe(true); expect(meetsFoodCriteria(undefined, userValid)).toBe(true); });
@@ -269,7 +266,6 @@ describe('FoodAssistantChatBot Full Tests', () => {
    //-----------------------------------------------------
    describe('generateSuggestion (Integration Simulation)', () => {
    //-----------------------------------------------------
-    // Tests remain the same as previous corrected version
     it('Valid: Suggests items meeting criteria, avoiding allergens', () => {
         const suggestions = generateSuggestion(userValid, menuValid);
         expect(suggestions).toContainEqual(foodSafeLowCalHighProt);

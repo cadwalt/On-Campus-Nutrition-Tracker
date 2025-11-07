@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { DietaryRestriction } from '../../../types/nutrition';
 import { DIETARY_RESTRICTIONS } from '../../../constants/nutrition';
+import { Tooltip } from '../../ui';
 
 interface DietaryRestrictionsModalProps {
   isOpen: boolean;
@@ -149,6 +150,20 @@ const DietaryRestrictionsModal: React.FC<DietaryRestrictionsModalProps> = ({
           style={{ padding: '2rem' }}
         >
           <div className="dietary-restrictions-editor">
+            <div className="section-header-with-tooltip">
+              <h3 style={{
+                color: '#e2e8f0',
+                fontSize: '1.25rem',
+                fontWeight: '600',
+                margin: '0 0 1rem 0'
+              }}>
+                Dietary Preferences
+              </h3>
+              <Tooltip 
+                content="Select any specific dietary preferences or restrictions that apply to you." 
+                example="Choose 'Vegetarian' to exclude meat, 'Gluten-Free' for celiac diet, etc."
+              />
+            </div>
             <div 
               className="section-description"
               style={{ marginBottom: '1.5rem' }}

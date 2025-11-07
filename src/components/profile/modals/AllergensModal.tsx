@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { Tooltip } from '../../ui';
 
 interface AllergensModalProps {
   isOpen: boolean;
@@ -160,6 +161,20 @@ const AllergensModal: React.FC<AllergensModalProps> = ({
           style={{ padding: '2rem' }}
         >
           <div className="allergens-editor">
+            <div className="section-header-with-tooltip">
+              <h3 style={{
+                color: '#e2e8f0',
+                fontSize: '1.25rem',
+                fontWeight: '600',
+                margin: '0 0 1rem 0'
+              }}>
+                Food Allergens
+              </h3>
+              <Tooltip 
+                content="Indicate any food allergies to ensure your safety. We'll exclude these ingredients from your meal suggestions." 
+                example="If you're allergic to peanuts, we'll avoid recipes with peanuts and warn about potential cross-contamination."
+              />
+            </div>
             <div 
               className="section-description"
               style={{ marginBottom: '1.5rem' }}

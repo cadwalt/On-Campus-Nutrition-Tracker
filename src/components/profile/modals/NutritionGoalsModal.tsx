@@ -9,6 +9,7 @@ import {
   GOAL_OPTIONS, 
   ACTIVITY_LEVELS
 } from '../../../constants/nutrition';
+import { Tooltip } from '../../ui';
 
 interface NutritionGoalsModalProps {
   isOpen: boolean;
@@ -201,7 +202,13 @@ const NutritionGoalsModal: React.FC<NutritionGoalsModalProps> = ({
           <div className="nutrition-goals-editor">
             {/* Primary Goal Selection */}
             <div className="goal-selection-section">
-              <h3>What's your primary goal?</h3>
+              <div className="section-header-with-tooltip">
+                <h3>What's your primary goal?</h3>
+                <Tooltip 
+                  content="Choose your main fitness objective. This will help tailor your nutrition plan and macro recommendations." 
+                  example="If you select 'Weight Loss', we'll adjust your caloric and macro targets accordingly."
+                />
+              </div>
               <div className="goal-options-grid">
                 {GOAL_OPTIONS.map(goal => (
                   <div
@@ -235,7 +242,13 @@ const NutritionGoalsModal: React.FC<NutritionGoalsModalProps> = ({
 
             {/* Activity Level Selection */}
             <div className="activity-level-section">
-              <h3>Activity Level</h3>
+              <div className="section-header-with-tooltip">
+                <h3>Activity Level</h3>
+                <Tooltip 
+                  content="Select how active you are on average. This helps calculate your daily caloric needs." 
+                  example="If you exercise 3-5 times per week, choose 'Moderately Active'."
+                />
+              </div>
               <div className="activity-level-options">
                 {ACTIVITY_LEVELS.map(level => (
                   <label 
@@ -261,7 +274,13 @@ const NutritionGoalsModal: React.FC<NutritionGoalsModalProps> = ({
             {/* Physical Metrics Section */}
             <div className="physical-metrics-section">
               <div className="section-header">
-                <h3>Physical Metrics</h3>
+                <div className="section-header-with-tooltip">
+                  <h3>Physical Metrics</h3>
+                  <Tooltip 
+                    content="Enter your current measurements to help calculate your personalized nutrition plan." 
+                    example="Current weight 180lbs, target weight 165lbs helps determine your daily caloric goals."
+                  />
+                </div>
                 <p>Enter your body measurements to personalize your nutrition plan.</p>
               </div>
               
@@ -328,7 +347,13 @@ const NutritionGoalsModal: React.FC<NutritionGoalsModalProps> = ({
             {/* Macro Targets Section */}
             <div className="macro-targets-container">
               <div className="macro-targets-header">
-                <h3 className="macro-targets-title">Macro Targets</h3>
+                <div className="section-header-with-tooltip">
+                  <h3 className="macro-targets-title">Macro Targets</h3>
+                  <Tooltip 
+                    content="Balance your protein, carbs, and fats to meet your nutritional needs. Total should equal 100%." 
+                    example="A balanced split might be: 30% protein, 40% carbs, 30% fats"
+                  />
+                </div>
                 <p className="macro-targets-description">Set your daily macronutrient distribution.</p>
               </div>
               
