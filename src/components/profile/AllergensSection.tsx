@@ -3,6 +3,7 @@ import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import type { User } from 'firebase/auth';
 import AllergensModal from './modals/AllergensModal';
+import { Tooltip } from '../ui';
 
 interface AllergensSectionProps {
   user: User;
@@ -85,7 +86,10 @@ const AllergensSection: React.FC<AllergensSectionProps> = ({ user, onSuccess, on
   return (
     <div className="profile-section">
       <div className="section-header">
-        <h2>Allergens</h2>
+        <div className="header-with-tooltip">
+          <h2>Allergens</h2>
+          <Tooltip content="Specify your food allergies and dietary restrictions to ensure safe and suitable meal recommendations." />
+        </div>
         {!isEditing && (
           <button 
             className="edit-section-button" 

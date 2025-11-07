@@ -1,28 +1,62 @@
-import React, { useState } from 'react';
-import { getChatGptResponse } from '../chatGptService';
+import React, { useEffect, useState } from 'react';
 import RestaurantDisplay from '../components/features/RestaurantDisplay';
+import NutritionPlanCard from '../components/features/NutritionPlanCard';
+import { NutritionSummary, NutritionChatbot, WaterTracker } from '../components/features';
+import { auth, db } from '../firebase';
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import type { Meal } from '../types/meal';
+import { calculateActualCalories } from '../utils/mealCalculations';
 
 const Dashboard: React.FC = () => {
-  const [prompt, setPrompt] = useState('');
-  const [response, setResponse] = useState('');
-  const [loading, setLoading] = useState(false);
+  // Live Quick Stats derived from user's meals
+  const [user, setUser] = useState<User | null>(auth.currentUser);
+  const [stats, setStats] = useState({ totalMeals: 0, caloriesToday: 0, activeDays: 0 });
 
-  const handleChatGptCall = async () => {
-    if (!prompt.trim()) {
-      setResponse('Please enter a prompt.');
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => setUser(u));
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setStats({ totalMeals: 0, caloriesToday: 0, activeDays: 0 });
       return;
     }
+    const mealsQ = query(collection(db, 'meals'), where('userId', '==', user.uid));
+    const unsub = onSnapshot(mealsQ, (snap) => {
+      let totalMeals = 0;
+      let caloriesToday = 0;
+      const daysSet = new Set<string>();
 
-    setLoading(true);
-    try {
-      const result = await getChatGptResponse(prompt);
-      setResponse(result);
-    } catch (error) {
-      setResponse('Error fetching response');
-    } finally {
-      setLoading(false);
-    }
-  };
+      const toMillis = (val: any): number => {
+        if (typeof val === 'number') return val;
+        if (val && typeof val.seconds === 'number') return val.seconds * 1000 + Math.floor((val.nanoseconds || 0) / 1e6);
+        if (val instanceof Date) return val.getTime();
+        return 0;
+      };
+
+      const startOfToday = (() => { const d = new Date(); d.setHours(0,0,0,0); return d.getTime(); })();
+      const endOfToday = startOfToday + 24 * 60 * 60 * 1000;
+
+      snap.forEach((docSnap) => {
+        const data = docSnap.data() as Meal;
+        totalMeals += 1;
+        const ms = toMillis((data as any).createdAt);
+        if (ms) {
+          const dayKey = new Date(ms).toISOString().slice(0,10);
+          daysSet.add(dayKey);
+          if (ms >= startOfToday && ms < endOfToday) {
+            const cal = calculateActualCalories(data);
+            caloriesToday += cal;
+          }
+        }
+      });
+
+      setStats({ totalMeals, caloriesToday, activeDays: daysSet.size });
+    });
+    return () => unsub();
+  }, [user]);
 
   return (
     <div className="dashboard-page">
@@ -32,78 +66,42 @@ const Dashboard: React.FC = () => {
       </div>
 
       <main className="dashboard-content">
+        {/* Restaurant Display spans full width */}
+        <RestaurantDisplay />
+        
         <div className="dashboard-grid">
           <div className="dashboard-left">
-            <RestaurantDisplay />
-            
-            <div className="card">
-              <h2>Quick Stats</h2>
-              <div className="stats-grid">
-                <div className="stat-item">
-                  <div className="stat-number">0</div>
-                  <div className="stat-label">Meals Tracked</div>
-                </div>
-                <div className="stat-item">
-                  <div className="stat-number">0</div>
-                  <div className="stat-label">Calories Today</div>
-                </div>
-                <div className="stat-item">
-                  <div className="stat-number">0</div>
-                  <div className="stat-label">Water Intake</div>
-                </div>
-                <div className="stat-item">
-                  <div className="stat-number">0</div>
-                  <div className="stat-label">Active Days</div>
-                </div>
-              </div>
-            </div>
+            {/* Nutrition Summary - Shows intake vs goals */}
+            <NutritionSummary />
+
+            {/* Water Intake Tracker */}
+            <WaterTracker />
           </div>
           
           <div className="dashboard-right">
             <div className="card">
-              <h2>Nutrition Assistant</h2>
-              <textarea
-                className="prompt-input"
-                placeholder="Ask about nutrition, meal planning, or campus dining options..."
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                rows={6}
-              />
-              <div className="button-container">
-                <button
-                  className="response-button"
-                  onClick={handleChatGptCall}
-                  disabled={loading}
-                >
-                  {loading ? 'Loading...' : 'Get Nutrition Advice'}
-                </button>
-              </div>
-              <div className="response-container">
-                <h3>AI Response:</h3>
-                <p className="response-text">{response}</p>
-              </div>
-            </div>
-            
-            <div className="card">
-              <h2>Recent Meals</h2>
-              <div className="meal-list">
-                <div className="meal-item">
-                  <div className="meal-time">12:30 PM</div>
-                  <div className="meal-name">Lunch - Chicken Salad</div>
-                  <div className="meal-calories">450 cal</div>
+              <h2>Quick Stats</h2>
+              <div className="stats-grid">
+                <div className="stat-item">
+                  <div className="stat-number">{stats.totalMeals}</div>
+                  <div className="stat-label">Meals Tracked</div>
                 </div>
-                <div className="meal-item">
-                  <div className="meal-time">8:00 AM</div>
-                  <div className="meal-name">Breakfast - Oatmeal</div>
-                  <div className="meal-calories">320 cal</div>
+                <div className="stat-item">
+                  <div className="stat-number">{stats.caloriesToday}</div>
+                  <div className="stat-label">Calories Today</div>
                 </div>
-                <div className="meal-item">
-                  <div className="meal-time">Yesterday</div>
-                  <div className="meal-name">Dinner - Pasta</div>
-                  <div className="meal-calories">680 cal</div>
+                {/* Water stat migrated into WaterTracker card */}
+                <div className="stat-item">
+                  <div className="stat-number">{stats.activeDays}</div>
+                  <div className="stat-label">Active Days</div>
                 </div>
               </div>
             </div>
+
+            <NutritionPlanCard />
+
+            {/* Floating Nutrition Assistant Chatbot */}
+            <NutritionChatbot />
           </div>
         </div>
       </main>
