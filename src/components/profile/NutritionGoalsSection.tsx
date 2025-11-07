@@ -14,6 +14,7 @@ import {
   validateNutritionGoals 
 } from '../../constants/nutrition';
 import NutritionGoalsModal from './modals/NutritionGoalsModal';
+import { Tooltip } from '../ui';
 
 interface NutritionGoalsSectionProps {
   user: User;
@@ -325,7 +326,10 @@ const NutritionGoalsSection: React.FC<NutritionGoalsSectionProps> = ({
   return (
     <div className="profile-section">
       <div className="section-header">
-        <h2>Nutrition Goals</h2>
+        <div className="header-with-tooltip">
+          <h2>Nutrition Goals</h2>
+          <Tooltip content="Set your daily macro and caloric targets based on your fitness goals, activity level, and body metrics." />
+        </div>
         {!isEditing && (
           <button 
             className="edit-section-button" 

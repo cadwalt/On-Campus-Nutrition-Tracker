@@ -5,6 +5,7 @@ import type { User } from 'firebase/auth';
 import type { DietaryRestriction } from '../../types/nutrition';
 import { DIETARY_RESTRICTIONS } from '../../constants/nutrition';
 import DietaryRestrictionsModal from './modals/DietaryRestrictionsModal';
+import { Tooltip } from '../ui';
 
 interface DietaryRestrictionsSectionProps {
   user: User;
@@ -110,7 +111,10 @@ const DietaryRestrictionsSection: React.FC<DietaryRestrictionsSectionProps> = ({
   return (
     <div className="profile-section">
       <div className="section-header">
-        <h2>Dietary Restrictions</h2>
+        <div className="header-with-tooltip">
+          <h2>Dietary Restrictions</h2>
+          <Tooltip content="Set your dietary preferences such as vegetarian, vegan, kosher, or any specific food restrictions to personalize your meal options." />
+        </div>
         {!isEditing && (
           <button 
             className="edit-section-button" 

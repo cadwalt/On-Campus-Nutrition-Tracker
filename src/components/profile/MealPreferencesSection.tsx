@@ -5,6 +5,7 @@ import type { User } from 'firebase/auth';
 import type { CookingSkill, NutritionGoals } from '../../types/nutrition';
 import { COOKING_SKILLS } from '../../constants/nutrition';
 import MealPreferencesModal from './modals/MealPreferencesModal';
+import { Tooltip } from '../ui';
 
 interface MealPreferencesSectionProps {
   user: User;
@@ -131,7 +132,10 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
   return (
     <div className="profile-section">
       <div className="section-header">
-        <h2>Meal Preferences</h2>
+        <div className="header-with-tooltip">
+          <h2>Meal Preferences</h2>
+          <Tooltip content="Customize your meal planning by setting your cooking experience level and preferred daily meal frequency." />
+        </div>
         {!isEditing && (
           <button 
             className="edit-section-button" 

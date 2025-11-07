@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { CookingSkill } from '../../../types/nutrition';
 import { COOKING_SKILLS } from '../../../constants/nutrition';
+import { Tooltip } from '../../ui';
 
 interface MealPreferencesModalProps {
   isOpen: boolean;
@@ -207,14 +208,20 @@ const MealPreferencesModal: React.FC<MealPreferencesModalProps> = ({
               className="cooking-skill-section"
               style={{ marginBottom: '2rem' }}
             >
-              <h3 style={{
-                color: '#e2e8f0',
-                fontSize: '1.25rem',
-                fontWeight: '600',
-                margin: '0 0 1rem 0'
-              }}>
-                Cooking Skill Level
-              </h3>
+              <div className="section-header-with-tooltip">
+                <h3 style={{
+                  color: '#e2e8f0',
+                  fontSize: '1.25rem',
+                  fontWeight: '600',
+                  margin: '0 0 1rem 0'
+                }}>
+                  Cooking Skill Level
+                </h3>
+                <Tooltip 
+                  content="Choose your cooking expertise level to receive appropriate recipe recommendations." 
+                  example="If you're 'Beginner', we'll suggest simpler recipes with basic techniques."
+                />
+              </div>
               
               <div 
                 className="cooking-skill-options"
@@ -314,16 +321,22 @@ const MealPreferencesModal: React.FC<MealPreferencesModalProps> = ({
             {/* Meal Frequency Section */}
             <div 
               className="meal-frequency-section"
-              style={{ marginBottom: '1rem' }}
+              style={{ marginBottom: '2rem' }}
             >
-              <h3 style={{
-                color: '#e2e8f0',
-                fontSize: '1.25rem',
-                fontWeight: '600',
-                margin: '0 0 1rem 0'
-              }}>
-                Meal Frequency
-              </h3>
+              <div className="section-header-with-tooltip">
+                <h3 style={{
+                  color: '#e2e8f0',
+                  fontSize: '1.25rem',
+                  fontWeight: '600',
+                  margin: '0 0 1rem 0'
+                }}>
+                  Meal Frequency
+                </h3>
+                <Tooltip 
+                  content="Set how many meals you prefer to eat per day to help with meal planning." 
+                  example="Choose 3 for traditional breakfast, lunch, and dinner schedule."
+                />
+              </div>
               
               <div 
                 className="frequency-selector"
