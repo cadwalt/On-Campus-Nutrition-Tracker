@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../../firebase';
+import { db, auth } from '../../../firebase';
 import type { Meal } from '../../../types/meal';
 import Toast from '../../ui/Toast';
 import { calculateActualCalories, calculateActualMacros } from '../../../utils/mealCalculations';
+import { canAccess } from '../../../utils/authorization';
 
 interface MealDetailsModalProps {
   isOpen: boolean;
@@ -20,7 +21,6 @@ const MealDetailsModal: React.FC<MealDetailsModalProps> = ({ isOpen, meal, onClo
     type: 'success',
     visible: false,
   });
-
   const [form, setForm] = useState({
     name: '',
     servingSize: '',
@@ -40,6 +40,13 @@ const MealDetailsModal: React.FC<MealDetailsModalProps> = ({ isOpen, meal, onClo
 
   useEffect(() => {
     if (isOpen && meal) {
+      const user = auth.currentUser;
+      // Check authorization when opening modal
+      if (!user || !canAccess(user.uid, meal.userId)) {
+        showToast('Unauthorized: Cannot access this meal', 'error');
+        onClose();
+        return;
+      }
       setEdit(false);
       setForm({
         name: meal.name || '',
@@ -102,11 +109,19 @@ const MealDetailsModal: React.FC<MealDetailsModalProps> = ({ isOpen, meal, onClo
   }, [meal]);
 
   const handleSave = async () => {
-    if (!meal?.id) return;
+    const user = auth.currentUser;
+    if (!meal?.id || !user) return;
     if (!form.name.trim() || !form.servingSize.trim() || !form.calories.trim()) {
       showToast('Name, calories, and serving size are required', 'error');
       return;
     }
+    
+    if (!canAccess(user.uid, meal.userId)) {
+      showToast('Unauthorized: Cannot modify this meal', 'error');
+      setEdit(false);
+      return;
+    }
+    
     setSubmitting(true);
     try {
       const updates: any = {
@@ -150,6 +165,21 @@ const MealDetailsModal: React.FC<MealDetailsModalProps> = ({ isOpen, meal, onClo
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleEditClick = () => {
+    const user = auth.currentUser;
+    if (!user || !meal) {
+      showToast('You must be signed in to edit meals', 'error');
+      return;
+    }
+    
+    if (!canAccess(user.uid, meal.userId)) {
+      showToast('Unauthorized: Cannot edit this meal', 'error');
+      return;
+    }
+    
+    setEdit(true);
   };
 
   if (!isOpen || !meal) return null;
@@ -232,7 +262,7 @@ const MealDetailsModal: React.FC<MealDetailsModalProps> = ({ isOpen, meal, onClo
               <button type="button" className="response-button" onClick={handleSave} disabled={submitting}>{submitting ? 'Saving…' : 'Save Changes'}</button>
             </>
           ) : (
-            <button type="button" className="response-button" onClick={() => setEdit(true)}>Edit</button>
+            <button type="button" className="response-button" onClick={handleEditClick}>Edit</button>
           )}
         </div>
       </div>

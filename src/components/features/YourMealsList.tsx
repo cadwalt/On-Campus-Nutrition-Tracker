@@ -6,6 +6,7 @@ import type { Meal } from '../../types/meal';
 import Toast from '../ui/Toast';
 import MealDetailsModal from './modals/MealDetailsModal';
 import { calculateActualCalories, calculateActualMacros } from '../../utils/mealCalculations';
+import { canAccess } from '../../utils/authorization';
 
 const YourMealsList: React.FC = () => {
   const [meals, setMeals] = useState<Meal[]>([]);
@@ -76,13 +77,40 @@ const YourMealsList: React.FC = () => {
   const closeToast = () => setToast((t) => ({ ...t, visible: false }));
 
   const handleDelete = async (mealId?: string) => {
-    if (!mealId) return;
+    if (!mealId || !user) return;
+    
+    const mealToDelete = meals.find(m => m.id === mealId);
+    if (!mealToDelete) {
+      showToast('Meal not found', 'error');
+      return;
+    }
+    
+    if (!canAccess(user.uid, mealToDelete.userId)) {
+      showToast('Unauthorized: Cannot delete this meal', 'error');
+      return;
+    }
+    
     try {
       await deleteDoc(doc(db, 'meals', mealId));
       showToast('Meal removed', 'success');
     } catch (e: any) {
       showToast(e.message || 'Failed to remove meal', 'error');
     }
+  };
+
+  const handleMealClick = (meal: Meal) => {
+    if (!user) {
+      showToast('You must be signed in to view meal details', 'error');
+      return;
+    }
+    
+    if (!canAccess(user.uid, meal.userId)) {
+      showToast('Unauthorized: Cannot access this meal', 'error');
+      return;
+    }
+    
+    setSelectedMeal(meal);
+    setDetailsOpen(true);
   };
 
   if (!user) {
@@ -104,7 +132,7 @@ const YourMealsList: React.FC = () => {
           key={m.id}
           className="meal-item"
           style={{ cursor: 'pointer' }}
-          onClick={() => { setSelectedMeal(m); setDetailsOpen(true); }}
+          onClick={() => handleMealClick(m)}
         >
           <div className="meal-left">
             <div className="meal-time">
