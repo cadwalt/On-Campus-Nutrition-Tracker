@@ -13,6 +13,7 @@ import {
   ACTIVITY_LEVELS, 
   validateNutritionGoals 
 } from '../../constants/nutrition';
+import { validatePhysicalMetricsValues } from './nutritionValidation'; // import helper from same folder
 import NutritionGoalsModal from './modals/NutritionGoalsModal';
 import { Tooltip } from '../ui';
 
@@ -99,33 +100,14 @@ const NutritionGoalsSection: React.FC<NutritionGoalsSectionProps> = ({
   // Calculate total percentage for macro targets
   const totalPercentage = proteinPercentage + carbsPercentage + fatPercentage;
 
-  // Validate physical metrics
-  const validatePhysicalMetrics = () => {
-    const errors: string[] = [];
-
-    if (currentWeight && (currentWeight < 50 || currentWeight > 500)) {
-      errors.push('Current weight must be between 50 and 500 pounds');
-    }
-
-    if (targetWeight && (targetWeight < 50 || targetWeight > 500)) {
-      errors.push('Target weight must be between 50 and 500 pounds');
-    }
-
-    if (height && (height < 36 || height > 96)) {
-      errors.push('Height must be between 36 and 96 inches');
-    }
-
-    if (currentWeight && targetWeight && nutritionGoals?.primary_goal) {
-      if (nutritionGoals.primary_goal === 'lose_weight' && targetWeight >= currentWeight) {
-        errors.push('Target weight should be less than current weight for weight loss');
-      }
-      if (nutritionGoals.primary_goal === 'gain_weight' && targetWeight <= currentWeight) {
-        errors.push('Target weight should be greater than current weight for weight gain');
-      }
-    }
-
-    return errors;
-  };
+  // Validate physical metrics (delegates to a testable helper)
+  const validatePhysicalMetrics = () =>
+    validatePhysicalMetricsValues({
+      currentWeight,
+      targetWeight,
+      height,
+      primaryGoal: nutritionGoals?.primary_goal
+    });
 
   // Validate macro targets
   const validateMacroTargets = () => {
