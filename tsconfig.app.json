@@ -23,5 +23,10 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": [
+    "node_modules",
+    "src/testt",             // <-- Add this line to ignore your test folder
+    "src/uploadSecurity.ts"  // <-- Add this line to ignore your backend file
+  ]
 }
