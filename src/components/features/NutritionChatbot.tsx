@@ -1,6 +1,5 @@
 // Floating Chatbot Component
 import React, { useRef, useState, useEffect } from 'react';
-import { getChatGptResponse } from '../../chatGptService';
 import { auth, db } from '../../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
@@ -70,25 +69,44 @@ const NutritionChatbot: React.FC = () => {
     void loadContext();
   }, [isOpen]);
 
-  const sendPrompt = async () => {
-    if (!prompt.trim() || loading) return;
-    const currentPrompt = prompt.trim();
-    // Clear input immediately for a clean experience
-    setPrompt('');
-    // Add user's message to transcript so they can still see it
-    setMessages((prev) => [...prev, { role: 'user', content: currentPrompt }]);
-    setLoading(true);
-    try {
-      const result = await getChatGptResponse(currentPrompt, systemContext);
-      setMessages((prev) => [...prev, { role: 'assistant', content: result }]);
-    } catch (error) {
-      setMessages((prev) => [...prev, { role: 'assistant', content: 'Error fetching response' }]);
-    } finally {
-      setLoading(false);
-      // Return focus to the input for rapid follow-ups
-      inputRef.current?.focus();
+
+  // This is the NEW sendPrompt function for NutritionChatbot.tsx
+ const sendPrompt = async () => {
+  if (!prompt.trim() || loading) return;
+  const currentPrompt = prompt.trim();
+  // Clear input immediately for a clean experience
+  setPrompt('');
+  // Add user's message to transcript so they can still see it
+  setMessages((prev) => [...prev, { role: 'user', content: currentPrompt }]);
+  setLoading(true);
+
+  try {
+    // This is the new, secure fetch call to your Vercel backend
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        prompt: currentPrompt, 
+        systemContext: systemContext // Pass the user context
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Server responded with an error');
     }
-  };
+
+    const data = await response.json();
+    const result = data.content; // Get the text from our new backend
+
+    setMessages((prev) => [...prev, { role: 'assistant', content: result }]);
+  } catch (error) {
+    setMessages((prev) => [...prev, { role: 'assistant', content: 'Error fetching response' }]);
+  } finally {
+    setLoading(false);
+    // Return focus to the input for rapid follow-ups
+    inputRef.current?.focus();
+  }
+};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

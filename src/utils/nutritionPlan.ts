@@ -2,7 +2,7 @@ import type { NutritionGoals, PrimaryGoal, MacroTargets, ActivityLevel } from '.
 import { GOAL_OPTIONS, ACTIVITY_LEVELS } from '../constants/nutrition';
 
 export interface NutritionPlan {
-  maintenanceCalories: number; // estimated maintenance kcal/day
+  maintenanceCalories: number; // estimated maintenance cal/day
   targetCalories: number; // adjusted by goal
   adjustmentPercent: number; // e.g., -0.15 for 15% deficit
   macroCalories: { protein: number; carbs: number; fat: number };
@@ -64,7 +64,7 @@ export function computeNutritionPlan(goals: Partial<NutritionGoals>): NutritionP
   if (weightLb) {
     maintenance = maintenanceByPounds(weightLb, goals.activity_level);
   } else {
-    // Fallback if weight unknown: anchor to 2000 kcal and scale by activity
+    // Fallback if weight unknown: anchor to 2000 cal and scale by activity
     maintenance = 2000 * getActivityFactor(goals.activity_level) / 1.55; // normalize to moderate
   }
 
@@ -73,13 +73,13 @@ export function computeNutritionPlan(goals: Partial<NutritionGoals>): NutritionP
 
   const macroPct = goals.macro_targets ?? defaultMacroSplit(goals.primary_goal);
 
-  const kcalProtein = target * (macroPct.protein_percentage / 100);
-  const kcalCarbs = target * (macroPct.carbs_percentage / 100);
-  const kcalFat = target * (macroPct.fat_percentage / 100);
+  const Protein = target * (macroPct.protein_percentage / 100);
+  const Carbs = target * (macroPct.carbs_percentage / 100);
+  const Fat = target * (macroPct.fat_percentage / 100);
 
-  const gramsProtein = kcalProtein / 4;
-  const gramsCarbs = kcalCarbs / 4;
-  const gramsFat = kcalFat / 9;
+  const gramsProtein = Protein / 4;
+  const gramsCarbs = Carbs / 4;
+  const gramsFat = Fat / 9;
 
   const notes: string[] = [note];
   if (!goals.current_weight) notes.push('Current weight missing — using a general estimate.');
@@ -101,9 +101,9 @@ export function computeNutritionPlan(goals: Partial<NutritionGoals>): NutritionP
     targetCalories: ROUND(target),
     adjustmentPercent: percent,
     macroCalories: {
-      protein: ROUND(kcalProtein),
-      carbs: ROUND(kcalCarbs),
-      fat: ROUND(kcalFat),
+      protein: ROUND(Protein),
+      carbs: ROUND(Carbs),
+      fat: ROUND(Fat),
     },
     macroGrams: {
       protein: ROUND(gramsProtein),
