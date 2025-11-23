@@ -210,7 +210,7 @@ const NutritionSummary: React.FC = () => {
         label="Calories"
         current={todayIntake.calories}
         target={Math.round(targetCalories)}
-        unit="kcal"
+        unit="cal"
       />
 
       <ProgressBar 
