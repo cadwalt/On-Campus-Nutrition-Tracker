@@ -65,6 +65,32 @@ const SignInForm: React.FC = () => {
     }
   };
 
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      // User is now logged out, onAuthStateChanged will update the UI
+    } catch (firebaseError: any) {
+      setError(firebaseError.message);
+    }
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null); // Clear previous errors
+    setLoading(true); // Start loading
+    try {
+      // Add your sign-up logic here
+      // For example, createUserWithEmailAndPassword(auth, email, password);
+      setEmail('');
+      setPassword('');
+      // Navigate to a different page on successful sign-up, if needed
+    } catch (firebaseError: any) {
+      setError(firebaseError.message);
+    } finally {
+      setLoading(false); // Stop loading
+    }
+  };
+
   return (
     <div className="auth-form-centered">
       <div className="auth-form">
