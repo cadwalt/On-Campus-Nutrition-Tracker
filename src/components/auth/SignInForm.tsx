@@ -2,8 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { auth, db } from '../../firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { auth, } from '../../firebase';
 
 const welcomeMessages = [
   "Welcome back!",
@@ -18,7 +17,7 @@ const SignInForm: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null); // <-- Change from userEmail to userName
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [fadeOut, setFadeOut] = useState(false);
   const [visible, setVisible] = useState(false);
