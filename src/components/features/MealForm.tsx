@@ -1,6 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { addDoc, collection, onSnapshot, query, where } from 'firebase/firestore';
-import { db, auth } from '../../firebase';
+
+const resolveFirebase = async () => {
+  const mod: any = await import('../../firebase');
+  const db = (mod.getFirestoreClient ? await mod.getFirestoreClient() : mod.db) as any;
+  const firestore = await import('firebase/firestore');
+  const firebaseAuth = await import('firebase/auth');
+  return { db, firestore, firebaseAuth };
+};
 import type { Meal } from '../../types/meal';
 import Toast from '../ui/Toast';
 
@@ -35,7 +41,11 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded }) => {
   const [priorMeals, setPriorMeals] = useState<Meal[] | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  const user = auth.currentUser;
+  // fetch current user on-demand to avoid bundling auth into initial chunk
+  const getCurrentUser = async () => {
+    const { firebaseAuth } = await resolveFirebase();
+    return firebaseAuth.getAuth ? firebaseAuth.getAuth().currentUser : null;
+  };
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type, visible: true });
@@ -64,28 +74,32 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded }) => {
 
   // Subscribe to this user's prior meals for predictive suggestions
   useEffect(() => {
-    if (!user) {
-      setPriorMeals([]);
-      return;
-    }
-    const qUserMeals = query(collection(db, 'meals'), where('userId', '==', user.uid));
-    const unsub = onSnapshot(
-      qUserMeals,
-      (snap) => {
-        const list: Meal[] = [];
-        snap.forEach((docSnap) => {
-          const data = docSnap.data() as Meal;
-          list.push({ ...data, id: docSnap.id });
-        });
-        setPriorMeals(list);
-      },
-      (err) => {
-        console.error('Error loading meals for suggestions:', err);
+    (async () => {
+      const user = await getCurrentUser();
+      if (!user) {
         setPriorMeals([]);
+        return;
       }
-    );
-    return () => unsub();
-  }, [user]);
+      const { db, firestore } = await resolveFirebase();
+      const qUserMeals = firestore.query(firestore.collection(db, 'meals'), firestore.where('userId', '==', user.uid));
+      const unsub = firestore.onSnapshot(
+        qUserMeals,
+        (snap: any) => {
+          const list: Meal[] = [];
+          snap.forEach((docSnap: any) => {
+            const data = docSnap.data() as Meal;
+            list.push({ ...data, id: docSnap.id });
+          });
+          setPriorMeals(list);
+        },
+        (err: any) => {
+          console.error('Error loading meals for suggestions:', err);
+          setPriorMeals([]);
+        }
+      );
+      return () => unsub();
+    })();
+  }, []);
 
   const filteredSuggestions = useMemo(() => {
     const term = form.name.trim().toLowerCase();
@@ -131,6 +145,7 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded }) => {
   };
 
   const quickAddSuggestion = async (m: Meal) => {
+    const user = await getCurrentUser();
     if (!user) {
       showToast('You must be signed in to save meals', 'error');
       return;
@@ -160,7 +175,8 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded }) => {
       if (m.otherInfo && m.otherInfo.trim()) optional.otherInfo = m.otherInfo.trim();
 
       const meal: Meal = { ...base, ...optional } as Meal;
-      const ref = await addDoc(collection(db, 'meals'), meal);
+      const { db, firestore } = await resolveFirebase();
+      const ref = await firestore.addDoc(firestore.collection(db, 'meals'), meal);
       const added: Meal = { ...meal, id: ref.id };
       onMealAdded(added);
       showToast('Meal added from suggestion', 'success');
@@ -178,6 +194,7 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const user = await getCurrentUser();
     if (!user) {
       showToast('You must be signed in to save meals', 'error');
       return;
@@ -230,8 +247,9 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded }) => {
         }
       });
 
-      const meal: Meal = mealBase;
-  const ref = await addDoc(collection(db, 'meals'), meal);
+        const meal: Meal = mealBase;
+        const { db, firestore } = await resolveFirebase();
+        const ref = await firestore.addDoc(firestore.collection(db, 'meals'), meal);
   console.debug('[MealForm] Added meal', { id: ref.id, meal });
       const added: Meal = { ...meal, id: ref.id };
       onMealAdded(added);

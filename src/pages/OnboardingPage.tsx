@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth, db } from '../firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+// Lazily resolve Firebase to avoid bundling the SDK in the main chunk
+const resolveFirebase = async () => {
+  const mod: any = await import('../firebase');
+  const authClient = await mod.getAuthClient();
+  const dbClient = await mod.getFirestoreClient();
+  const firestore = await import('firebase/firestore');
+  return { authClient, dbClient, firestore };
+};
 import type { 
   NutritionGoals, 
   PrimaryGoal, 
@@ -69,7 +75,8 @@ const OnboardingPage: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const user = auth.currentUser;
+    const { authClient, dbClient, firestore } = await resolveFirebase();
+    const user = authClient.currentUser;
     if (!user) {
       setError("No user found.");
       setLoading(false);
@@ -84,7 +91,7 @@ const OnboardingPage: React.FC = () => {
     }
 
     try {
-      const userDocRef = doc(db, 'users', user.uid);
+      const userDocRef = firestore.doc(dbClient, 'users', user.uid);
 
       // Create nutrition goals
       const nutritionGoals: NutritionGoals = {
@@ -100,7 +107,7 @@ const OnboardingPage: React.FC = () => {
         }
       };
 
-      await updateDoc(userDocRef, {
+      await firestore.updateDoc(userDocRef, {
         allergens: selectedAllergens,
         nutrition_goals: nutritionGoals,
         updated_at: new Date()

@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth } from '../firebase';
 import type { User } from 'firebase/auth';
+// Resolve auth at runtime to avoid bundling firebase in initial chunk
+const resolveAuthClient = async () => {
+  const mod: any = await import('../firebase');
+  const auth = (mod.getAuthClient ? await mod.getAuthClient() : mod.auth) as any;
+  const firebaseAuth = await import('firebase/auth');
+  return { auth, firebaseAuth };
+};
 import Toast from '../components/ui/Toast';
 import PersonalInformation from '../components/profile/PersonalInformation';
 import AllergensSection from '../components/profile/AllergensSection';
@@ -34,11 +40,20 @@ const ProfilePage: React.FC = () => {
   };
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      setUser(user);
-      setLoading(false);
-    });
-    return () => unsubscribe();
+    let unsub: (() => void) | null = null;
+    (async () => {
+      try {
+        const { auth, firebaseAuth } = await resolveAuthClient();
+        unsub = firebaseAuth.onAuthStateChanged(auth, (user: User | null) => {
+          setUser(user);
+          setLoading(false);
+        });
+      } catch (err) {
+        console.error('Failed to init auth listener', err);
+        setLoading(false);
+      }
+    })();
+    return () => { if (unsub) unsub(); };
   }, []);
 
   if (loading) {

@@ -1,8 +1,7 @@
 // Nutrition Summary Component - Shows logged intake vs goals
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, where, doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../../firebase';
-import { onAuthStateChanged, type User } from 'firebase/auth';
+import type { User } from 'firebase/auth';
+import { resolveFirebase } from '../../lib/resolveFirebase';
 import type { Meal } from '../../types/meal';
 import type { NutritionGoals } from '../../types/nutrition';
 import { calculateActualCalories, calculateActualMacros } from '../../utils/mealCalculations';
@@ -21,8 +20,16 @@ const NutritionSummary: React.FC = () => {
 
   // Track auth state
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => setUser(u));
-    return () => unsub();
+    let unsub: (() => void) | null = null;
+    (async () => {
+      try {
+        const { auth, firebaseAuth } = await resolveFirebase();
+        unsub = firebaseAuth.onAuthStateChanged(auth, (u: User | null) => setUser(u));
+      } catch (err) {
+        console.error('Auth listener init failed', err);
+      }
+    })();
+    return () => { if (unsub) unsub(); };
   }, []);
 
   // Load user's nutrition goals
@@ -35,8 +42,9 @@ const NutritionSummary: React.FC = () => {
 
     const loadGoals = async () => {
       try {
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDocSnap = await getDoc(userDocRef);
+        const { db, firestore } = await resolveFirebase();
+        const userDocRef = firestore.doc(db, 'users', user.uid);
+        const userDocSnap = await firestore.getDoc(userDocRef);
         if (userDocSnap.exists()) {
           const data = userDocSnap.data();
           setGoals(data.nutrition_goals || null);
@@ -58,46 +66,54 @@ const NutritionSummary: React.FC = () => {
       return;
     }
 
-    const mealsQ = query(collection(db, 'meals'), where('userId', '==', user.uid));
-    const unsub = onSnapshot(mealsQ, (snap) => {
-      const now = new Date();
-      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-      const endOfToday = startOfToday + 24 * 60 * 60 * 1000;
+    let unsubLocal: (() => void) | null = null;
+    (async () => {
+      try {
+        const { db, firestore } = await resolveFirebase();
+        const mealsQ = firestore.query(firestore.collection(db, 'meals'), firestore.where('userId', '==', user.uid));
+        unsubLocal = firestore.onSnapshot(mealsQ, (snap) => {
+          const now = new Date();
+          const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+          const endOfToday = startOfToday + 24 * 60 * 60 * 1000;
 
-      let calories = 0;
-      let protein = 0;
-      let carbs = 0;
-      let fat = 0;
+          let calories = 0;
+          let protein = 0;
+          let carbs = 0;
+          let fat = 0;
 
-      const toMillis = (val: any): number => {
-        if (typeof val === 'number') return val;
-        if (val && typeof val.seconds === 'number') return val.seconds * 1000 + Math.floor((val.nanoseconds || 0) / 1e6);
-        if (val instanceof Date) return val.getTime();
-        return 0;
-      };
+          const toMillis = (val: any): number => {
+            if (typeof val === 'number') return val;
+            if (val && typeof val.seconds === 'number') return val.seconds * 1000 + Math.floor((val.nanoseconds || 0) / 1e6);
+            if (val instanceof Date) return val.getTime();
+            return 0;
+          };
 
-      snap.forEach((docSnap) => {
-        const meal = docSnap.data() as Meal;
-        const ms = toMillis(meal.createdAt);
-        
-        if (ms >= startOfToday && ms < endOfToday) {
-          calories += calculateActualCalories(meal);
-          const macros = calculateActualMacros(meal);
-          protein += macros.protein || 0;
-          carbs += macros.carbs || 0;
-          fat += macros.fat || 0;
-        }
-      });
+          snap.forEach((docSnap: any) => {
+            const meal = docSnap.data() as Meal;
+            const ms = toMillis(meal.createdAt);
 
-      setTodayIntake({
-        calories: Math.round(calories),
-        protein: Math.round(protein * 10) / 10,
-        carbs: Math.round(carbs * 10) / 10,
-        fat: Math.round(fat * 10) / 10
-      });
-    });
+            if (ms >= startOfToday && ms < endOfToday) {
+              calories += calculateActualCalories(meal);
+              const macros = calculateActualMacros(meal);
+              protein += macros.protein || 0;
+              carbs += macros.carbs || 0;
+              fat += macros.fat || 0;
+            }
+          });
 
-    return () => unsub();
+          setTodayIntake({
+            calories: Math.round(calories),
+            protein: Math.round(protein * 10) / 10,
+            carbs: Math.round(carbs * 10) / 10,
+            fat: Math.round(fat * 10) / 10
+          });
+        });
+      } catch (err) {
+        console.error('Meals snapshot failed', err);
+      }
+    })();
+
+    return () => { if (unsubLocal) unsubLocal(); };
   }, [user]);
 
   if (loading) {

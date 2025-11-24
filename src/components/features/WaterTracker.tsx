@@ -1,35 +1,46 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { addDoc, collection, onSnapshot, query, where } from 'firebase/firestore';
-import { auth, db } from '../../firebase';
+// Load Firebase lazily to avoid bundling SDK into initial chunk
+const resolveFirebase = async () => {
+  const mod: any = await import('../../firebase');
+  const authClient = await mod.getAuthClient();
+  const dbClient = await mod.getFirestoreClient();
+  const firestore = await import('firebase/firestore');
+  return { authClient, dbClient, firestore };
+};
 import type { WaterLog } from '../../types/water';
 import { mlToOz, ozToMl } from '../../types/water';
 
 const WaterTracker: React.FC = () => {
-  const user = auth.currentUser;
+  const [user, setUser] = useState<any | null>(null);
   const [logs, setLogs] = useState<WaterLog[] | null>(null);
   const [inputAmount, setInputAmount] = useState<string>('');
   const [unit, setUnit] = useState<'oz' | 'ml'>('oz');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!user) {
-      setLogs([]);
-      return;
-    }
-    const q = query(collection(db, 'water'), where('userId', '==', user.uid));
-    const unsub = onSnapshot(q, (snap) => {
-      const arr: WaterLog[] = [];
-      snap.forEach((doc) => {
-        const d = doc.data() as any;
-        arr.push({ id: doc.id, ...(d as WaterLog) });
+    (async () => {
+      const { authClient, dbClient, firestore } = await resolveFirebase();
+      const u = authClient.currentUser;
+      setUser(u || null);
+      if (!u) {
+        setLogs([]);
+        return;
+      }
+      const q = firestore.query(firestore.collection(dbClient, 'water'), firestore.where('userId', '==', u.uid));
+      const unsub = firestore.onSnapshot(q, (snap: any) => {
+        const arr: WaterLog[] = [];
+        snap.forEach((doc: any) => {
+          const d = doc.data() as any;
+          arr.push({ id: doc.id, ...(d as WaterLog) });
+        });
+        setLogs(arr);
+      }, (err: any) => {
+        console.error('Failed to load water logs', err);
+        setLogs([]);
       });
-      setLogs(arr);
-    }, (err) => {
-      console.error('Failed to load water logs', err);
-      setLogs([]);
-    });
-    return () => unsub();
-  }, [user]);
+      return () => unsub();
+    })();
+  }, []);
 
   const todayRange = useMemo(() => {
     const start = new Date(); start.setHours(0,0,0,0);
@@ -66,7 +77,8 @@ const WaterTracker: React.FC = () => {
         createdAt: Date.now(),
         source,
       };
-      await addDoc(collection(db, 'water'), log);
+      const { dbClient, firestore } = await resolveFirebase();
+      await firestore.addDoc(firestore.collection(dbClient, 'water'), log);
       setInputAmount('');
     } catch (e) {
       console.error('Failed to add water log', e);
