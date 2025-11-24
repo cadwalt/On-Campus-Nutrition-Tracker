@@ -14,10 +14,11 @@ const welcomeMessages = [
   "Welcome back, friend!",
   "Good to have you here!",
   "Greetings, Food Warrior!",
-  "Welcome back to the kitchen!",
   "Back for more deliciousness?",
   "Your culinary journey continues!",
-  "Welcome, Big Back!"
+  "Welcome, Big Back!",
+  "Haven't you been here before?",
+  "Dinner Dinner! Chicken Winner!"
 ];
 
 const SignInForm: React.FC = () => {
@@ -32,18 +33,30 @@ const SignInForm: React.FC = () => {
   const [welcomeMsg, setWelcomeMsg] = useState(welcomeMessages[0]);
   const navigate = useNavigate();
 
+  // Resolve an auth client from the local firebase module whether it exposes
+  // an async getter (`getAuthClient`) or a synchronous `auth` instance.
+  const resolveAuthClient = async () => {
+    const firebaseMod: any = await import('../../firebase');
+    // prefer an async getter if available
+    const getter = firebaseMod.getAuthClient ?? firebaseMod.default?.getAuthClient ?? firebaseMod.default;
+    if (typeof getter === 'function') return await getter();
+    // fallback to exported auth instance
+    if (firebaseMod.auth) return firebaseMod.auth;
+    if (firebaseMod.default && firebaseMod.default.auth) return firebaseMod.default.auth;
+    throw new Error('getAuthClient not found on firebase module');
+  };
+
   useEffect(() => {
     let mounted = true;
     let unsub: (() => void) | null = null;
     (async () => {
       try {
-        const firebaseMod: any = await import('../../firebase');
-        const authClient = await firebaseMod.getAuthClient();
+        const authClient = await resolveAuthClient();
         const { onAuthStateChanged } = await import('firebase/auth');
         unsub = onAuthStateChanged(authClient, (user) => {
           if (!mounted) return;
           if (user) {
-            setUserName(user.displayName ?? null); // <-- Sets the name from the auth user
+            setUserName(user.displayName ?? null);
             setShowWelcome(true);
             setFadeOut(false);
             setVisible(false);
@@ -81,15 +94,20 @@ const SignInForm: React.FC = () => {
     e.preventDefault();
     setError(null); // Clear previous errors
     try {
-      const firebaseMod: any = await import('../../firebase');
-      const authClient = await firebaseMod.getAuthClient();
+      const authClient = await resolveAuthClient();
       const { signInWithEmailAndPassword } = await import('firebase/auth');
       await signInWithEmailAndPassword(authClient, email, password);
       // User is now logged in, onAuthStateChanged will update the UI
       setEmail('');
       setPassword('');
     } catch (firebaseError: any) {
-      setError(firebaseError?.message ?? String(firebaseError));
+      // Map common Firebase auth errors to friendlier messages.
+      const code: string | undefined = firebaseError?.code || firebaseError?.message;
+      if (typeof code === 'string' && code.includes('auth/invalid-api-key')) {
+        setError('Firebase configuration error: missing or invalid API key. Check your VITE_FIREBASE_* env vars in your hosting provider (e.g. Vercel) and rebuild.');
+      } else {
+        setError(firebaseError?.message ?? String(firebaseError));
+      }
     }
   };
 
@@ -116,7 +134,6 @@ const SignInForm: React.FC = () => {
         {showWelcome ? (
           <div className={`user-welcome${visible ? ' visible' : ''}${fadeOut ? ' fade-out' : ''}`}>
             <h3>{welcomeMsg}</h3>
-            {userName && <h4>Welcome, {userName}!</h4>}
           </div>
         ) : (
           <>

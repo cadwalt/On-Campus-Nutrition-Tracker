@@ -1,7 +1,6 @@
 // Floating Chatbot Component
 import React, { useRef, useState, useEffect } from 'react';
-import { auth, db } from '../../firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { resolveFirebase } from '../../lib/resolveFirebase';
 
 const NutritionChatbot: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -24,14 +23,15 @@ const NutritionChatbot: React.FC = () => {
   useEffect(() => {
     const loadContext = async () => {
       if (!isOpen) return;
-      const user = auth.currentUser;
-      if (!user) {
-        setSystemContext(undefined);
-        return;
-      }
       try {
-        const userRef = doc(db, 'users', user.uid);
-        const snap = await getDoc(userRef);
+        const { auth, db, firestore } = await resolveFirebase();
+        const user = auth.currentUser;
+        if (!user) {
+          setSystemContext(undefined);
+          return;
+        }
+        const userRef = firestore.doc(db, 'users', user.uid);
+        const snap = await firestore.getDoc(userRef);
         if (snap.exists()) {
           const data = snap.data() as any;
           const allergens: string[] = data.allergens || [];

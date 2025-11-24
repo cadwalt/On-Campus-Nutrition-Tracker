@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { auth } from '../../firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../../firebase';
 import type { User } from 'firebase/auth';
+import { resolveFirebase } from '../../lib/resolveFirebase';
 
 const GlobalSidebar: React.FC = () => {
   const location = useLocation();
@@ -11,10 +9,16 @@ const GlobalSidebar: React.FC = () => {
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      setUser(user);
-    });
-    return () => unsubscribe();
+    let unsub: (() => void) | null = null;
+    (async () => {
+      try {
+        const { auth, firebaseAuth } = await resolveFirebase();
+        unsub = firebaseAuth.onAuthStateChanged(auth, (user: User | null) => setUser(user));
+      } catch (err) {
+        console.error('Failed to init auth listener', err);
+      }
+    })();
+    return () => { if (unsub) unsub(); };
   }, []);
 
   // Listen for profile picture changes
@@ -24,15 +28,22 @@ const GlobalSidebar: React.FC = () => {
       return;
     }
 
-    const userDocRef = doc(db, 'users', user.uid);
-    const unsubscribe = onSnapshot(userDocRef, (doc) => {
-      if (doc.exists()) {
-        const data = doc.data();
-        setProfilePicture(data.profile_picture || null);
+    let unsubLocal: (() => void) | null = null;
+    (async () => {
+      try {
+        const { db, firestore } = await resolveFirebase();
+        const userDocRef = firestore.doc(db, 'users', user.uid);
+        unsubLocal = firestore.onSnapshot(userDocRef, (docSnap: any) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setProfilePicture(data.profile_picture || null);
+          }
+        });
+      } catch (err) {
+        console.error('Profile picture listener failed', err);
       }
-    });
-
-    return () => unsubscribe();
+    })();
+    return () => { if (unsubLocal) unsubLocal(); };
   }, [user?.uid]);
 
   return (

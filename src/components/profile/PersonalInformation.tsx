@@ -1,7 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { updateProfile } from 'firebase/auth';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebase';
+
+const resolveFirebase = async () => {
+  const mod: any = await import('../../firebase');
+  const db = (mod.getFirestoreClient ? await mod.getFirestoreClient() : mod.db) as any;
+  const firestore = await import('firebase/firestore');
+  const firebaseAuth = await import('firebase/auth');
+  return { db, firestore, firebaseAuth };
+};
 import { IoCamera, IoTrash } from 'react-icons/io5';
 import type { User } from 'firebase/auth';
 
@@ -25,8 +30,9 @@ const PersonalInformation: React.FC<PersonalInformationProps> = ({ user, onSucce
   useEffect(() => {
     const loadProfilePicture = async () => {
       try {
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDocSnap = await getDoc(userDocRef);
+        const { db, firestore } = await resolveFirebase();
+        const userDocRef = firestore.doc(db, 'users', user.uid);
+        const userDocSnap = await firestore.getDoc(userDocRef);
         if (userDocSnap.exists()) {
           const data = userDocSnap.data();
           setProfilePicture(data.profile_picture || null);
@@ -102,13 +108,15 @@ const PersonalInformation: React.FC<PersonalInformationProps> = ({ user, onSucce
       const base64String = await convertToBase64(file);
       
       // Update Firebase Auth profile with a placeholder (photoURL has length limits)
-      await updateProfile(user, {
+      const { firestore, firebaseAuth } = await resolveFirebase();
+      await firebaseAuth.updateProfile(user, {
         photoURL: `https://via.placeholder.com/150/667eea/ffffff?text=${user.displayName?.charAt(0) || 'U'}`
       });
 
       // Update Firestore document with base64 image
-      const userDocRef = doc(db, 'users', user.uid);
-      await updateDoc(userDocRef, {
+      const { db } = await resolveFirebase();
+      const userDocRef = firestore.doc(db, 'users', user.uid);
+      await firestore.updateDoc(userDocRef, {
         profile_picture: base64String,
         updated_at: new Date()
       });
@@ -143,13 +151,15 @@ const PersonalInformation: React.FC<PersonalInformationProps> = ({ user, onSucce
 
     try {
       // Update Firebase Auth profile with a placeholder
-      await updateProfile(user, {
+      const { firestore, firebaseAuth } = await resolveFirebase();
+      await firebaseAuth.updateProfile(user, {
         photoURL: `https://via.placeholder.com/150/667eea/ffffff?text=${user.displayName?.charAt(0) || 'U'}`
       });
 
       // Update Firestore document
-      const userDocRef = doc(db, 'users', user.uid);
-      await updateDoc(userDocRef, {
+      const { db } = await resolveFirebase();
+      const userDocRef = firestore.doc(db, 'users', user.uid);
+      await firestore.updateDoc(userDocRef, {
         profile_picture: null,
         updated_at: new Date()
       });
@@ -172,13 +182,14 @@ const PersonalInformation: React.FC<PersonalInformationProps> = ({ user, onSucce
 
     try {
       // Update Firebase Auth profile
-      await updateProfile(user, {
+      const { firebaseAuth, db, firestore } = await resolveFirebase();
+      await firebaseAuth.updateProfile(user, {
         displayName: newDisplayName.trim()
       });
-      
+
       // Update Firestore document
-      const userDocRef = doc(db, 'users', user.uid);
-      await updateDoc(userDocRef, {
+      const userDocRef = firestore.doc(db, 'users', user.uid);
+      await firestore.updateDoc(userDocRef, {
         name: newDisplayName.trim(),
         updated_at: new Date()
       });

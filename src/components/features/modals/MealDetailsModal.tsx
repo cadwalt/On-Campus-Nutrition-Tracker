@@ -1,7 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db, auth } from '../../../firebase';
+
+const resolveFirebase = async () => {
+  const mod: any = await import('../../../firebase');
+  const db = (mod.getFirestoreClient ? await mod.getFirestoreClient() : mod.db) as any;
+  const firestore = await import('firebase/firestore');
+  const firebaseAuth = await import('firebase/auth');
+  return { db, firestore, firebaseAuth };
+};
 import type { Meal } from '../../../types/meal';
 import Toast from '../../ui/Toast';
 import { calculateActualCalories, calculateActualMacros } from '../../../utils/mealCalculations';
@@ -40,30 +46,38 @@ const MealDetailsModal: React.FC<MealDetailsModalProps> = ({ isOpen, meal, onClo
 
   useEffect(() => {
     if (isOpen && meal) {
-      const user = auth.currentUser;
-      // Check authorization when opening modal
-      if (!user || !canAccess(user.uid, meal.userId)) {
-        showToast('Unauthorized: Cannot access this meal', 'error');
-        onClose();
-        return;
-      }
-      setEdit(false);
-      setForm({
-        name: meal.name || '',
-        servingSize: meal.servingSize || '',
-        servingsHad: meal.servingsHad != null ? String(meal.servingsHad) : '',
-        calories: meal.calories != null ? String(meal.calories) : '',
-        totalCarbs: meal.totalCarbs != null ? String(meal.totalCarbs) : '',
-        totalFat: meal.totalFat != null ? String(meal.totalFat) : '',
-        protein: meal.protein != null ? String(meal.protein) : '',
-        fatCategories: meal.fatCategories || '',
-        sodium: meal.sodium != null ? String(meal.sodium) : '',
-        sugars: meal.sugars != null ? String(meal.sugars) : '',
-        calcium: meal.calcium != null ? String(meal.calcium) : '',
-        vitamins: meal.vitamins || '',
-        iron: meal.iron != null ? String(meal.iron) : '',
-        otherInfo: meal.otherInfo || '',
-      });
+      (async () => {
+        try {
+          const { firebaseAuth } = await resolveFirebase();
+          const user = firebaseAuth.getAuth ? firebaseAuth.getAuth().currentUser : null;
+          // Check authorization when opening modal
+          if (!user || !canAccess(user.uid, meal.userId)) {
+            showToast('Unauthorized: Cannot access this meal', 'error');
+            onClose();
+            return;
+          }
+          setEdit(false);
+          setForm({
+            name: meal.name || '',
+            servingSize: meal.servingSize || '',
+            servingsHad: meal.servingsHad != null ? String(meal.servingsHad) : '',
+            calories: meal.calories != null ? String(meal.calories) : '',
+            totalCarbs: meal.totalCarbs != null ? String(meal.totalCarbs) : '',
+            totalFat: meal.totalFat != null ? String(meal.totalFat) : '',
+            protein: meal.protein != null ? String(meal.protein) : '',
+            fatCategories: meal.fatCategories || '',
+            sodium: meal.sodium != null ? String(meal.sodium) : '',
+            sugars: meal.sugars != null ? String(meal.sugars) : '',
+            calcium: meal.calcium != null ? String(meal.calcium) : '',
+            vitamins: meal.vitamins || '',
+            iron: meal.iron != null ? String(meal.iron) : '',
+            otherInfo: meal.otherInfo || '',
+          });
+        } catch (err) {
+          console.error('Error initializing meal modal auth', err);
+          onClose();
+        }
+      })();
     }
   }, [isOpen, meal]);
 
@@ -109,7 +123,8 @@ const MealDetailsModal: React.FC<MealDetailsModalProps> = ({ isOpen, meal, onClo
   }, [meal]);
 
   const handleSave = async () => {
-    const user = auth.currentUser;
+    const { firebaseAuth } = await resolveFirebase();
+    const user = firebaseAuth.getAuth ? firebaseAuth.getAuth().currentUser : null;
     if (!meal?.id || !user) return;
     if (!form.name.trim() || !form.servingSize.trim() || !form.calories.trim()) {
       showToast('Name, calories, and serving size are required', 'error');
@@ -155,8 +170,9 @@ const MealDetailsModal: React.FC<MealDetailsModalProps> = ({ isOpen, meal, onClo
         if (trimmed) updates[key] = trimmed; else updates[key] = null;
       });
 
-      const ref = doc(db, 'meals', meal.id);
-      await updateDoc(ref, updates);
+      const { db, firestore } = await resolveFirebase();
+      const ref = firestore.doc(db, 'meals', meal.id);
+      await firestore.updateDoc(ref, updates);
       showToast('Meal updated', 'success');
       setEdit(false);
     } catch (e: any) {
@@ -167,8 +183,9 @@ const MealDetailsModal: React.FC<MealDetailsModalProps> = ({ isOpen, meal, onClo
     }
   };
 
-  const handleEditClick = () => {
-    const user = auth.currentUser;
+  const handleEditClick = async () => {
+    const { firebaseAuth } = await resolveFirebase();
+    const user = firebaseAuth.getAuth ? firebaseAuth.getAuth().currentUser : null;
     if (!user || !meal) {
       showToast('You must be signed in to edit meals', 'error');
       return;

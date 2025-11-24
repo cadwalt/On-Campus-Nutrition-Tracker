@@ -1,7 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, deleteDoc, doc, where } from 'firebase/firestore';
-import { auth, db } from '../../firebase';
-import { onAuthStateChanged, type User } from 'firebase/auth';
+import type { User } from 'firebase/auth';
+// Runtime resolver for firebase to avoid bundling into initial chunk
+const resolveFirebase = async () => {
+  const mod: any = await import('../../firebase');
+  const auth = (mod.getAuthClient ? await mod.getAuthClient() : mod.auth) as any;
+  const db = (mod.getFirestoreClient ? await mod.getFirestoreClient() : mod.db) as any;
+  const firestore = await import('firebase/firestore');
+  return { auth, db, firestore };
+};
 import type { Meal } from '../../types/meal';
 import Toast from '../ui/Toast';
 import MealDetailsModal from './modals/MealDetailsModal';
@@ -26,12 +32,21 @@ const YourMealsList: React.FC = () => {
     if (updated) setSelectedMeal(updated);
   }, [meals, detailsOpen, selectedMeal?.id]);
 
-  const [user, setUser] = useState<User | null>(auth.currentUser);
+  const [user, setUser] = useState<User | null>(null);
 
   // Keep user state in sync with Firebase Auth
   useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, (u) => setUser(u));
-    return () => unsubAuth();
+    let unsub: (() => void) | null = null;
+    (async () => {
+      try {
+        const { auth } = await resolveFirebase();
+        const firebaseAuth = await import('firebase/auth');
+        unsub = firebaseAuth.onAuthStateChanged(auth, (u: User | null) => setUser(u));
+      } catch (err) {
+        console.error('Auth listener init failed', err);
+      }
+    })();
+    return () => { if (unsub) unsub(); };
   }, []);
 
   // Subscribe to this user's meals (client-side sort to avoid composite index requirement)
@@ -42,35 +57,44 @@ const YourMealsList: React.FC = () => {
       return;
     }
 
-    const qUserMeals = query(collection(db, 'meals'), where('userId', '==', user.uid));
-    const unsub = onSnapshot(
-      qUserMeals,
-      (snap) => {
-        const list: Meal[] = [];
-        snap.forEach((d) => {
-          const data = d.data() as any;
-          list.push({ id: d.id, ...(data as Meal) });
-        });
-        // Sort client-side by createdAt desc (supports number or Firestore Timestamp)
-        list.sort((a, b) => {
-          const toMillis = (val: any): number => {
-            if (typeof val === 'number') return val;
-            if (val && typeof val.seconds === 'number') return val.seconds * 1000 + Math.floor((val.nanoseconds || 0) / 1e6);
-            if (val instanceof Date) return val.getTime();
-            return 0;
-          };
-        
-          return toMillis(b.createdAt) - toMillis(a.createdAt);
-        });
-        setMeals(list);
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Error loading meals:', error);
+    let unsubLocal: (() => void) | null = null;
+    (async () => {
+      try {
+        const { db, firestore } = await resolveFirebase();
+        const qUserMeals = firestore.query(firestore.collection(db, 'meals'), firestore.where('userId', '==', user.uid));
+        unsubLocal = firestore.onSnapshot(
+          qUserMeals,
+          (snap: any) => {
+            const list: Meal[] = [];
+            snap.forEach((d: any) => {
+              const data = d.data() as any;
+              list.push({ id: d.id, ...(data as Meal) });
+            });
+            // Sort client-side by createdAt desc (supports number or Firestore Timestamp)
+            list.sort((a, b) => {
+              const toMillis = (val: any): number => {
+                if (typeof val === 'number') return val;
+                if (val && typeof val.seconds === 'number') return val.seconds * 1000 + Math.floor((val.nanoseconds || 0) / 1e6);
+                if (val instanceof Date) return val.getTime();
+                return 0;
+              };
+
+              return toMillis(b.createdAt) - toMillis(a.createdAt);
+            });
+            setMeals(list);
+            setLoading(false);
+          },
+          (error: any) => {
+            console.error('Error loading meals:', error);
+            setLoading(false);
+          }
+        );
+      } catch (err) {
+        console.error('Failed to subscribe to meals', err);
         setLoading(false);
       }
-    );
-    return () => unsub();
+    })();
+    return () => { if (unsubLocal) unsubLocal(); };
   }, [user]);
 
   const showToast = (message: string, type: 'success' | 'error') => setToast({ message, type, visible: true });
@@ -91,7 +115,8 @@ const YourMealsList: React.FC = () => {
     }
     
     try {
-      await deleteDoc(doc(db, 'meals', mealId));
+      const { db, firestore } = await resolveFirebase();
+      await firestore.deleteDoc(firestore.doc(db, 'meals', mealId));
       showToast('Meal removed', 'success');
     } catch (e: any) {
       showToast(e.message || 'Failed to remove meal', 'error');

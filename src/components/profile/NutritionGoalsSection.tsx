@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebase';
+
+const resolveFirebase = async () => {
+  const mod: any = await import('../../firebase');
+  const db = (mod.getFirestoreClient ? await mod.getFirestoreClient() : mod.db) as any;
+  const firestore = await import('firebase/firestore');
+  return { db, firestore };
+};
 import type { User } from 'firebase/auth';
 import type { 
   NutritionGoals, 
@@ -48,8 +53,9 @@ const NutritionGoalsSection: React.FC<NutritionGoalsSectionProps> = ({
     const loadNutritionGoals = async () => {
       if (user) {
         try {
-          const userDocRef = doc(db, 'users', user.uid);
-          const userDocSnap = await getDoc(userDocRef);
+          const { db, firestore } = await resolveFirebase();
+          const userDocRef = firestore.doc(db, 'users', user.uid);
+          const userDocSnap = await firestore.getDoc(userDocRef);
           if (userDocSnap.exists()) {
             const data = userDocSnap.data();
             const goals = data.nutrition_goals;
@@ -235,8 +241,9 @@ const NutritionGoalsSection: React.FC<NutritionGoalsSectionProps> = ({
     setValidationErrors([]);
 
     try {
-      const userDocRef = doc(db, 'users', user.uid);
-      
+      const { db, firestore } = await resolveFirebase();
+      const userDocRef = firestore.doc(db, 'users', user.uid);
+
       // Create macro targets object
       const macroTargets: MacroTargets = {
         protein_percentage: proteinPercentage,
@@ -253,7 +260,7 @@ const NutritionGoalsSection: React.FC<NutritionGoalsSectionProps> = ({
         macro_targets: macroTargets
       };
 
-      await updateDoc(userDocRef, {
+      await firestore.updateDoc(userDocRef, {
         nutrition_goals: completeGoals,
         updated_at: new Date()
       });
@@ -275,8 +282,9 @@ const NutritionGoalsSection: React.FC<NutritionGoalsSectionProps> = ({
     // Reload original data
     const loadOriginalGoals = async () => {
       if (user) {
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDocSnap = await getDoc(userDocRef);
+        const { db, firestore } = await resolveFirebase();
+        const userDocRef = firestore.doc(db, 'users', user.uid);
+        const userDocSnap = await firestore.getDoc(userDocRef);
         if (userDocSnap.exists()) {
           const data = userDocSnap.data();
           const goals = data.nutrition_goals;

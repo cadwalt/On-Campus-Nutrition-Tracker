@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebase';
+
+const resolveFirebase = async () => {
+  const mod: any = await import('../../firebase');
+  const db = (mod.getFirestoreClient ? await mod.getFirestoreClient() : mod.db) as any;
+  const firestore = await import('firebase/firestore');
+  return { db, firestore };
+};
 import type { User } from 'firebase/auth';
 import type { DietaryRestriction } from '../../types/nutrition';
 import { DIETARY_RESTRICTIONS } from '../../constants/nutrition';
@@ -27,8 +32,9 @@ const DietaryRestrictionsSection: React.FC<DietaryRestrictionsSectionProps> = ({
     const loadDietaryRestrictions = async () => {
       if (user) {
         try {
-          const userDocRef = doc(db, 'users', user.uid);
-          const userDocSnap = await getDoc(userDocRef);
+          const { db, firestore } = await resolveFirebase();
+          const userDocRef = firestore.doc(db, 'users', user.uid);
+          const userDocSnap = await firestore.getDoc(userDocRef);
           if (userDocSnap.exists()) {
             const data = userDocSnap.data();
             const nutritionGoals = data.nutrition_goals;
@@ -58,14 +64,15 @@ const DietaryRestrictionsSection: React.FC<DietaryRestrictionsSectionProps> = ({
     setLoading(true);
 
     try {
-      const userDocRef = doc(db, 'users', user.uid);
-      
+      const { db, firestore } = await resolveFirebase();
+      const userDocRef = firestore.doc(db, 'users', user.uid);
+
       // Get current nutrition goals and update dietary restrictions
-      const userDocSnap = await getDoc(userDocRef);
+      const userDocSnap = await firestore.getDoc(userDocRef);
       const currentData = userDocSnap.exists() ? userDocSnap.data() : {};
       const currentNutritionGoals = currentData.nutrition_goals || {};
-      
-      await updateDoc(userDocRef, {
+
+      await firestore.updateDoc(userDocRef, {
         nutrition_goals: {
           ...currentNutritionGoals,
           preferences: {
@@ -91,8 +98,9 @@ const DietaryRestrictionsSection: React.FC<DietaryRestrictionsSectionProps> = ({
     // Reload original data
     const loadOriginalRestrictions = async () => {
       if (user) {
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDocSnap = await getDoc(userDocRef);
+        const { db, firestore } = await resolveFirebase();
+        const userDocRef = firestore.doc(db, 'users', user.uid);
+        const userDocSnap = await firestore.getDoc(userDocRef);
         if (userDocSnap.exists()) {
           const data = userDocSnap.data();
           const nutritionGoals = data.nutrition_goals;
