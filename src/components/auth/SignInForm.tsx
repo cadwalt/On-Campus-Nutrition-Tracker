@@ -100,7 +100,13 @@ const SignInForm: React.FC = () => {
       setEmail('');
       setPassword('');
     } catch (firebaseError: any) {
-      setError(firebaseError?.message ?? String(firebaseError));
+      // Map common Firebase auth errors to friendlier messages.
+      const code: string | undefined = firebaseError?.code || firebaseError?.message;
+      if (typeof code === 'string' && code.includes('auth/invalid-api-key')) {
+        setError('Firebase configuration error: missing or invalid API key. Check your VITE_FIREBASE_* env vars in your hosting provider (e.g. Vercel) and rebuild.');
+      } else {
+        setError(firebaseError?.message ?? String(firebaseError));
+      }
     }
   };
 

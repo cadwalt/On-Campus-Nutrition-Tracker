@@ -19,6 +19,19 @@ let _db: any | null = null;
 
 export async function getApp() {
   if (_app) return _app;
+  // Helpful runtime guard: ensure the build injected the Firebase API key.
+  // Vite embeds `import.meta.env.*` at build time — if these are not set in
+  // your deployment environment (e.g. Vercel), Firebase initialization will
+  // fail with an opaque `auth/invalid-api-key` error. Throw a clearer message
+  // so deploy logs / the browser console point directly to the missing var.
+  if (!firebaseConfig.apiKey) {
+    const msg = 'Missing Firebase API key: build-time env `VITE_FIREBASE_API_KEY` is not set.\n' +
+      'Set the VITE_FIREBASE_* environment variables in your hosting provider (e.g. Vercel) and rebuild.';
+    // Log to console for easier diagnosis in production browser devtools.
+    // eslint-disable-next-line no-console
+    console.error(msg);
+    throw new Error(msg);
+  }
   const firebaseApp = await import('firebase/app');
   const { initializeApp } = firebaseApp;
   _app = initializeApp(firebaseConfig);
