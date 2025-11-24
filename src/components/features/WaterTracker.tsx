@@ -130,14 +130,18 @@ const WaterTracker: React.FC = () => {
         </div>
 
         <div className="water-quick-buttons">
-          <div style={{display:'flex', gap:8}}>
-            <button className="water-btn" onClick={() => handleQuickAdd(8)} disabled={loading || !user}>+8 oz</button>
-            <button className="water-btn" onClick={() => handleQuickAdd(12)} disabled={loading || !user}>+12 oz</button>
-            <button className="water-btn" onClick={() => handleQuickAdd(16)} disabled={loading || !user}>+16 oz</button>
-          </div>
-          <div style={{display:'flex', gap:8}}>
-            <button className="water-btn water-btn-negative" onClick={() => handleQuickSubtract(8)} disabled={loading || !user}>−8 oz</button>
+          {/* Left: subtract (largest outermost) */}
+          <div className="water-quick-group subtract-group" aria-hidden>
+            <button className="water-btn water-btn-negative" onClick={() => handleQuickSubtract(16)} disabled={loading || !user}>−16 oz</button>
             <button className="water-btn water-btn-negative" onClick={() => handleQuickSubtract(12)} disabled={loading || !user}>−12 oz</button>
+            <button className="water-btn water-btn-negative" onClick={() => handleQuickSubtract(8)} disabled={loading || !user}>−8 oz</button>
+          </div>
+
+          {/* Right: add (largest outermost) */}
+          <div className="water-quick-group add-group" aria-hidden>
+            <button className="water-btn" onClick={() => handleQuickAdd(16)} disabled={loading || !user}>+16 oz</button>
+            <button className="water-btn" onClick={() => handleQuickAdd(12)} disabled={loading || !user}>+12 oz</button>
+            <button className="water-btn" onClick={() => handleQuickAdd(8)} disabled={loading || !user}>+8 oz</button>
           </div>
         </div>
 

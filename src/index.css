@@ -152,6 +152,10 @@ button:focus-visible {
   color: rgba(226,232,240,0.8);
 }
 .water-quick-buttons { display:flex; gap:8px }
+.water-quick-buttons { display:flex; justify-content:space-between; align-items:center }
+.water-quick-group { display:flex; flex-direction:column; gap:8px }
+.water-quick-group.add-group { align-items:flex-end }
+.water-quick-group.subtract-group { align-items:flex-start }
 .water-btn { padding:6px 10px }
 .water-custom { display:flex; gap:8px; align-items:center }
 .water-input { width:100px; padding:8px; border-radius:6px }

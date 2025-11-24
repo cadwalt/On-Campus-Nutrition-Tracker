@@ -6,6 +6,7 @@ import type { Meal } from '../../types/meal';
 import type { NutritionGoals } from '../../types/nutrition';
 import { calculateActualCalories, calculateActualMacros } from '../../utils/mealCalculations';
 import { computeNutritionPlan } from '../../utils/nutritionPlan';
+import { mlToOz } from '../../types/water';
 
 const NutritionSummary: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -17,6 +18,8 @@ const NutritionSummary: React.FC = () => {
   });
   const [goals, setGoals] = useState<NutritionGoals | null>(null);
   const [loading, setLoading] = useState(true);
+  const [waterMlToday, setWaterMlToday] = useState<number>(0);
+  const [waterGoalMl, setWaterGoalMl] = useState<number | null>(null);
 
   // Track auth state
   useEffect(() => {
@@ -48,6 +51,12 @@ const NutritionSummary: React.FC = () => {
         if (userDocSnap.exists()) {
           const data = userDocSnap.data();
           setGoals(data.nutrition_goals || null);
+          // Read water goal and today's total if present
+          const goal = data?.water?.goalMl;
+          setWaterGoalMl(typeof goal === 'number' ? goal : null);
+          const todayKey = new Date().toISOString().slice(0,10);
+          const todayVal = data?.water?.daily?.[todayKey] || 0;
+          setWaterMlToday(Math.round(todayVal));
         }
       } catch (error) {
         console.error('Error loading nutrition goals:', error);
@@ -57,6 +66,33 @@ const NutritionSummary: React.FC = () => {
     };
 
     loadGoals();
+  }, [user]);
+
+  // Subscribe to user doc for live water updates
+  useEffect(() => {
+    if (!user) return;
+    let unsub: (() => void) | null = null;
+    (async () => {
+      try {
+        const { db, firestore } = await resolveFirebase();
+        const userDocRef = firestore.doc(db, 'users', user.uid);
+        unsub = firestore.onSnapshot(userDocRef, (snap: any) => {
+          if (!snap.exists()) {
+            setWaterMlToday(0);
+            return;
+          }
+          const data = snap.data() as any;
+          const todayKey = new Date().toISOString().slice(0,10);
+          const todayVal = data?.water?.daily?.[todayKey] || 0;
+          setWaterMlToday(Math.round(todayVal));
+          const goal = data?.water?.goalMl;
+          setWaterGoalMl(typeof goal === 'number' ? goal : null);
+        });
+      } catch (err) {
+        console.error('Failed to subscribe to user water updates', err);
+      }
+    })();
+    return () => { if (unsub) unsub(); };
   }, [user]);
 
   // Calculate today's intake from meals
@@ -173,6 +209,10 @@ const NutritionSummary: React.FC = () => {
     return '#f59e0b'; // yellow (over)
   };
 
+  // Water progress
+  const waterTargetMl = waterGoalMl || 2000;
+  const waterPercent = Math.round((waterMlToday / waterTargetMl) * 100);
+
   const ProgressBar: React.FC<{ percent: number; label: string; current: number; target: number; unit: string }> = 
     ({ percent, label, current, target, unit }) => (
       <div style={{ marginBottom: '1rem' }}>
@@ -252,6 +292,27 @@ const NutritionSummary: React.FC = () => {
         target={Math.round(targetFat)}
         unit="g"
       />
+
+      <div style={{ marginTop: '1rem' }}>
+        <h4 style={{ margin: '0 0 0.5rem 0' }}>Hydration</h4>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <div style={{ width: 72 }}>
+            <div style={{ height: 120, position: 'relative' }}>
+              <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: `${Math.min(100, Math.max(0, waterPercent))}%`, background: 'linear-gradient(180deg,#60a5fa,#3b82f6)', borderRadius: 6, transition: 'height 300ms ease' }} />
+              <div style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, border: '2px solid rgba(255,255,255,0.06)', borderRadius: 8 }} />
+            </div>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div style={{ fontWeight: 600 }}>{Math.round(mlToOz(waterMlToday))} oz</div>
+              <div style={{ color: '#94a3b8' }}>{Math.round(waterPercent)}% of {Math.round(mlToOz(waterTargetMl))} oz</div>
+            </div>
+            <div style={{ height: 8, background: 'rgba(255,255,255,0.08)', borderRadius: 6, marginTop: 8, overflow: 'hidden' }}>
+              <div style={{ width: `${Math.min(100, Math.max(0, waterPercent))}%`, height: '100%', background: getProgressColor(waterPercent), transition: 'width 300ms ease' }} />
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div style={{ 
         marginTop: '1.5rem', 
