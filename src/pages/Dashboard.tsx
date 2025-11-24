@@ -1,7 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import RestaurantDisplay from '../components/features/RestaurantDisplay';
+import React, { useEffect, useState, Suspense } from 'react';
 import NutritionPlanCard from '../components/features/NutritionPlanCard';
-import { NutritionSummary, NutritionChatbot, WaterTracker } from '../components/features';
+
+// Lazy-load heavier feature components so the dashboard splits into chunks
+const RestaurantDisplay = React.lazy(() => import('../components/features/RestaurantDisplay'));
+const NutritionSummary = React.lazy(() => import('../components/features/NutritionSummary'));
+const WaterTracker = React.lazy(() => import('../components/features/WaterTracker'));
+const NutritionChatbot = React.lazy(() => import('../components/features/NutritionChatbot'));
 import { auth, db } from '../firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
@@ -67,15 +71,21 @@ const Dashboard: React.FC = () => {
 
       <main className="dashboard-content">
         {/* Restaurant Display spans full width */}
-        <RestaurantDisplay />
+        <Suspense fallback={<div>Loading restaurant...</div>}>
+          <RestaurantDisplay />
+        </Suspense>
         
         <div className="dashboard-grid">
           <div className="dashboard-left">
             {/* Nutrition Summary - Shows intake vs goals */}
-            <NutritionSummary />
+            <Suspense fallback={<div>Loading summary...</div>}>
+              <NutritionSummary />
+            </Suspense>
 
             {/* Water Intake Tracker */}
-            <WaterTracker />
+            <Suspense fallback={<div>Loading water tracker...</div>}>
+              <WaterTracker />
+            </Suspense>
           </div>
           
           <div className="dashboard-right">
@@ -101,7 +111,9 @@ const Dashboard: React.FC = () => {
             <NutritionPlanCard />
 
             {/* Floating Nutrition Assistant Chatbot */}
-            <NutritionChatbot />
+            <Suspense fallback={<div>Loading assistant...</div>}>
+              <NutritionChatbot />
+            </Suspense>
           </div>
         </div>
       </main>

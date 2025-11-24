@@ -2,12 +2,15 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import './App.css';
 import GlobalSidebar from './components/ui/GlobalSidebar';
 import BackgroundBlobs from './components/ui/BackgroundBlobs';
-import SignUpForm from './components/auth/SignUpForm';
-import SignInForm from './components/auth/SignInForm';
-import OnboardingPage from './pages/OnboardingPage';
-import Dashboard from './pages/Dashboard';
-import ProfilePage from './pages/ProfilePage';
-import MealTrackerPage from './pages/MealTrackerPage';
+import React, { Suspense } from 'react';
+
+// Lazy-load route pages to split bundle and improve initial load
+const SignUpForm = React.lazy(() => import('./components/auth/SignUpForm'));
+const SignInForm = React.lazy(() => import('./components/auth/SignInForm'));
+const OnboardingPage = React.lazy(() => import('./pages/OnboardingPage'));
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
+const MealTrackerPage = React.lazy(() => import('./pages/MealTrackerPage'));
 
 function AppContent() {
   // Hide sidebar and switch to minimal auth layout on auth routes
@@ -24,16 +27,18 @@ function AppContent() {
           "main-content" +
           (isAuth ? " auth-solo" : " minimal")
         }>
-          <Routes>
-            <Route path="/" element={<Navigate to="/signin" replace />} />
-            <Route path="/signup" element={<SignUpForm />} />
-            <Route path="/signin" element={<SignInForm />} />
-            <Route path="/onboarding" element={<OnboardingPage />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/meals" element={<MealTrackerPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="*" element={<Navigate to="/signin" replace />} />
-          </Routes>
+          <Suspense fallback={<div>Loading...</div>}>
+            <Routes>
+              <Route path="/" element={<Navigate to="/signin" replace />} />
+              <Route path="/signup" element={<SignUpForm />} />
+              <Route path="/signin" element={<SignInForm />} />
+              <Route path="/onboarding" element={<OnboardingPage />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/meals" element={<MealTrackerPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="*" element={<Navigate to="/signin" replace />} />
+            </Routes>
+          </Suspense>
         </main>
       </div>
     </div>
