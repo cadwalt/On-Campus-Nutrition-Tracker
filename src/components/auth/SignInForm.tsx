@@ -27,6 +27,7 @@ const SignInForm: React.FC = () => {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user) {
+        setUserName(user.displayName); // <-- Sets the name from the auth user
         setShowWelcome(true);
         setFadeOut(false);
         setVisible(false);
