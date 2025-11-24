@@ -14,10 +14,11 @@ const welcomeMessages = [
   "Welcome back, friend!",
   "Good to have you here!",
   "Greetings, Food Warrior!",
-  "Welcome back to the kitchen!",
   "Back for more deliciousness?",
   "Your culinary journey continues!",
-  "Welcome, Big Back!"
+  "Welcome, Big Back!",
+  "Haven't you been here before?",
+  "Dinner Dinner! Chicken Winner!"
 ];
 
 const SignInForm: React.FC = () => {
