@@ -260,14 +260,42 @@ const NutritionGoalsSection: React.FC<NutritionGoalsSectionProps> = ({
         macro_targets: macroTargets
       };
 
-      await firestore.updateDoc(userDocRef, {
-        nutrition_goals: completeGoals,
-        updated_at: new Date()
-      });
-      
-      setNutritionGoals(completeGoals);
-      onSuccess('Nutrition goals saved successfully!');
-      setIsEditing(false);
+      try {
+        try {
+          await firestore.updateDoc(userDocRef, {
+            nutrition_goals: completeGoals,
+            updated_at: firestore.serverTimestamp ? firestore.serverTimestamp() : new Date()
+          });
+        } catch (err) {
+          // If update fails (for example the user doc doesn't exist or permission issue),
+          // attempt to create/merge the document so the goals are saved.
+          console.warn('updateDoc failed, falling back to setDoc with merge:', err);
+          await firestore.setDoc(userDocRef, {
+            nutrition_goals: completeGoals,
+            updated_at: firestore.serverTimestamp ? firestore.serverTimestamp() : new Date()
+          }, { merge: true });
+        }
+
+        // Re-read the document to confirm persistence before signaling success.
+        const savedSnap = await firestore.getDoc(userDocRef);
+        if (!savedSnap.exists()) {
+          throw new Error('Save did not persist: user document missing after write.');
+        }
+        const savedData = savedSnap.data?.() || savedSnap.data();
+        const savedGoals = savedData?.nutrition_goals ?? savedData?.nutrition_goals;
+        // Basic verification: existence and that primary_goal matches intended value
+        if (!savedGoals || savedGoals.primary_goal !== completeGoals.primary_goal) {
+          throw new Error('Saved data does not match expected goals after write.');
+        }
+
+        // Persist locally and return success only after verification
+        setNutritionGoals(completeGoals);
+        onSuccess('Nutrition goals saved successfully!');
+        setIsEditing(false);
+      } catch (err: any) {
+        console.error('Failed to persist nutrition goals:', err);
+        onError(err?.message || 'Failed to save nutrition goals');
+      }
     } catch (error: any) {
       onError(error.message || 'Failed to save nutrition goals');
     } finally {
