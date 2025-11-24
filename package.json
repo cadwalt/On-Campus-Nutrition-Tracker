@@ -45,6 +45,6 @@
     "vitest": "^2.1.9"
   },
   "engines": {
-    "node": "18.x"
+    "node": "22.x"
   }
 }
