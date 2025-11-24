@@ -281,8 +281,9 @@ const NutritionGoalsSection: React.FC<NutritionGoalsSectionProps> = ({
         if (!savedSnap.exists()) {
           throw new Error('Save did not persist: user document missing after write.');
         }
-        const savedData = savedSnap.data?.() || savedSnap.data();
-        const savedGoals = savedData?.nutrition_goals ?? savedData?.nutrition_goals;
+        // DocumentSnapshot.data() is the canonical accessor for saved fields
+        const savedData = savedSnap.data();
+        const savedGoals = savedData?.nutrition_goals;
         // Basic verification: existence and that primary_goal matches intended value
         if (!savedGoals || savedGoals.primary_goal !== completeGoals.primary_goal) {
           throw new Error('Saved data does not match expected goals after write.');
