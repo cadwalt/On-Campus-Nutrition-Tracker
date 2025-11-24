@@ -1,12 +1,8 @@
 // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { getAuth } from "firebase/auth";
-// https://firebase.google.com/docs/web/setup#available-libraries
+// Lazily initialize Firebase SDK to avoid pulling it into the initial client bundle.
+// This module exposes async getters `getApp`, `getAuthClient`, and `getFirestoreClient`.
+// Call sites should use `await import('../firebase')` then `await mod.getAuthClient()` etc.
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -17,19 +13,35 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+let _app: any | null = null;
+let _auth: any | null = null;
+let _db: any | null = null;
 
-// Export the services you'll use
-export { app, db, auth };
+export async function getApp() {
+  if (_app) return _app;
+  const firebaseApp = await import('firebase/app');
+  const { initializeApp } = firebaseApp;
+  _app = initializeApp(firebaseConfig);
+  return _app;
+}
 
-// Provide compatibility async getters for code that expects them
 export async function getAuthClient() {
-  return auth;
+  if (_auth) return _auth;
+  const app = await getApp();
+  const firebaseAuth = await import('firebase/auth');
+  const { getAuth } = firebaseAuth;
+  _auth = getAuth(app);
+  return _auth;
 }
 
 export async function getFirestoreClient() {
-  return db;
+  if (_db) return _db;
+  const app = await getApp();
+  const firebaseFirestore = await import('firebase/firestore');
+  const { getFirestore } = firebaseFirestore;
+  _db = getFirestore(app);
+  return _db;
 }
+
+// NOTE: we intentionally do not export synchronous `auth`/`db` variables here to avoid
+// accidental static imports of the Firebase SDK. Use the async getters above.

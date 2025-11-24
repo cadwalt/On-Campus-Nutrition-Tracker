@@ -1,7 +1,12 @@
 // src/components/RestaurantDisplay.tsx
 import React, { useEffect, useState } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebase';
+
+const resolveFirebase = async () => {
+  const mod: any = await import('../../firebase');
+  const db = (mod.getFirestoreClient ? await mod.getFirestoreClient() : mod.db) as any;
+  const firestore = await import('firebase/firestore');
+  return { db, firestore };
+};
 
 interface Restaurant {
   name: string;
@@ -16,9 +21,10 @@ const RestaurantDisplay: React.FC = () => {
   useEffect(() => {
     const fetchRestaurant = async () => {
       try {
+        const { db, firestore } = await resolveFirebase();
         // Reference to the 'testRestaurant' document in the 'restaurants' collection
-        const restaurantRef = doc(db, 'restaurants', 'testRestaurant');
-        const restaurantSnap = await getDoc(restaurantRef);
+        const restaurantRef = firestore.doc(db, 'restaurants', 'testRestaurant');
+        const restaurantSnap = await firestore.getDoc(restaurantRef);
 
         if (restaurantSnap.exists()) {
           // Document data is available

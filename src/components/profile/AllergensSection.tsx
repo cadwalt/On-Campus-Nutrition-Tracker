@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebase';
+
+// runtime-resolve firebase to avoid bundling
+const resolveFirebase = async () => {
+  const mod: any = await import('../../firebase');
+  const db = (mod.getFirestoreClient ? await mod.getFirestoreClient() : mod.db) as any;
+  const firestore = await import('firebase/firestore');
+  return { db, firestore };
+};
 import type { User } from 'firebase/auth';
 import AllergensModal from './modals/AllergensModal';
 import { Tooltip } from '../ui';
@@ -20,8 +26,9 @@ const AllergensSection: React.FC<AllergensSectionProps> = ({ user, onSuccess, on
     const loadAllergens = async () => {
       if (user) {
         try {
-          const userDocRef = doc(db, 'users', user.uid);
-          const userDocSnap = await getDoc(userDocRef);
+          const { db, firestore } = await resolveFirebase();
+          const userDocRef = firestore.doc(db, 'users', user.uid);
+          const userDocSnap = await firestore.getDoc(userDocRef);
           if (userDocSnap.exists()) {
             const data = userDocSnap.data();
             setSelectedAllergens(data.allergens || []);
@@ -45,10 +52,11 @@ const AllergensSection: React.FC<AllergensSectionProps> = ({ user, onSuccess, on
   const handleSaveAllergens = async () => {
     if (!user) return;
     
-    setLoading(true);
+      setLoading(true);
     try {
-      const userDocRef = doc(db, 'users', user.uid);
-      await updateDoc(userDocRef, {
+      const { db, firestore } = await resolveFirebase();
+      const userDocRef = firestore.doc(db, 'users', user.uid);
+      await firestore.updateDoc(userDocRef, {
         allergens: selectedAllergens,
         updated_at: new Date()
       });
@@ -67,8 +75,9 @@ const AllergensSection: React.FC<AllergensSectionProps> = ({ user, onSuccess, on
     // Reload original data
     const loadOriginalAllergens = async () => {
       if (user) {
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDocSnap = await getDoc(userDocRef);
+        const { db, firestore } = await resolveFirebase();
+        const userDocRef = firestore.doc(db, 'users', user.uid);
+        const userDocSnap = await firestore.getDoc(userDocRef);
         if (userDocSnap.exists()) {
           const data = userDocSnap.data();
           setSelectedAllergens(data.allergens || []);

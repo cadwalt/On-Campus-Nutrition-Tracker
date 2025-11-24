@@ -127,7 +127,6 @@ const SignInForm: React.FC = () => {
         {showWelcome ? (
           <div className={`user-welcome${visible ? ' visible' : ''}${fadeOut ? ' fade-out' : ''}`}>
             <h3>{welcomeMsg}</h3>
-            {userName && <h4>Welcome, {userName}!</h4>}
           </div>
         ) : (
           <>

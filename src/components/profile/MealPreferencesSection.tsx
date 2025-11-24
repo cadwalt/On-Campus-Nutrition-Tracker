@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebase';
+
+const resolveFirebase = async () => {
+  const mod: any = await import('../../firebase');
+  const db = (mod.getFirestoreClient ? await mod.getFirestoreClient() : mod.db) as any;
+  const firestore = await import('firebase/firestore');
+  return { db, firestore };
+};
 import type { User } from 'firebase/auth';
 import type { CookingSkill, NutritionGoals } from '../../types/nutrition';
 import { COOKING_SKILLS } from '../../constants/nutrition';
@@ -30,8 +35,9 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
     const loadMealPreferences = async () => {
       if (user) {
         try {
-          const userDocRef = doc(db, 'users', user.uid);
-          const userDocSnap = await getDoc(userDocRef);
+          const { db, firestore } = await resolveFirebase();
+          const userDocRef = firestore.doc(db, 'users', user.uid);
+          const userDocSnap = await firestore.getDoc(userDocRef);
           if (userDocSnap.exists()) {
             const data = userDocSnap.data();
             const goals = data.nutrition_goals;
@@ -81,13 +87,14 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
     setValidationErrors([]);
 
     try {
-      const userDocRef = doc(db, 'users', user.uid);
-      
+      const { db, firestore } = await resolveFirebase();
+      const userDocRef = firestore.doc(db, 'users', user.uid);
+
       // Get current nutrition goals and update meal preferences
-      const userDocSnap = await getDoc(userDocRef);
+      const userDocSnap = await firestore.getDoc(userDocRef);
       const currentData = userDocSnap.exists() ? userDocSnap.data() : {};
       const currentNutritionGoals = currentData.nutrition_goals || {};
-      
+
       const updatedGoals: NutritionGoals = {
         ...currentNutritionGoals,
         preferences: {
@@ -99,8 +106,8 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
         primary_goal: currentNutritionGoals.primary_goal || 'general_health',
         activity_level: currentNutritionGoals.activity_level || 'moderately_active'
       };
-      
-      await updateDoc(userDocRef, {
+
+      await firestore.updateDoc(userDocRef, {
         nutrition_goals: updatedGoals,
         updated_at: new Date()
       });

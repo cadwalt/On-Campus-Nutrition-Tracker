@@ -1,6 +1,4 @@
 import React from 'react';
-import { signOut } from 'firebase/auth';
-import { auth } from '../../firebase';
 
 interface AccountSectionProps {
   onLogout: () => void;
@@ -9,7 +7,10 @@ interface AccountSectionProps {
 const AccountSection: React.FC<AccountSectionProps> = ({ onLogout }) => {
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      const mod: any = await import('../../firebase');
+      const authClient = (mod.getAuthClient ? await mod.getAuthClient() : mod.auth) as any;
+      const firebaseAuth = await import('firebase/auth');
+      await firebaseAuth.signOut(authClient);
       onLogout();
     } catch (error) {
       console.error('Error signing out:', error);

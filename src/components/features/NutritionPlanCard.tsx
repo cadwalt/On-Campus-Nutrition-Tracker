@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { auth, db } from '../../firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
+
+const resolveFirebase = async () => {
+  const mod: any = await import('../../firebase');
+  const authClient = await mod.getAuthClient();
+  const dbClient = await mod.getFirestoreClient();
+  const firestore = await import('firebase/firestore');
+  return { authClient, dbClient, firestore };
+};
 import type { NutritionGoals } from '../../types/nutrition';
 import { computeNutritionPlan } from '../../utils/nutritionPlan';
 
@@ -9,19 +15,27 @@ const NutritionPlanCard: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const u = auth.currentUser;
-    if (!u) {
-      setGoals(null);
-      setLoading(false);
-      return;
-    }
-    const ref = doc(db, 'users', u.uid);
-    const unsub = onSnapshot(ref, (snap) => {
-      const data = snap.data();
-      setGoals((data?.nutrition_goals as NutritionGoals) || null);
-      setLoading(false);
-    });
-    return () => unsub();
+    (async () => {
+      try {
+        const { authClient, dbClient, firestore } = await resolveFirebase();
+        const u = authClient.currentUser;
+        if (!u) {
+          setGoals(null);
+          setLoading(false);
+          return;
+        }
+        const ref = firestore.doc(dbClient, 'users', u.uid);
+        const unsub = firestore.onSnapshot(ref, (snap: any) => {
+          const data = snap.data();
+          setGoals((data?.nutrition_goals as NutritionGoals) || null);
+          setLoading(false);
+        });
+        return () => unsub();
+      } catch (err) {
+        console.error('Failed to load nutrition plan', err);
+        setLoading(false);
+      }
+    })();
   }, []);
 
   if (loading) {

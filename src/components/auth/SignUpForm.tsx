@@ -1,9 +1,15 @@
 // src/components/SignUpForm.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { auth, db } from '../../firebase';
-import { doc, setDoc } from 'firebase/firestore';
+// Firebase is loaded lazily to avoid bundling the SDK in the initial bundle.
+const resolveFirebase = async () => {
+  const mod: any = await import('../../firebase');
+  const authClient = await mod.getAuthClient();
+  const dbClient = await mod.getFirestoreClient();
+  const firebaseAuth = await import('firebase/auth');
+  const firestore = await import('firebase/firestore');
+  return { authClient, dbClient, firebaseAuth, firestore };
+};
 
 const SignUpForm: React.FC = () => {
   const [name, setName] = useState('');
@@ -21,9 +27,10 @@ const SignUpForm: React.FC = () => {
     setLoading(true);
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await updateProfile(userCredential.user, { displayName: name });
-      await setDoc(doc(db, 'users', userCredential.user.uid), {
+      const { authClient, dbClient, firebaseAuth, firestore } = await resolveFirebase();
+      const userCredential = await firebaseAuth.createUserWithEmailAndPassword(authClient, email, password);
+      await firebaseAuth.updateProfile(userCredential.user, { displayName: name });
+      await firestore.setDoc(firestore.doc(dbClient, 'users', userCredential.user.uid), {
         name: name.trim(),
         email: email,
         profile_picture: null,

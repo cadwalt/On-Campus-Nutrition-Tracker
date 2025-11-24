@@ -6,20 +6,27 @@ const RestaurantDisplay = React.lazy(() => import('../components/features/Restau
 const NutritionSummary = React.lazy(() => import('../components/features/NutritionSummary'));
 const WaterTracker = React.lazy(() => import('../components/features/WaterTracker'));
 const NutritionChatbot = React.lazy(() => import('../components/features/NutritionChatbot'));
-import { auth, db } from '../firebase';
-import { onAuthStateChanged, type User } from 'firebase/auth';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { type User } from 'firebase/auth';
+import { resolveFirebase } from '../lib/resolveFirebase';
 import type { Meal } from '../types/meal';
 import { calculateActualCalories } from '../utils/mealCalculations';
 
 const Dashboard: React.FC = () => {
   // Live Quick Stats derived from user's meals
-  const [user, setUser] = useState<User | null>(auth.currentUser);
+  const [user, setUser] = useState<User | null>(null);
   const [stats, setStats] = useState({ totalMeals: 0, caloriesToday: 0, activeDays: 0 });
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => setUser(u));
-    return () => unsub();
+    let unsub: (() => void) | null = null;
+    (async () => {
+      try {
+        const { auth, firebaseAuth } = await resolveFirebase();
+        unsub = firebaseAuth.onAuthStateChanged(auth, (u: User | null) => setUser(u));
+      } catch (err) {
+        console.error('Auth init failed', err);
+      }
+    })();
+    return () => { if (unsub) unsub(); };
   }, []);
 
   useEffect(() => {
@@ -27,8 +34,12 @@ const Dashboard: React.FC = () => {
       setStats({ totalMeals: 0, caloriesToday: 0, activeDays: 0 });
       return;
     }
-    const mealsQ = query(collection(db, 'meals'), where('userId', '==', user.uid));
-    const unsub = onSnapshot(mealsQ, (snap) => {
+    let unsub: (() => void) | null = null;
+    (async () => {
+      try {
+        const { db, firestore } = await resolveFirebase();
+        const mealsQ = firestore.query(firestore.collection(db, 'meals'), firestore.where('userId', '==', user.uid));
+        unsub = firestore.onSnapshot(mealsQ, (snap) => {
       let totalMeals = 0;
       let caloriesToday = 0;
       const daysSet = new Set<string>();
@@ -57,9 +68,13 @@ const Dashboard: React.FC = () => {
         }
       });
 
-      setStats({ totalMeals, caloriesToday, activeDays: daysSet.size });
-    });
-    return () => unsub();
+        setStats({ totalMeals, caloriesToday, activeDays: daysSet.size });
+        });
+      } catch (err) {
+        console.error('Meals subscription failed', err);
+      }
+    })();
+    return () => { if (unsub) unsub(); };
   }, [user]);
 
   return (
