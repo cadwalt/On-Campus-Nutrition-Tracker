@@ -17,6 +17,7 @@ const SignInForm: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null); // <-- Change from userEmail to userName
+  const [loading, setLoading] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [fadeOut, setFadeOut] = useState(false);
   const [visible, setVisible] = useState(false);
