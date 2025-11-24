@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { auth, } from '../../firebase';
+import { auth, db } from '../../firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 const welcomeMessages = [
   "Welcome back!",
@@ -17,7 +18,7 @@ const SignInForm: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null); // <-- Change from userEmail to userName
-  const [, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [fadeOut, setFadeOut] = useState(false);
   const [visible, setVisible] = useState(false);
@@ -62,6 +63,32 @@ const SignInForm: React.FC = () => {
       setPassword('');
     } catch (firebaseError: any) {
       setError(firebaseError.message);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      // User is now logged out, onAuthStateChanged will update the UI
+    } catch (firebaseError: any) {
+      setError(firebaseError.message);
+    }
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null); // Clear previous errors
+    setLoading(true); // Start loading
+    try {
+      // Add your sign-up logic here
+      // For example, createUserWithEmailAndPassword(auth, email, password);
+      setEmail('');
+      setPassword('');
+      // Navigate to a different page on successful sign-up, if needed
+    } catch (firebaseError: any) {
+      setError(firebaseError.message);
+    } finally {
+      setLoading(false); // Stop loading
     }
   };
 
