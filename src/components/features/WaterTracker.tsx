@@ -60,37 +60,39 @@ const WaterTracker: React.FC = () => {
     return Math.round((dailyMap[keyDate] || 0));
   }, [dailyMap, todayRange.startMs]);
 
+  // amountMl may be positive (add) or negative (subtract). Use a transaction
+  // to ensure totals don't go below zero and updates are atomic.
   const addWater = async (amountMl: number, source: 'quick' | 'custom') => {
     if (!user) return;
-    if (amountMl <= 0 || !Number.isFinite(amountMl)) return;
+    if (!Number.isFinite(amountMl)) return;
+    const rawAmount = Math.round(amountMl);
+    if (rawAmount === 0) return;
     setLoading(true);
     try {
-      const amount = Math.round(amountMl);
       const { dbClient, firestore } = await resolveFirebase();
       const userDocRef = firestore.doc(dbClient, 'users', user.uid);
       const dateKey = new Date(todayRange.startMs).toISOString().slice(0,10); // YYYY-MM-DD
-      // Try atomic increment; if the document doesn't exist, fall back to set with merge
-      try {
-        await firestore.updateDoc(userDocRef, {
-          [`water.daily.${dateKey}`]: firestore.increment(amount),
-          'water.lastUpdated': Date.now(),
-          'water.lastSource': source,
-        });
-      } catch (err: any) {
-        // If update failed (likely because doc missing), create with merge
-        await firestore.setDoc(userDocRef, {
-          water: { daily: { [dateKey]: amount }, lastUpdated: Date.now(), lastSource: source }
+
+      await firestore.runTransaction(dbClient, async (tx: any) => {
+        const snap = await tx.get(userDocRef);
+        const current = snap.exists() ? ((snap.data()?.water?.daily?.[dateKey]) || 0) : 0;
+        const newTotal = Math.max(0, current + rawAmount);
+        if (newTotal === current) return;
+        tx.set(userDocRef, {
+          water: { daily: { [dateKey]: newTotal }, lastUpdated: Date.now(), lastSource: source }
         }, { merge: true });
-      }
+      });
+
       setInputAmount('');
     } catch (e) {
-      console.error('Failed to add water log', e);
+      console.error('Failed to add/subtract water', e);
     } finally {
       setLoading(false);
     }
   };
 
   const handleQuickAdd = (oz: number) => addWater(ozToMl(oz), 'quick');
+  const handleQuickSubtract = (oz: number) => addWater(-ozToMl(oz), 'quick');
 
   const handleCustomAdd = () => {
     const val = parseFloat(inputAmount);
@@ -128,9 +130,15 @@ const WaterTracker: React.FC = () => {
         </div>
 
         <div className="water-quick-buttons">
-          <button className="water-btn" onClick={() => handleQuickAdd(8)} disabled={loading || !user}>+8 oz</button>
-          <button className="water-btn" onClick={() => handleQuickAdd(12)} disabled={loading || !user}>+12 oz</button>
-          <button className="water-btn" onClick={() => handleQuickAdd(16)} disabled={loading || !user}>+16 oz</button>
+          <div style={{display:'flex', gap:8}}>
+            <button className="water-btn" onClick={() => handleQuickAdd(8)} disabled={loading || !user}>+8 oz</button>
+            <button className="water-btn" onClick={() => handleQuickAdd(12)} disabled={loading || !user}>+12 oz</button>
+            <button className="water-btn" onClick={() => handleQuickAdd(16)} disabled={loading || !user}>+16 oz</button>
+          </div>
+          <div style={{display:'flex', gap:8}}>
+            <button className="water-btn water-btn-negative" onClick={() => handleQuickSubtract(8)} disabled={loading || !user}>−8 oz</button>
+            <button className="water-btn water-btn-negative" onClick={() => handleQuickSubtract(12)} disabled={loading || !user}>−12 oz</button>
+          </div>
         </div>
 
         <div className="water-custom">

@@ -102,6 +102,26 @@ button:focus-visible {
   background: rgba(255,255,255,0.03);
   box-shadow: inset 0 6px 18px rgba(0,0,0,0.6);
 }
+.water-glass::before {
+  /* top rim for cup look */
+  content: '';
+  position: absolute;
+  left: -6px;
+  right: -6px;
+  top: -8px;
+  height: 18px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+  border-radius: 50%/60% 60% 0 0;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.4) inset;
+  pointer-events: none;
+}
+.water-glass {
+  /* wider at top, narrower at bottom to resemble a cup */
+  clip-path: polygon(5% 0%, 95% 0%, 85% 100%, 15% 100%);
+}
+.water-glass-outline { border-radius: 8px; }
+.water-fill { border-radius: 6px 6px 0 0; }
+.water-btn-negative { background: transparent; border: 1px solid rgba(255,100,100,0.12); color: #ff8484 }
 .water-fill {
   position: absolute;
   left: 0;
