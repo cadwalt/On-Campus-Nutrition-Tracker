@@ -1,15 +1,23 @@
 // src/components/SignInForm.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signInWithEmailAndPassword,  } from 'firebase/auth';
-import { auth, } from '../../firebase';
+// Use dynamic import for the firebase helper to avoid TypeScript export mismatch
 
 const welcomeMessages = [
   "Welcome back!",
   "Again so soon?",
   "Glad to see you!",
   "Hello again!",
-  "Nice to have you back!"
+  "Nice to have you back!",
+  "You need to leave!",
+  "Love to see you again!",
+  "Welcome back, friend!",
+  "Good to have you here!",
+  "Greetings, Food Warrior!",
+  "Welcome back to the kitchen!",
+  "Back for more deliciousness?",
+  "Your culinary journey continues!",
+  "Welcome, Big Back!"
 ];
 
 const SignInForm: React.FC = () => {
@@ -25,44 +33,63 @@ const SignInForm: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      if (user) {
-        setUserName(user.displayName); // <-- Sets the name from the auth user
-        setShowWelcome(true);
-        setFadeOut(false);
-        setVisible(false);
-        setWelcomeMsg(welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)]);
-        // Fade in
-        setTimeout(() => setVisible(true), 50);
-        // Fade out after 1.5s
-        setTimeout(() => setFadeOut(true), 1500);
-        // Navigate after 3s
-        setTimeout(() => {
-          setShowWelcome(false);
-          setFadeOut(false);
-          setVisible(false);
-          navigate('/dashboard');
-        }, 3000);
-      } else {
-        setShowWelcome(false);
-        setFadeOut(false);
-        setVisible(false);
-        setUserName(null);
+    let mounted = true;
+    let unsub: (() => void) | null = null;
+    (async () => {
+      try {
+        const firebaseMod: any = await import('../../firebase');
+        const authClient = await firebaseMod.getAuthClient();
+        const { onAuthStateChanged } = await import('firebase/auth');
+        unsub = onAuthStateChanged(authClient, (user) => {
+          if (!mounted) return;
+          if (user) {
+            setUserName(user.displayName ?? null); // <-- Sets the name from the auth user
+            setShowWelcome(true);
+            setFadeOut(false);
+            setVisible(false);
+            setWelcomeMsg(welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)]);
+            // Fade in
+            setTimeout(() => setVisible(true), 50);
+            // Fade out after 1.5s
+            setTimeout(() => setFadeOut(true), 1500);
+            // Navigate after 3s
+            setTimeout(() => {
+              if (!mounted) return;
+              setShowWelcome(false);
+              setFadeOut(false);
+              setVisible(false);
+              navigate('/dashboard');
+            }, 3000);
+          } else {
+            setShowWelcome(false);
+            setFadeOut(false);
+            setVisible(false);
+            setUserName(null);
+          }
+        });
+      } catch (err) {
+        console.error('Failed to initialize auth listener', err);
       }
-    });
-    return () => unsubscribe();
+    })();
+    return () => {
+      mounted = false;
+      if (unsub) unsub();
+    };
   }, [navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null); // Clear previous errors
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const firebaseMod: any = await import('../../firebase');
+      const authClient = await firebaseMod.getAuthClient();
+      const { signInWithEmailAndPassword } = await import('firebase/auth');
+      await signInWithEmailAndPassword(authClient, email, password);
       // User is now logged in, onAuthStateChanged will update the UI
       setEmail('');
       setPassword('');
     } catch (firebaseError: any) {
-      setError(firebaseError.message);
+      setError(firebaseError?.message ?? String(firebaseError));
     }
   };
 
