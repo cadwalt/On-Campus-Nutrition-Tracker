@@ -24,3 +24,12 @@ const auth = getAuth(app);
 
 // Export the services you'll use
 export { app, db, auth };
+
+// Provide compatibility async getters for code that expects them
+export async function getAuthClient() {
+  return auth;
+}
+
+export async function getFirestoreClient() {
+  return db;
+}

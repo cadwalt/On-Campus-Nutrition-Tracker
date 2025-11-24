@@ -32,18 +32,30 @@ const SignInForm: React.FC = () => {
   const [welcomeMsg, setWelcomeMsg] = useState(welcomeMessages[0]);
   const navigate = useNavigate();
 
+  // Resolve an auth client from the local firebase module whether it exposes
+  // an async getter (`getAuthClient`) or a synchronous `auth` instance.
+  const resolveAuthClient = async () => {
+    const firebaseMod: any = await import('../../firebase');
+    // prefer an async getter if available
+    const getter = firebaseMod.getAuthClient ?? firebaseMod.default?.getAuthClient ?? firebaseMod.default;
+    if (typeof getter === 'function') return await getter();
+    // fallback to exported auth instance
+    if (firebaseMod.auth) return firebaseMod.auth;
+    if (firebaseMod.default && firebaseMod.default.auth) return firebaseMod.default.auth;
+    throw new Error('getAuthClient not found on firebase module');
+  };
+
   useEffect(() => {
     let mounted = true;
     let unsub: (() => void) | null = null;
     (async () => {
       try {
-        const firebaseMod: any = await import('../../firebase');
-        const authClient = await firebaseMod.getAuthClient();
+        const authClient = await resolveAuthClient();
         const { onAuthStateChanged } = await import('firebase/auth');
         unsub = onAuthStateChanged(authClient, (user) => {
           if (!mounted) return;
           if (user) {
-            setUserName(user.displayName ?? null); // <-- Sets the name from the auth user
+            setUserName(user.displayName ?? null);
             setShowWelcome(true);
             setFadeOut(false);
             setVisible(false);
@@ -81,8 +93,7 @@ const SignInForm: React.FC = () => {
     e.preventDefault();
     setError(null); // Clear previous errors
     try {
-      const firebaseMod: any = await import('../../firebase');
-      const authClient = await firebaseMod.getAuthClient();
+      const authClient = await resolveAuthClient();
       const { signInWithEmailAndPassword } = await import('firebase/auth');
       await signInWithEmailAndPassword(authClient, email, password);
       // User is now logged in, onAuthStateChanged will update the UI
