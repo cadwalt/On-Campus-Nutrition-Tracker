@@ -1,18 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-// Load Firebase lazily to avoid bundling SDK into initial chunk
-const resolveFirebase = async () => {
-  const mod: any = await import('../../firebase');
-  const authClient = await mod.getAuthClient();
-  const dbClient = await mod.getFirestoreClient();
-  const firestore = await import('firebase/firestore');
-  return { authClient, dbClient, firestore };
-};
+import { resolveFirebase } from '../../lib/resolveFirebase';
 import type { WaterLog } from '../../types/water';
 import { mlToOz, ozToMl } from '../../types/water';
 
 const WaterTracker: React.FC = () => {
   const [user, setUser] = useState<any | null>(null);
   const [logs, setLogs] = useState<WaterLog[] | null>(null);
+  const [dailyMap, setDailyMap] = useState<Record<string, number>>({});
   const [inputAmount, setInputAmount] = useState<string>('');
   const [unit, setUnit] = useState<'oz' | 'ml'>('oz');
   const [loading, setLoading] = useState(false);
@@ -24,18 +18,24 @@ const WaterTracker: React.FC = () => {
       setUser(u || null);
       if (!u) {
         setLogs([]);
+        setDailyMap({});
         return;
       }
-      const q = firestore.query(firestore.collection(dbClient, 'water'), firestore.where('userId', '==', u.uid));
-      const unsub = firestore.onSnapshot(q, (snap: any) => {
-        const arr: WaterLog[] = [];
-        snap.forEach((doc: any) => {
-          const d = doc.data() as any;
-          arr.push({ id: doc.id, ...(d as WaterLog) });
-        });
-        setLogs(arr);
+      const userDocRef = firestore.doc(dbClient, 'users', u.uid);
+      const unsub = firestore.onSnapshot(userDocRef, (docSnap: any) => {
+        if (!docSnap.exists()) {
+          setDailyMap({});
+          setLogs([]);
+          return;
+        }
+        const data = docSnap.data() as any;
+        const map = (data?.water?.daily) || {};
+        setDailyMap(map);
+        // preserve logs array for legacy display if needed
+        setLogs([]);
       }, (err: any) => {
-        console.error('Failed to load water logs', err);
+        console.error('Failed to load user water data', err);
+        setDailyMap({});
         setLogs([]);
       });
       return () => unsub();
@@ -56,29 +56,32 @@ const WaterTracker: React.FC = () => {
   };
 
   const totalMlToday = useMemo(() => {
-    if (!logs) return 0;
-    return logs.reduce((sum, l) => {
-      const ms = toMillis((l as any).createdAt);
-      if (ms >= todayRange.startMs && ms < todayRange.endMs) {
-        return sum + (l.amountMl || 0);
-      }
-      return sum;
-    }, 0);
-  }, [logs, todayRange.startMs, todayRange.endMs]);
+    const keyDate = new Date(todayRange.startMs).toISOString().slice(0,10);
+    return Math.round((dailyMap[keyDate] || 0));
+  }, [dailyMap, todayRange.startMs]);
 
   const addWater = async (amountMl: number, source: 'quick' | 'custom') => {
     if (!user) return;
     if (amountMl <= 0 || !Number.isFinite(amountMl)) return;
     setLoading(true);
     try {
-      const log: Omit<WaterLog, 'id'> = {
-        userId: user.uid,
-        amountMl: Math.round(amountMl),
-        createdAt: Date.now(),
-        source,
-      };
+      const amount = Math.round(amountMl);
       const { dbClient, firestore } = await resolveFirebase();
-      await firestore.addDoc(firestore.collection(dbClient, 'water'), log);
+      const userDocRef = firestore.doc(dbClient, 'users', user.uid);
+      const dateKey = new Date(todayRange.startMs).toISOString().slice(0,10); // YYYY-MM-DD
+      // Try atomic increment; if the document doesn't exist, fall back to set with merge
+      try {
+        await firestore.updateDoc(userDocRef, {
+          [`water.daily.${dateKey}`]: firestore.increment(amount),
+          'water.lastUpdated': Date.now(),
+          'water.lastSource': source,
+        });
+      } catch (err: any) {
+        // If update failed (likely because doc missing), create with merge
+        await firestore.setDoc(userDocRef, {
+          water: { daily: { [dateKey]: amount }, lastUpdated: Date.now(), lastSource: source }
+        }, { merge: true });
+      }
       setInputAmount('');
     } catch (e) {
       console.error('Failed to add water log', e);
@@ -98,15 +101,30 @@ const WaterTracker: React.FC = () => {
 
   const totalOzToday = mlToOz(totalMlToday);
 
+  // Visual goal in mL (default ~2000 mL). You can replace this with user goal from profile later.
+  const DAILY_GOAL_ML = 2000;
+  const percent = Math.min(100, Math.round((totalMlToday / DAILY_GOAL_ML) * 100));
+
   return (
     <div className="card">
       <div className="section-header-with-tooltip">
         <h2>Water Intake</h2>
       </div>
       <div className="water-tracker">
-        <div className="water-summary">
-          <div className="water-amount">{totalOzToday} oz</div>
-          <div className="water-label">Today</div>
+        <div className="water-visual-and-summary">
+          <div className="water-glass-wrap" aria-hidden>
+            <div className="water-glass">
+              <div
+                className="water-fill"
+                style={{ height: `${percent}%` }}
+              />
+              <div className="water-glass-outline" />
+            </div>
+          </div>
+          <div className="water-summary">
+            <div className="water-amount">{totalOzToday} oz</div>
+            <div className="water-label">Today • {percent}% of {mlToOz(DAILY_GOAL_ML)} oz</div>
+          </div>
         </div>
 
         <div className="water-quick-buttons">
