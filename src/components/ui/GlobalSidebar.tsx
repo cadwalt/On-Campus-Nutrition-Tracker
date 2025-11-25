@@ -65,6 +65,10 @@ const GlobalSidebar: React.FC = () => {
             <span className="nav-icon"></span>
             <span className="nav-text">Dashboard</span>
           </Link>
+          <Link to="/ai-assistant" className={`nav-link ${location.pathname === '/ai-assistant' ? 'active' : ''}`}>
+            <span className="nav-icon"></span>
+            <span className="nav-text">AI Assistant</span>
+          </Link>
           <Link to="/meals" className={`nav-link ${location.pathname === '/meals' ? 'active' : ''}`}>
             <span className="nav-icon"></span>
             <span className="nav-text">Meals</span>
