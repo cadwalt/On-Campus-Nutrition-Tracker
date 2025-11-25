@@ -6,16 +6,6 @@ A React-based web application designed to help University of Oklahoma students t
 **Instructor:** Dr. Mansoor Abdulhak  
 **Team:** Group I
 
-## 🚀 Features
-
-- Interactive ChatGPT integration for nutritional advice (Ask questions, meal planning)
-- Firebase Authentication (Email/Password): Sign up, sign in, sign out
-- Profile management: Update display name and view account details
-- Firestore integration: Sample dining data fetch (e.g., `restaurants/testRestaurant`)
-- Dashboard with Quick Stats and Recent Meals sections
-- Global sidebar navigation with user-aware CTA/profile link
-- Modern React + TypeScript UI with responsive styling
-
 ## 🛠️ Technology Stack
 
 - **Frontend:** React 19.1.1 with TypeScript
@@ -67,10 +57,6 @@ First, make sure you have Git installed in your code editor. Then,
     ```bash
     npm install
     ```
-4. Add vite + vitest as dev deps if not present
-    ```bash
-    npm install --save-dev vite vitest
-    ```
 
 ### Running Tests
 1. Open a terminal or command prompt
@@ -87,20 +73,7 @@ First, make sure you have Git installed in your code editor. Then,
 ## 🔧 Environment Setup
 
 1. Create a `.env` file in the root directory
-2. Add your OpenAI and Firebase keys:
-   ```
-   # OpenAI
-   VITE_OPENAI_API_KEY=your_openai_api_key
-
-   # Firebase
-   VITE_FIREBASE_API_KEY=your_firebase_api_key
-   VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-   VITE_FIREBASE_PROJECT_ID=your_project_id
-   VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
-   VITE_FIREBASE_MESSAGING_SENDER_ID=1234567890
-   VITE_FIREBASE_APP_ID=1:1234567890:web:abcdef123456
-   VITE_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
-   ```
+2. Add the team's OpenAI and Firebase keys
    **Note:** Never commit your `.env` file or any of its contents to version control.
 
 
@@ -123,16 +96,6 @@ This will start the Vite development server, typically at `http://localhost:5173
 
 *(If this url does not work, use the URL that comes up next to `Local:` when you run this command in your terminal)
 
-## 🙌 Using the App
-
-1. Start the dev server and open the app.
-2. Go to Auth to create an account or sign in.
-3. After signing in, open Profile to edit your display name.
-4. Visit Dashboard to:
-   - Ask the Nutrition Assistant questions (uses OpenAI).
-   - View Quick Stats and Recent Meals sections.
-   - See sample dining data from Firestore in Restaurant Info.
-
 ## 🤝 Contributing
 
 1. Create a feature branch from `main`
@@ -141,7 +104,7 @@ This will start the Vite development server, typically at `http://localhost:5173
 4. Test your changes thoroughly using `npm run dev`
 5. Create a pull request in Github, adding Copilot as a reviewer.
 6. After Copilot and Cursor Bugbot have reviewed your PR, verify and/or fix any issues they have noted.
-7. Merge the branch into main
+7. Merge the branch into main using "Squash and Merge".
 
 ## 🐛 Troubleshooting
 
@@ -177,3 +140,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 **Note:** This project is currently in development. Features and functionality will change as development progresses.
+
