@@ -458,6 +458,24 @@ body::after {
   gap: 2rem;
 }
 
+/* Preferences Page */
+.preferences-page {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.preferences-content {
+  flex: 1;
+  padding: 2rem 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
 /* Profile Sections */
 .profile-section {
   display: flex;
@@ -2503,6 +2521,11 @@ body::after {
   
   /* Profile responsive */
   .profile-content {
+    padding: 1rem 0.5rem;
+    gap: 1.5rem;
+  }
+  
+  .preferences-content {
     padding: 1rem 0.5rem;
     gap: 1.5rem;
   }
