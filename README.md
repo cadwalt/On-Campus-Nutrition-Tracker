@@ -33,7 +33,7 @@ Before you begin, ensure you have the following installed:
 - [Git](https://git-scm.com/)
 - [Node.js](https://nodejs.org/en/download) (version 16 or higher)*
 
-If you're on Mac, I recommend installing Node.js using Brew with npm. If you're on Windows, I recommend installing using Chocolatey with npm. Here's a tutorial if you need more help: [tutorial](https://www.youtube.com/watch?v=ICysCMwOmcM)
+If you're on Mac, I recommend installing Node.js using Brew with npm. If you're on Windows, I recommend installing using Chocolatey with npm. Here's a [tutorial](https://www.youtube.com/watch?v=ICysCMwOmcM) if you need more help.
 
 
 ## 📥 Cloning the Repository
@@ -123,31 +123,6 @@ This will start the Vite development server, typically at `http://localhost:5173
 
 *(If this url does not work, use the URL that comes up next to `Local:` when you run this command in your terminal)
 
-
-## 📁 Project Structure
-
-```
-src/
-├── App.tsx              # Main application component
-├── App.css              # Application styles
-├── main.tsx             # Application entry point
-├── index.css            # Global styles
-├── chatGptService.ts    # OpenAI API integration
-├── firebase.ts          # Firebase initialization (Auth, Firestore, Analytics)
-└── assets/              # Static assets (images, icons)
-
-pages/
-├── Dashboard.tsx        # Nutrition dashboard (ChatGPT, stats, recent meals)
-├── AuthPage.tsx         # Sign in / Sign up hub
-└── ProfilePage.tsx      # Profile management (edit display name, sign out)
-
-components/
-├── GlobalSidebar.tsx    # App-wide navigation with user-aware CTA/profile
-├── RestaurantDisplay.tsx# Firestore example: fetches `restaurants/testRestaurant`
-├── SignInForm.tsx       # Email/password sign-in
-└── SignUpForm.tsx       # Account creation and user doc bootstrap
-```
-
 ## 🙌 Using the App
 
 1. Start the dev server and open the app.
@@ -164,7 +139,9 @@ components/
 2. Make your changes
 3. Run `npm run lint` to check for code issues
 4. Test your changes thoroughly using `npm run dev`
-5. Merge the branch into main
+5. Create a pull request in Github, adding Copilot as a reviewer.
+6. After Copilot and Cursor Bugbot have reviewed your PR, verify and/or fix any issues they have noted.
+7. Merge the branch into main
 
 ## 🐛 Troubleshooting
 
