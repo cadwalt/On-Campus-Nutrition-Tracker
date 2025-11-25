@@ -11,6 +11,7 @@ const OnboardingPage = React.lazy(() => import('./pages/OnboardingPage'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
 const MealTrackerPage = React.lazy(() => import('./pages/MealTrackerPage'));
+const PreferencesPage = React.lazy(() => import('./pages/PreferencesPage'));
 
 function AppContent() {
   // Hide sidebar and switch to minimal auth layout on auth routes
@@ -35,6 +36,7 @@ function AppContent() {
               <Route path="/onboarding" element={<OnboardingPage />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/meals" element={<MealTrackerPage />} />
+              <Route path="/preferences" element={<PreferencesPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="*" element={<Navigate to="/signin" replace />} />
             </Routes>
