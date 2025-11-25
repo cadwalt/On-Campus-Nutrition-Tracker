@@ -69,6 +69,10 @@ const GlobalSidebar: React.FC = () => {
             <span className="nav-icon"></span>
             <span className="nav-text">Meals</span>
           </Link>
+          <Link to="/preferences" className={`nav-link ${location.pathname === '/preferences' ? 'active' : ''}`}>
+            <span className="nav-icon"></span>
+            <span className="nav-text">Preferences</span>
+          </Link>
         </nav>
         
         <div className="sidebar-footer">

@@ -10,10 +10,6 @@ const resolveAuthClient = async () => {
 };
 import Toast from '../components/ui/Toast';
 import PersonalInformation from '../components/profile/PersonalInformation';
-import AllergensSection from '../components/profile/AllergensSection';
-import NutritionGoalsSection from '../components/profile/NutritionGoalsSection';
-import DietaryRestrictionsSection from '../components/profile/DietaryRestrictionsSection';
-import MealPreferencesSection from '../components/profile/MealPreferencesSection';
 import AccountSection from '../components/profile/AccountSection';
 
 const ProfilePage: React.FC = () => {
@@ -81,35 +77,11 @@ const ProfilePage: React.FC = () => {
     <div className="profile-page">
       <div className="page-header">
         <h1>Profile</h1>
-        <p>Manage your account settings and preferences</p>
+        <p>Manage your account settings and personal information</p>
       </div>
 
       <main className="profile-content">
         <PersonalInformation 
-          user={user} 
-          onSuccess={(message) => showToastNotification(message, 'success')}
-          onError={(message) => showToastNotification(message, 'error')}
-        />
-
-        <AllergensSection 
-          user={user} 
-          onSuccess={(message) => showToastNotification(message, 'success')}
-          onError={(message) => showToastNotification(message, 'error')}
-        />
-
-        <DietaryRestrictionsSection 
-          user={user} 
-          onSuccess={(message) => showToastNotification(message, 'success')}
-          onError={(message) => showToastNotification(message, 'error')}
-        />
-
-        <NutritionGoalsSection 
-          user={user} 
-          onSuccess={(message) => showToastNotification(message, 'success')}
-          onError={(message) => showToastNotification(message, 'error')}
-        />
-
-        <MealPreferencesSection 
           user={user} 
           onSuccess={(message) => showToastNotification(message, 'success')}
           onError={(message) => showToastNotification(message, 'error')}
