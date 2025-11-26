@@ -5465,6 +5465,10 @@ body::after {
   height: 48px;
   object-fit: contain;
   margin-bottom: 0.5rem;
+  background: rgba(59, 130, 246, 0.5);
+  border-radius: 8px;
+  padding: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .water-bottle-icon-label {
@@ -5516,6 +5520,10 @@ body::after {
   width: 48px;
   height: 48px;
   object-fit: contain;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .water-bottle-icon-label-text {
@@ -5539,4 +5547,81 @@ body::after {
   height: 32px;
   object-fit: contain;
   flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Smart Suggestions */
+.water-suggestions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.water-suggestion-item {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(59, 130, 246, 0.05);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.water-suggestion-item:hover {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.25);
+  transform: translateY(-1px);
+}
+
+.water-suggestion-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 10px;
+}
+
+.water-suggestion-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.water-suggestion-message {
+  margin: 0;
+  color: #e2e8f0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.water-suggestion-action {
+  align-self: flex-start;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.water-suggestion-action:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.water-suggestion-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
