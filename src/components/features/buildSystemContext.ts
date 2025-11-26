@@ -136,11 +136,32 @@ export async function buildSystemContext(params: SystemContextParams): Promise<s
         const remainingCarbs = Math.max(0, nutritionPlan.macroGrams.carbs - todayIntake.carbs);
         const remainingFat = Math.max(0, nutritionPlan.macroGrams.fat - todayIntake.fat);
 
+        // Helper function to safely calculate percentage, avoiding division by zero
+        const safePercentage = (current: number, target: number): string => {
+          if (target === 0 || !isFinite(target)) return 'N/A';
+          return `${Math.round((current / target) * 100)}%`;
+        };
+
         parts.push(`\nToday's intake so far:`);
-        parts.push(`- Calories: ${todayIntake.calories} / ${nutritionPlan.targetCalories} (${Math.round((todayIntake.calories / nutritionPlan.targetCalories) * 100)}%)`);
-        parts.push(`- Protein: ${todayIntake.protein}g / ${Math.round(nutritionPlan.macroGrams.protein)}g (${Math.round((todayIntake.protein / nutritionPlan.macroGrams.protein) * 100)}%)`);
-        parts.push(`- Carbs: ${todayIntake.carbs}g / ${Math.round(nutritionPlan.macroGrams.carbs)}g (${Math.round((todayIntake.carbs / nutritionPlan.macroGrams.carbs) * 100)}%)`);
-        parts.push(`- Fat: ${todayIntake.fat}g / ${Math.round(nutritionPlan.macroGrams.fat)}g (${Math.round((todayIntake.fat / nutritionPlan.macroGrams.fat) * 100)}%)`);
+        const caloriesPercent = nutritionPlan.targetCalories > 0 
+          ? ` (${safePercentage(todayIntake.calories, nutritionPlan.targetCalories)})` 
+          : '';
+        parts.push(`- Calories: ${todayIntake.calories} / ${nutritionPlan.targetCalories}${caloriesPercent}`);
+        
+        const proteinPercent = nutritionPlan.macroGrams.protein > 0 
+          ? ` (${safePercentage(todayIntake.protein, nutritionPlan.macroGrams.protein)})` 
+          : '';
+        parts.push(`- Protein: ${todayIntake.protein}g / ${Math.round(nutritionPlan.macroGrams.protein)}g${proteinPercent}`);
+        
+        const carbsPercent = nutritionPlan.macroGrams.carbs > 0 
+          ? ` (${safePercentage(todayIntake.carbs, nutritionPlan.macroGrams.carbs)})` 
+          : '';
+        parts.push(`- Carbs: ${todayIntake.carbs}g / ${Math.round(nutritionPlan.macroGrams.carbs)}g${carbsPercent}`);
+        
+        const fatPercent = nutritionPlan.macroGrams.fat > 0 
+          ? ` (${safePercentage(todayIntake.fat, nutritionPlan.macroGrams.fat)})` 
+          : '';
+        parts.push(`- Fat: ${todayIntake.fat}g / ${Math.round(nutritionPlan.macroGrams.fat)}g${fatPercent}`);
         
         parts.push(`\nRemaining targets for today:`);
         parts.push(`- Calories: ${remainingCalories} remaining`);
