@@ -14,6 +14,7 @@ import WaterIntakeTodayCard from '../components/features/WaterIntakeTodayCard';
 import WaterAddCard from '../components/features/WaterAddCard';
 import WaterMyBottlesCard from '../components/features/WaterMyBottlesCard';
 import WaterBottleManagerCard from '../components/features/WaterBottleManagerCard';
+import WaterEntriesCard from '../components/features/WaterEntriesCard';
 
 const WaterIntakePage: React.FC = () => {
   const [user, setUser] = useState<any | null>(null);
@@ -265,6 +266,20 @@ const WaterIntakePage: React.FC = () => {
               user={user}
               loading={loading}
               onAddWater={(amountMl) => void addWater(amountMl, 'quick')}
+            />
+
+            {/* Today's Entries Card */}
+            <WaterEntriesCard
+              logs={logs}
+              unit={unit}
+              todayRange={todayRange}
+              user={user}
+              loading={loading}
+              onEntriesUpdate={() => {
+                // The logs are already updated via the onSnapshot listener,
+                // but we can trigger a re-render if needed
+                setLoading(false);
+              }}
             />
           </div>
 

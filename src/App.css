@@ -5625,3 +5625,323 @@ body::after {
   cursor: not-allowed;
   transform: none;
 }
+
+/* Water Entries List */
+.water-entries-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.water-entry-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+
+.water-entry-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.water-entry-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.water-entry-amount {
+  font-weight: 600;
+  color: #e2e8f0;
+  font-size: 0.9375rem;
+}
+
+.water-entry-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: #94a3b8;
+}
+
+.water-entry-time {
+  color: #94a3b8;
+}
+
+.water-entry-source {
+  color: #64748b;
+}
+
+.water-entry-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.water-entry-edit-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.water-entry-edit-inputs {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.water-entry-edit-inputs .water-input {
+  flex: 1;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(17, 17, 27, 0.8);
+  color: #e2e8f0;
+}
+
+.water-entry-edit-inputs .water-unit {
+  padding: 0.625rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(17, 17, 27, 0.8);
+  color: #e2e8f0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+}
+
+.water-entry-edit-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.water-entry-edit-actions .water-add {
+  min-width: 80px;
+}
+
+.water-entry-edit-actions .water-btn {
+  min-width: 80px;
+}
+
+/* Water Timeline Bar Graph */
+.water-timeline-container {
+  padding: 1rem 0;
+}
+
+.water-timeline-chart {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  margin-bottom: 3rem;
+}
+
+.water-timeline-bars {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.water-timeline-bar {
+  position: absolute;
+  bottom: 0;
+  width: 28px;
+  min-height: 12px;
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.8) 0%, rgba(59, 130, 246, 0.6) 100%);
+  border: 2px solid rgba(59, 130, 246, 0.9);
+  border-radius: 6px 6px 0 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  transform: translateX(-50%);
+  z-index: 2;
+  max-width: calc(100% - 4px);
+}
+
+.water-timeline-bar:hover {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 1) 0%, rgba(59, 130, 246, 0.8) 100%);
+  border-color: rgba(59, 130, 246, 1);
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  z-index: 10;
+}
+
+.water-timeline-bar.editing {
+  background: linear-gradient(180deg, rgba(251, 191, 36, 0.8) 0%, rgba(251, 191, 36, 0.6) 100%);
+  border-color: rgba(251, 191, 36, 0.9);
+}
+
+.water-timeline-bar.at-max {
+  background: linear-gradient(180deg, rgba(34, 197, 94, 0.8) 0%, rgba(34, 197, 94, 0.6) 100%);
+  border-color: rgba(34, 197, 94, 0.9);
+}
+
+.water-timeline-bar.at-max:hover {
+  background: linear-gradient(180deg, rgba(34, 197, 94, 1) 0%, rgba(34, 197, 94, 0.8) 100%);
+  border-color: rgba(34, 197, 94, 1);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+}
+
+.water-timeline-bar-content {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  border-radius: 8px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 20;
+  min-width: 100px;
+}
+
+.water-timeline-bar-content::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid rgba(15, 23, 42, 0.95);
+}
+
+.water-timeline-bar:hover .water-timeline-bar-content {
+  opacity: 1;
+}
+
+.water-timeline-bar-amount {
+  font-weight: 600;
+  color: #bfdbfe;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+.water-timeline-bar-time {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.water-timeline-axis {
+  position: absolute;
+  bottom: -2.5rem;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 0.5rem;
+  height: 2rem;
+}
+
+.water-timeline-hour-marker {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.water-timeline-hour-tick {
+  width: 1px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.water-timeline-hour-label {
+  font-size: 0.6875rem;
+  color: #64748b;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.water-entry-edit-modal {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+}
+
+.water-entry-edit-modal h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.water-entry-edit-modal .water-entry-edit-form {
+  gap: 1rem;
+}
+
+.water-entry-edit-modal .water-entry-edit-actions {
+  justify-content: flex-start;
+}
+
+.water-entry-group-info {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 8px;
+}
+
+.water-entry-group-info p {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.875rem;
+  color: #94a3b8;
+}
+
+.water-entry-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.water-entry-group-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  font-size: 0.8125rem;
+}
+
+.water-entry-group-item span:first-child {
+  color: #e2e8f0;
+  font-weight: 500;
+}
+
+.water-entry-group-item span:last-of-type {
+  color: #bfdbfe;
+  font-weight: 600;
+}
+
+.water-timeline-bar-count {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.water-timeline-bar-max-indicator {
+  color: #4ade80;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
