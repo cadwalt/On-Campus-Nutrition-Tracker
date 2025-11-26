@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import type { User } from 'firebase/auth';
 import { resolveFirebase } from '../../lib/resolveFirebase';
+import { NovaIcon } from './Icons';
 
 const GlobalSidebar: React.FC = () => {
   const location = useLocation();
@@ -73,7 +74,14 @@ const GlobalSidebar: React.FC = () => {
             <span className="nav-icon"></span>
             <span className="nav-text">Preferences</span>
           </Link>
-        </nav>
+          </nav>
+   
+        <Link to="/ai-assistant" className={`nav-link nav-link-nova ${location.pathname === '/ai-assistant' ? 'active' : ''}`}>
+          <span className="nav-icon"><NovaIcon size={20} /></span>
+          <span className="nav-text">Ask Nova</span>
+        </Link>
+        
+        <div className="sidebar-divider"></div>
         
         <div className="sidebar-footer">
           {user ? (
