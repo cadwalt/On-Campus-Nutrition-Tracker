@@ -5,7 +5,6 @@ import NutritionPlanCard from '../components/features/NutritionPlanCard';
 const RestaurantDisplay = React.lazy(() => import('../components/features/RestaurantDisplay'));
 const NutritionSummary = React.lazy(() => import('../components/features/NutritionSummary'));
 const WaterTracker = React.lazy(() => import('../components/features/WaterTracker'));
-const NutritionChatbot = React.lazy(() => import('../components/features/NutritionChatbot'));
 import { type User } from 'firebase/auth';
 import { resolveFirebase } from '../lib/resolveFirebase';
 import type { Meal } from '../types/meal';
@@ -124,11 +123,6 @@ const Dashboard: React.FC = () => {
             </div>
 
             <NutritionPlanCard />
-
-            {/* Floating Nutrition Assistant Chatbot */}
-            <Suspense fallback={<div>Loading assistant...</div>}>
-              <NutritionChatbot />
-            </Suspense>
           </div>
         </div>
       </main>
