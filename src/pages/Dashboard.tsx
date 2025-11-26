@@ -1,19 +1,27 @@
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState, useMemo, Suspense } from 'react';
 import NutritionPlanCard from '../components/features/NutritionPlanCard';
 
 // Lazy-load heavier feature components so the dashboard splits into chunks
 const RestaurantDisplay = React.lazy(() => import('../components/features/RestaurantDisplay'));
 const NutritionSummary = React.lazy(() => import('../components/features/NutritionSummary'));
-const WaterTracker = React.lazy(() => import('../components/features/WaterTracker'));
+const WaterIntakeTodayCard = React.lazy(() => import('../components/features/WaterIntakeTodayCard'));
 import { type User } from 'firebase/auth';
 import { resolveFirebase } from '../lib/resolveFirebase';
 import type { Meal } from '../types/meal';
 import { calculateActualCalories } from '../utils/mealCalculations';
+import type { WaterLog } from '../types/water';
+import { mlToOz } from '../types/water';
 
 const Dashboard: React.FC = () => {
   // Live Quick Stats derived from user's meals
   const [user, setUser] = useState<User | null>(null);
   const [stats, setStats] = useState({ totalMeals: 0, caloriesToday: 0, activeDays: 0 });
+  
+  // Water intake state
+  const [waterLogs, setWaterLogs] = useState<WaterLog[] | null>(null);
+  const [waterUnit, setWaterUnit] = useState<'oz' | 'ml'>('oz');
+  const [waterLoading, setWaterLoading] = useState(false);
+  const [dailyGoalMl, setDailyGoalMl] = useState<number>(1892.7); // Default: 64 oz in ml
 
   useEffect(() => {
     let unsub: (() => void) | null = null;
@@ -76,6 +84,100 @@ const Dashboard: React.FC = () => {
     return () => { if (unsub) unsub(); };
   }, [user]);
 
+  // Load water logs
+  useEffect(() => {
+    if (!user) {
+      setWaterLogs([]);
+      return;
+    }
+    let unsub: (() => void) | null = null;
+    (async () => {
+      try {
+        const { db, firestore } = await resolveFirebase();
+        const q = firestore.query(firestore.collection(db, 'water'), firestore.where('userId', '==', user.uid));
+        unsub = firestore.onSnapshot(q, (snap: any) => {
+          const arr: WaterLog[] = [];
+          snap.forEach((doc: any) => {
+            const d = doc.data() as any;
+            arr.push({ id: doc.id, ...(d as WaterLog) });
+          });
+          setWaterLogs(arr);
+        }, (err: any) => {
+          console.error('Failed to load water logs', err);
+          setWaterLogs([]);
+        });
+      } catch (err) {
+        console.error('Failed to subscribe to water logs', err);
+      }
+    })();
+    return () => { if (unsub) unsub(); };
+  }, [user]);
+
+  // Load daily water goal
+  useEffect(() => {
+    if (!user?.uid) {
+      setDailyGoalMl(1892.7);
+      return;
+    }
+    let unsub: (() => void) | null = null;
+    (async () => {
+      try {
+        const { db, firestore } = await resolveFirebase();
+        const userDocRef = firestore.doc(db, 'users', user.uid);
+        unsub = firestore.onSnapshot(userDocRef, (docSnap: any) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            const goal = data.water_goal_ml || 1892.7;
+            setDailyGoalMl(goal);
+          } else {
+            setDailyGoalMl(1892.7);
+          }
+        }, (err: any) => {
+          console.error('Failed to load water goal', err);
+          setDailyGoalMl(1892.7);
+        });
+      } catch (err) {
+        console.error('Failed to subscribe to user document', err);
+      }
+    })();
+    return () => { if (unsub) unsub(); };
+  }, [user?.uid]);
+
+  // Calculate today's water intake
+  const todayRange = useMemo(() => {
+    const start = new Date(); start.setHours(0,0,0,0);
+    const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+    return { startMs: start.getTime(), endMs: end.getTime() };
+  }, []);
+
+  const toMillis = (val: any): number => {
+    if (typeof val === 'number') return val;
+    if (val && typeof val.seconds === 'number') return val.seconds * 1000 + Math.floor((val.nanoseconds || 0) / 1e6);
+    if (val instanceof Date) return val.getTime();
+    return 0;
+  };
+
+  const totalMlToday = useMemo(() => {
+    if (!waterLogs) return 0;
+    return waterLogs.reduce((sum, l) => {
+      const ms = toMillis((l as any).createdAt);
+      if (ms >= todayRange.startMs && ms < todayRange.endMs) {
+        return sum + (l.amountMl || 0);
+      }
+      return sum;
+    }, 0);
+  }, [waterLogs, todayRange.startMs, todayRange.endMs]);
+
+  const progressPercentage = useMemo(() => {
+    if (dailyGoalMl <= 0) return 0;
+    return Math.min((totalMlToday / dailyGoalMl) * 100, 100);
+  }, [totalMlToday, dailyGoalMl]);
+
+  const remainingMl = Math.max(0, dailyGoalMl - totalMlToday);
+  const remainingOz = mlToOz(remainingMl);
+  const goalOz = mlToOz(dailyGoalMl);
+  const goalMl = dailyGoalMl;
+
   return (
     <div className="dashboard-page">
       <div className="page-header">
@@ -98,7 +200,18 @@ const Dashboard: React.FC = () => {
 
             {/* Water Intake Tracker */}
             <Suspense fallback={<div>Loading water tracker...</div>}>
-              <WaterTracker />
+              <WaterIntakeTodayCard
+                totalMlToday={totalMlToday}
+                progressPercentage={progressPercentage}
+                remainingMl={remainingMl}
+                remainingOz={remainingOz}
+                goalOz={goalOz}
+                goalMl={goalMl}
+                unit={waterUnit}
+                user={user}
+                loading={waterLoading}
+                onGoalUpdate={setDailyGoalMl}
+              />
             </Suspense>
           </div>
           

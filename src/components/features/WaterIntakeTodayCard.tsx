@@ -83,7 +83,7 @@ const WaterIntakeTodayCard: React.FC<WaterIntakeTodayCardProps> = ({
   return (
     <div className="card">
       <div className="section-header-with-tooltip">
-        <h2>Today's Intake</h2>
+        <h2>Today's Water Intake</h2>
       </div>
       <div className="water-tracker">
         {isEditingGoal ? (
