@@ -45,7 +45,7 @@ const AiAssistantPage: React.FC = () => {
       <div className="ai-assistant-page">
         <div className="page-header">
           <h1>Not Signed In</h1>
-          <p>Please sign in to chat with Alex, your nutrition assistant.</p>
+          <p>Please sign in to chat with Nova, your nutrition assistant.</p>
         </div>
       </div>
     );

@@ -6,7 +6,7 @@ interface IconProps {
   size?: number;
 }
 
-export const AlexIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+export const NovaIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
   <svg
     width={size}
     height={size}
@@ -294,6 +294,23 @@ export const NutIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
   >
     <path d="M12 2L2 7l10 5 10-5-10-5z"/>
     <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+  </svg>
+);
+
+export const InfoIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <circle cx="12" cy="12" r="10"/>
+    <path d="M12 16v-4M12 8h.01"/>
   </svg>
 );
 
