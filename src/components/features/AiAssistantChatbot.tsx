@@ -313,7 +313,6 @@ const AiAssistantChatbot: React.FC = () => {
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="Ask Nova anything about nutrition, meal planning, or your goals..."
-            rows={2}
             disabled={loading}
             ref={inputRef}
             onKeyDown={(e) => {
@@ -332,9 +331,9 @@ const AiAssistantChatbot: React.FC = () => {
             {loading ? (
               <span className="spinner"></span>
             ) : (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/>
-              </svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ display: 'block', width: '24px', height: '24px' }}>
+                  <path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                </svg>
             )}
           </button>
         </div>
