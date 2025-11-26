@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import type { User } from 'firebase/auth';
 import { resolveFirebase } from '../../lib/resolveFirebase';
-import { NovaIcon } from './Icons';
+import { NovaIcon, DropletIcon, ChartIcon, UtensilsIcon, TargetIcon } from './Icons';
 
 const GlobalSidebar: React.FC = () => {
   const location = useLocation();
@@ -63,16 +63,20 @@ const GlobalSidebar: React.FC = () => {
         
         <nav className="sidebar-nav">
           <Link to="/dashboard" className={`nav-link ${location.pathname === '/dashboard' ? 'active' : ''}`}>
-            <span className="nav-icon"></span>
+            <span className="nav-icon"><ChartIcon size={20} /></span>
             <span className="nav-text">Dashboard</span>
           </Link>
           <Link to="/meals" className={`nav-link ${location.pathname === '/meals' ? 'active' : ''}`}>
-            <span className="nav-icon"></span>
+            <span className="nav-icon"><UtensilsIcon size={20} /></span>
             <span className="nav-text">Meals</span>
           </Link>
           <Link to="/preferences" className={`nav-link ${location.pathname === '/preferences' ? 'active' : ''}`}>
-            <span className="nav-icon"></span>
+            <span className="nav-icon"><TargetIcon size={20} /></span>
             <span className="nav-text">Preferences</span>
+          </Link>
+          <Link to="/water-intake" className={`nav-link ${location.pathname === '/water-intake' ? 'active' : ''}`}>
+            <span className="nav-icon"><DropletIcon size={20} /></span>
+            <span className="nav-text">Water Intake</span>
           </Link>
           </nav>
    
