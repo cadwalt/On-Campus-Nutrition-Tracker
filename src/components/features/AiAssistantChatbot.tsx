@@ -351,15 +351,24 @@ const AiAssistantChatbot: React.FC = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Server responded with an error');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Server error: ${response.status}`);
       }
 
       const data = await response.json();
       const result = data.content;
 
+      if (!result) {
+        throw new Error('No response content received');
+      }
+
       setMessages((prev) => [...prev, { role: 'assistant', content: result }]);
-    } catch (error) {
-      setMessages((prev) => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' }]);
+    } catch (error: any) {
+      const errorMessage = error.message?.includes('Failed to fetch') 
+        ? 'Unable to connect to the server. Please check your connection and try again.'
+        : error.message || 'Sorry, I encountered an error. Please try again.';
+      
+      setMessages((prev) => [...prev, { role: 'assistant', content: errorMessage }]);
     } finally {
       setLoading(false);
       inputRef.current?.focus();
