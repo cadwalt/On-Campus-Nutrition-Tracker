@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import type { User } from 'firebase/auth';
 // Runtime resolver for firebase to avoid bundling into initial chunk
 const resolveFirebase = async () => {
@@ -14,7 +14,12 @@ import MealDetailsModal from './modals/MealDetailsModal';
 import { calculateActualCalories, calculateActualMacros } from '../../utils/mealCalculations';
 import { canAccess } from '../../utils/authorization';
 
-const YourMealsList: React.FC = () => {
+interface YourMealsListProps {
+  searchQuery?: string;
+  dateRange?: { startMs: number; endMs: number } | null;
+}
+
+const YourMealsList: React.FC<YourMealsListProps> = ({ searchQuery = '', dateRange = null }) => {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; visible: boolean }>({
@@ -49,6 +54,14 @@ const YourMealsList: React.FC = () => {
     return () => { if (unsub) unsub(); };
   }, []);
 
+  // Helper function to convert createdAt to milliseconds
+  const toMillis = (val: any): number => {
+    if (typeof val === 'number') return val;
+    if (val && typeof val.seconds === 'number') return val.seconds * 1000 + Math.floor((val.nanoseconds || 0) / 1e6);
+    if (val instanceof Date) return val.getTime();
+    return 0;
+  };
+
   // Subscribe to this user's meals (client-side sort to avoid composite index requirement)
   useEffect(() => {
     if (!user) {
@@ -72,13 +85,6 @@ const YourMealsList: React.FC = () => {
             });
             // Sort client-side by createdAt desc (supports number or Firestore Timestamp)
             list.sort((a, b) => {
-              const toMillis = (val: any): number => {
-                if (typeof val === 'number') return val;
-                if (val && typeof val.seconds === 'number') return val.seconds * 1000 + Math.floor((val.nanoseconds || 0) / 1e6);
-                if (val instanceof Date) return val.getTime();
-                return 0;
-              };
-
               return toMillis(b.createdAt) - toMillis(a.createdAt);
             });
             setMeals(list);
@@ -96,6 +102,29 @@ const YourMealsList: React.FC = () => {
     })();
     return () => { if (unsubLocal) unsubLocal(); };
   }, [user]);
+
+  // Apply search and date filters
+  const filteredMeals = useMemo(() => {
+    let filtered = [...meals];
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.trim().toLowerCase();
+      filtered = filtered.filter((meal) => 
+        meal.name.toLowerCase().includes(query)
+      );
+    }
+
+    // Apply date filter
+    if (dateRange) {
+      filtered = filtered.filter((meal) => {
+        const mealMs = toMillis(meal.createdAt);
+        return mealMs >= dateRange.startMs && mealMs <= dateRange.endMs;
+      });
+    }
+
+    return filtered;
+  }, [meals, searchQuery, dateRange]);
 
   const showToast = (message: string, type: 'success' | 'error') => setToast({ message, type, visible: true });
   const closeToast = () => setToast((t) => ({ ...t, visible: false }));
@@ -150,9 +179,39 @@ const YourMealsList: React.FC = () => {
     return <div className="muted">No meals yet. Your saved meals will appear here.</div>;
   }
 
+  if (filteredMeals.length === 0) {
+    const hasFilters = searchQuery.trim() || dateRange;
+    return (
+      <div className="muted" style={{ padding: '2rem', textAlign: 'center' }}>
+        {hasFilters ? (
+          <>
+            <p style={{ marginBottom: '0.5rem' }}>No meals found matching your filters.</p>
+            <p style={{ fontSize: '0.875rem', color: 'var(--muted, #9aa7bf)' }}>
+              Try adjusting your search or date range.
+            </p>
+          </>
+        ) : (
+          'No meals yet. Your saved meals will appear here.'
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="meal-list">
-      {meals.map((m) => (
+      {filteredMeals.length < meals.length && (
+        <div style={{ 
+          marginBottom: '1rem', 
+          padding: '0.75rem', 
+          background: 'rgba(99, 102, 241, 0.1)', 
+          borderRadius: '6px',
+          fontSize: '0.875rem',
+          color: 'var(--muted, #9aa7bf)'
+        }}>
+          Showing {filteredMeals.length} of {meals.length} meal{meals.length !== 1 ? 's' : ''}
+        </div>
+      )}
+      {filteredMeals.map((m) => (
         <div
           key={m.id}
           className="meal-item"
@@ -162,14 +221,7 @@ const YourMealsList: React.FC = () => {
           <div className="meal-left">
             <div className="meal-time">
               {(() => {
-                const v: any = m.createdAt as any;
-                const ms = typeof v === 'number'
-                  ? v
-                  : v && typeof v.seconds === 'number'
-                    ? v.seconds * 1000 + Math.floor((v.nanoseconds || 0) / 1e6)
-                    : v instanceof Date
-                      ? v.getTime()
-                      : 0;
+                const ms = toMillis(m.createdAt);
                 return ms ? new Date(ms).toLocaleString() : '';
               })()}
             </div>
