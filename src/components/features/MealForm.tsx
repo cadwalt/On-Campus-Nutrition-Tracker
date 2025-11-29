@@ -12,9 +12,12 @@ import Toast from '../ui/Toast';
 
 interface MealFormProps {
   onMealAdded: (meal: Meal) => void;
+  initialMeal?: Meal | null;
+  onInitialMealSet?: () => void;
+  planningMode?: boolean; // If true, don't save to meals collection, only call onMealAdded
 }
 
-const MealForm: React.FC<MealFormProps> = ({ onMealAdded }) => {
+const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitialMealSet, planningMode = false }) => {
   const [form, setForm] = useState({
     name: '',
     calories: '',
@@ -40,6 +43,32 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded }) => {
   const [showOptional, setShowOptional] = useState(false);
   const [priorMeals, setPriorMeals] = useState<Meal[] | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Fill form when initialMeal is provided
+  useEffect(() => {
+    if (initialMeal) {
+      setForm({
+        name: initialMeal.name || '',
+        calories: String(initialMeal.calories ?? ''),
+        servingSize: initialMeal.servingSize || '',
+        servingsHad: initialMeal.servingsHad != null ? String(initialMeal.servingsHad) : '',
+        totalCarbs: initialMeal.totalCarbs != null ? String(initialMeal.totalCarbs) : '',
+        totalFat: initialMeal.totalFat != null ? String(initialMeal.totalFat) : '',
+        protein: initialMeal.protein != null ? String(initialMeal.protein) : '',
+        fatCategories: initialMeal.fatCategories || '',
+        sodium: initialMeal.sodium != null ? String(initialMeal.sodium) : '',
+        sugars: initialMeal.sugars != null ? String(initialMeal.sugars) : '',
+        calcium: initialMeal.calcium != null ? String(initialMeal.calcium) : '',
+        vitamins: initialMeal.vitamins || '',
+        iron: initialMeal.iron != null ? String(initialMeal.iron) : '',
+        otherInfo: initialMeal.otherInfo || '',
+      });
+      setShowSuggestions(false);
+      if (onInitialMealSet) {
+        onInitialMealSet();
+      }
+    }
+  }, [initialMeal, onInitialMealSet]);
 
   // fetch current user on-demand to avoid bundling auth into initial chunk
   const getCurrentUser = async () => {
@@ -175,11 +204,19 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded }) => {
       if (m.otherInfo && m.otherInfo.trim()) optional.otherInfo = m.otherInfo.trim();
 
       const meal: Meal = { ...base, ...optional } as Meal;
-      const { db, firestore } = await resolveFirebase();
-      const ref = await firestore.addDoc(firestore.collection(db, 'meals'), meal);
-      const added: Meal = { ...meal, id: ref.id };
-      onMealAdded(added);
-      showToast('Meal added from suggestion', 'success');
+      
+      if (planningMode) {
+        // In planning mode, don't save to meals collection, just call callback
+        showToast('Meal prepared for planning!', 'success');
+        onMealAdded(meal);
+      } else {
+        // Normal mode: save to meals collection
+        const { db, firestore } = await resolveFirebase();
+        const ref = await firestore.addDoc(firestore.collection(db, 'meals'), meal);
+        const added: Meal = { ...meal, id: ref.id };
+        onMealAdded(added);
+        showToast('Meal added from suggestion', 'success');
+      }
       setForm({
         name: '', calories: '', servingSize: '', servingsHad: '', totalCarbs: '', totalFat: '', protein: '', fatCategories: '', sodium: '', sugars: '', calcium: '', vitamins: '', iron: '', otherInfo: '',
       });
@@ -249,11 +286,19 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded }) => {
 
         const meal: Meal = mealBase;
         const { db, firestore } = await resolveFirebase();
-        const ref = await firestore.addDoc(firestore.collection(db, 'meals'), meal);
-  console.debug('[MealForm] Added meal', { id: ref.id, meal });
-      const added: Meal = { ...meal, id: ref.id };
-      onMealAdded(added);
-      showToast('Meal saved', 'success');
+        
+        if (planningMode) {
+          // In planning mode, don't save to meals collection, just call callback
+          showToast('Meal prepared for planning!', 'success');
+          onMealAdded(meal);
+        } else {
+          // Normal mode: save to meals collection
+          const ref = await firestore.addDoc(firestore.collection(db, 'meals'), meal);
+          console.debug('[MealForm] Added meal', { id: ref.id, meal });
+          const added: Meal = { ...meal, id: ref.id };
+          onMealAdded(added);
+          showToast('Meal saved', 'success');
+        }
       setForm({
         name: '', calories: '', servingSize: '', servingsHad: '', totalCarbs: '', totalFat: '', protein: '', fatCategories: '', sodium: '', sugars: '', calcium: '', vitamins: '', iron: '', otherInfo: '',
       });
