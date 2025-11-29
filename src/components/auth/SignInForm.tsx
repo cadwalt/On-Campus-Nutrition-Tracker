@@ -5,19 +5,14 @@ import { useNavigate } from 'react-router-dom';
 
 const welcomeMessages = [
   "Welcome back!",
-  "Again so soon?",
   "Glad to see you!",
   "Hello again!",
   "Nice to have you back!",
-  "You need to leave!",
-  "Love to see you again!",
   "Welcome back, friend!",
   "Good to have you here!",
   "Greetings, Food Warrior!",
-  "Back for more deliciousness?",
   "Your culinary journey continues!",
   "Welcome, Big Back!",
-  "Haven't you been here before?",
   "Dinner Dinner! Chicken Winner!"
 ];
 

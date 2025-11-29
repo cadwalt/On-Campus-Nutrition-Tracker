@@ -5,11 +5,6 @@ import YourMealsList from '../components/features/YourMealsList';
 const MealTrackerPage: React.FC = () => {
   return (
     <div className="page meal-tracker-page">
-      <div className="page-header">
-        <h1>Meal Tracker</h1>
-        <p>Input detailed nutrition for your meals and build a personal history.</p>
-      </div>
-
       <main className="dashboard-content">
         <div className="dashboard-grid">
           <div className="dashboard-left">

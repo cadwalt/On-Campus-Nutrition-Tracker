@@ -55,9 +55,9 @@ const ProfilePage: React.FC = () => {
   if (loading) {
     return (
       <div className="profile-page">
-        <div className="page-header">
-          <h1>Loading...</h1>
-        </div>
+        <main className="profile-content">
+          <div className="muted" style={{ textAlign: 'center', padding: '2rem' }}>Loading...</div>
+        </main>
       </div>
     );
   }
@@ -65,21 +65,18 @@ const ProfilePage: React.FC = () => {
   if (!user) {
     return (
       <div className="profile-page">
-        <div className="page-header">
-          <h1>Not Signed In</h1>
-          <p>Please sign in to view your profile.</p>
-        </div>
+        <main className="profile-content">
+          <div className="muted" style={{ textAlign: 'center', padding: '2rem' }}>
+            <p>Not Signed In</p>
+            <p>Please sign in to view your profile.</p>
+          </div>
+        </main>
       </div>
     );
   }
 
   return (
     <div className="profile-page">
-      <div className="page-header">
-        <h1>Profile</h1>
-        <p>Manage your account settings and personal information</p>
-      </div>
-
       <main className="profile-content">
         <PersonalInformation 
           user={user} 

@@ -219,25 +219,16 @@ const WaterIntakePage: React.FC = () => {
 
   return (
     <div className="page water-intake-page">
-      <div className="page-header">
-        <div className="page-header-title">
-          <div>
-            <h1>Water Intake</h1>
-            <p>Track your daily water consumption and stay hydrated</p>
-          </div>
-        </div>
-        <div className="page-header-actions">
+      <main className="dashboard-content">
+        <div className="water-unit-toggle-container">
           <button
-            className="water-unit-toggle-btn-header"
+            className="water-unit-toggle-btn"
             onClick={() => setUnit(unit === 'oz' ? 'ml' : 'oz')}
             disabled={loading}
           >
             Switch to {unit === 'oz' ? 'ml' : 'oz'}
           </button>
         </div>
-      </div>
-
-      <main className="dashboard-content">
         <div className="water-intake-grid">
           {/* Left Column */}
           <div className="water-intake-column">

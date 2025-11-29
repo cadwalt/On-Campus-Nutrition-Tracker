@@ -33,9 +33,7 @@ const AiAssistantPage: React.FC = () => {
   if (loading) {
     return (
       <div className="ai-assistant-page">
-        <div className="page-header">
-          <h1>Loading...</h1>
-        </div>
+        <div className="muted" style={{ textAlign: 'center', padding: '2rem' }}>Loading...</div>
       </div>
     );
   }
@@ -43,8 +41,8 @@ const AiAssistantPage: React.FC = () => {
   if (!user) {
     return (
       <div className="ai-assistant-page">
-        <div className="page-header">
-          <h1>Not Signed In</h1>
+        <div className="muted" style={{ textAlign: 'center', padding: '2rem' }}>
+          <p>Not Signed In</p>
           <p>Please sign in to chat with Nova, your nutrition assistant.</p>
         </div>
       </div>

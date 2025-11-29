@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useMemo, Suspense } from 'react';
 import NutritionPlanCard from '../components/features/NutritionPlanCard';
+import WelcomeHeader from '../components/ui/WelcomeHeader';
 
 // Lazy-load heavier feature components so the dashboard splits into chunks
-const RestaurantDisplay = React.lazy(() => import('../components/features/RestaurantDisplay'));
 const NutritionSummary = React.lazy(() => import('../components/features/NutritionSummary'));
 const WaterIntakeTodayCard = React.lazy(() => import('../components/features/WaterIntakeTodayCard'));
 import { type User } from 'firebase/auth';
@@ -180,16 +180,9 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="dashboard-page">
-      <div className="page-header">
-        <h1>Nutrition Dashboard</h1>
-        <p>Track your nutrition and get personalized recommendations</p>
-      </div>
-
       <main className="dashboard-content">
-        {/* Restaurant Display spans full width */}
-        <Suspense fallback={<div>Loading restaurant...</div>}>
-          <RestaurantDisplay />
-        </Suspense>
+        {/* Welcome Header */}
+        <WelcomeHeader user={user} />
         
         <div className="dashboard-grid">
           <div className="dashboard-left">

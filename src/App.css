@@ -246,12 +246,13 @@ body::after {
   font-size: 1.25rem;
   font-weight: 800;
   margin: 0;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  text-shadow: 0 2px 8px rgba(239, 30, 30, 0.5);
   letter-spacing: -0.025em;
-  background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.646) 0%, rgba(220, 38, 38, 1) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  transition: all 0.3s ease;
 }
 
 .brand-link {
@@ -284,14 +285,18 @@ body::after {
 
 .brand-link:hover {
   transform: translateY(-1px);
-  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.brand-link:hover h1 {
+  text-shadow: 0 2px 12px rgba(239, 68, 68, 0.8);
+  filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.6));
 }
 
 .brand-icon {
   width: 40px;
   height: 40px;
   object-fit: contain;
-  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(0 2px 8px rgba(239, 68, 68, 0.5));
   transition: all 0.3s ease;
   /* Ensure transparent background */
   background: transparent;
@@ -299,7 +304,7 @@ body::after {
 
 .brand-link:hover .brand-icon {
   transform: rotate(10deg) scale(1.1);
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+  filter: drop-shadow(0 4px 12px rgba(239, 68, 68, 0.8));
 }
 
 /* Sidebar Navigation */
@@ -2658,29 +2663,6 @@ body::after {
   padding: 2rem;
 }
 
-.page-header {
-  text-align: center;
-  margin-bottom: 2rem;
-  padding: 2rem 0;
-}
-
-.page-header h1 {
-  font-size: 2rem;
-  font-weight: 700;
-  margin-bottom: 0.75rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.page-header p {
-  font-size: 1rem;
-  color: #d1d5db;
-  opacity: 0.9;
-  margin: 0;
-}
-
 .auth-page-header {
   text-align: center;
   margin-bottom: 3rem;
@@ -2734,15 +2716,315 @@ body::after {
   gap: 1.5rem;
 }
 
+/* Dashboard Welcome Header */
+.dashboard-welcome-header {
+  width: 100%;
+  max-width: 1250px;
+  margin: 0 auto 1.5rem;
+  padding: 2rem 1.5rem;
+  background: rgba(26, 26, 46, 0.4);
+  background-image: 
+    radial-gradient(circle at 20% 30%, rgba(102, 126, 234, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(118, 75, 162, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.06) 0%, transparent 50%);
+  background-size: 100% 100%, 100% 100%, 100% 100%;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  animation: fadeInUp 0.6s ease-out, backgroundFloat 12s ease-in-out infinite;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.dashboard-welcome-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(102, 126, 234, 0.1) 0%,
+    rgba(118, 75, 162, 0.1) 50%,
+    rgba(16, 185, 129, 0.1) 100%
+  );
+  background-size: 200% 200%;
+  pointer-events: none;
+  z-index: 0;
+  animation: gradientShift 8s ease infinite;
+}
+
+.dashboard-welcome-header:hover {
+  border-color: rgba(102, 126, 234, 0.3);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 0 20px rgba(102, 126, 234, 0.2);
+  transform: translateY(-2px);
+}
+
+.dashboard-welcome-header .welcome-icon {
+  width: 64px;
+  height: 64px;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+  transition: transform 0.3s ease, filter 0.3s ease;
+  animation: iconGlow 3s ease-in-out infinite, fadeInScale 0.6s ease-out 0.1s both;
+  z-index: 1;
+}
+
+.dashboard-welcome-header:hover .welcome-icon {
+  transform: scale(1.05);
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.4));
+}
+
+.dashboard-welcome-header .welcome-icon-wrapper:hover .welcome-icon {
+  transform: scale(1.1) rotate(5deg);
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.5));
+}
+
+.dashboard-welcome-header .welcome-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.dashboard-welcome-header .welcome-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.dashboard-welcome-header .welcome-icon-wrapper {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: rgba(102, 126, 234, 0.1);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(102, 126, 234, 0.2);
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.dashboard-welcome-header:hover .welcome-icon-wrapper {
+  background: rgba(102, 126, 234, 0.15);
+  border-color: rgba(102, 126, 234, 0.3);
+  box-shadow: 
+    0 6px 24px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 0 20px rgba(102, 126, 234, 0.2);
+  transform: scale(1.05);
+}
+
+.dashboard-welcome-header .welcome-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.dashboard-welcome-header .welcome-message {
+  position: relative;
+  z-index: 1;
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.dashboard-welcome-header .welcome-message span {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  animation: fadeIn 0.8s ease-out 0.2s both, textShimmer 3s ease-in-out infinite;
+  background-size: 200% 200%;
+  position: relative;
+}
+
+.dashboard-welcome-header .welcome-subtitle {
+  font-size: 1.0625rem;
+  font-weight: 400;
+  color: rgba(226, 232, 240, 0.75);
+  margin: 0;
+  line-height: 1.6;
+  animation: fadeIn 0.8s ease-out 0.4s both;
+  letter-spacing: 0.015em;
+  transition: color 0.3s ease;
+  position: relative;
+  padding-left: 1rem;
+}
+
+.dashboard-welcome-header .welcome-subtitle::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: rgba(102, 126, 234, 0.5);
+  font-size: 1.2em;
+  line-height: 1;
+}
+
+.dashboard-welcome-header:hover .welcome-subtitle {
+  color: rgba(226, 232, 240, 0.9);
+}
+
+.dashboard-welcome-header:hover .welcome-subtitle::before {
+  color: rgba(102, 126, 234, 0.7);
+}
+
+.dashboard-welcome-header .welcome-date-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  padding-top: 0.5rem;
+}
+
+.dashboard-welcome-header .welcome-date {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: rgba(226, 232, 240, 0.65);
+  text-align: right;
+  white-space: nowrap;
+  animation: fadeIn 0.8s ease-out 0.6s both;
+  letter-spacing: 0.025em;
+  transition: color 0.3s ease;
+  position: relative;
+  padding-right: 1.25rem;
+}
+
+.dashboard-welcome-header .welcome-date::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(102, 126, 234, 0.4);
+  box-shadow: 0 0 8px rgba(102, 126, 234, 0.3);
+  transition: all 0.3s ease;
+}
+
+.dashboard-welcome-header:hover .welcome-date {
+  color: rgba(226, 232, 240, 0.85);
+}
+
+.dashboard-welcome-header:hover .welcome-date::after {
+  background: rgba(102, 126, 234, 0.6);
+  box-shadow: 0 0 12px rgba(102, 126, 234, 0.5);
+  transform: translateY(-50%) scale(1.2);
+}
+
+
+@keyframes iconGlow {
+  0%, 100% {
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6));
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes gradientShift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes backgroundFloat {
+  0%, 100% {
+    background-position: 0% 0%, 100% 100%, 50% 50%;
+  }
+  33% {
+    background-position: 20% 20%, 80% 80%, 60% 40%;
+  }
+  66% {
+    background-position: 10% 10%, 90% 90%, 40% 60%;
+  }
+}
+
+@keyframes textShimmer {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
   height: 100%;
   width: 100%;
-  max-width: 1400px;
   margin: 0 auto;
   padding: 0 1rem;
+  box-sizing: border-box;
 }
 
 .dashboard-left {
@@ -3249,6 +3531,56 @@ body::after {
     padding: 0 0.5rem;
   }
   
+  .dashboard-welcome-header {
+    padding: 1.5rem 1rem;
+    margin-bottom: 1.25rem;
+  }
+  
+  .dashboard-welcome-header .welcome-content {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .dashboard-welcome-header .welcome-main {
+    gap: 1rem;
+  }
+  
+  .dashboard-welcome-header .welcome-message {
+    font-size: 1.875rem;
+    gap: 0.875rem;
+  }
+  
+  .dashboard-welcome-header .welcome-subtitle {
+    font-size: 0.9375rem;
+  }
+  
+  .dashboard-welcome-header .welcome-date-wrapper {
+    align-items: flex-start;
+    width: 100%;
+  }
+  
+  .dashboard-welcome-header .welcome-date {
+    text-align: left;
+    font-size: 0.8125rem;
+    padding-right: 0;
+    padding-left: 1.25rem;
+  }
+  
+  .dashboard-welcome-header .welcome-date::after {
+    left: 0;
+    right: auto;
+  }
+  
+  .dashboard-welcome-header .welcome-icon-wrapper {
+    width: 72px;
+    height: 72px;
+  }
+  
+  .dashboard-welcome-header .welcome-icon {
+    width: 48px;
+    height: 48px;
+  }
+  
   .stats-grid {
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
@@ -3370,6 +3702,57 @@ body::after {
   
   .dashboard-grid {
     padding: 0 0.25rem;
+  }
+  
+  .dashboard-welcome-header {
+    padding: 1.25rem 0.75rem;
+    margin-bottom: 1rem;
+    border-radius: 16px;
+  }
+  
+  .dashboard-welcome-header .welcome-content {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .dashboard-welcome-header .welcome-main {
+    gap: 0.875rem;
+  }
+  
+  .dashboard-welcome-header .welcome-message {
+    font-size: 1.625rem;
+    gap: 0.75rem;
+  }
+  
+  .dashboard-welcome-header .welcome-subtitle {
+    font-size: 0.875rem;
+  }
+  
+  .dashboard-welcome-header .welcome-date-wrapper {
+    align-items: flex-start;
+    width: 100%;
+  }
+  
+  .dashboard-welcome-header .welcome-date {
+    text-align: left;
+    font-size: 0.75rem;
+    padding-right: 0;
+    padding-left: 1.25rem;
+  }
+  
+  .dashboard-welcome-header .welcome-date::after {
+    left: 0;
+    right: auto;
+  }
+  
+  .dashboard-welcome-header .welcome-icon-wrapper {
+    width: 64px;
+    height: 64px;
+  }
+  
+  .dashboard-welcome-header .welcome-icon {
+    width: 40px;
+    height: 40px;
   }
   
   .dashboard-content {
@@ -4923,37 +5306,17 @@ body::after {
 .water-intake-page .page-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  text-align: left;
+  justify-content: flex-end;
   position: relative;
   width: 100%;
   max-width: 1400px;
-  margin: 0 auto 2rem;
-  padding: 2rem 2rem 0;
+  margin: 0 auto 1rem;
+  padding: 0.5rem 2rem 0;
   box-sizing: border-box;
 }
 
-.water-intake-page .page-header-title {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  flex: 1;
-  justify-content: center;
-  text-align: center;
-}
 
-.water-intake-page .page-header-title > div {
-  text-align: center;
-}
 
-.water-intake-page .page-header-title svg {
-  color: #60a5fa;
-  flex-shrink: 0;
-}
-
-.water-intake-page .page-header-title h1 {
-  margin-bottom: 0.5rem;
-}
 
 .water-intake-page .page-header-actions {
   display: flex;
@@ -4964,31 +5327,11 @@ body::after {
   min-width: fit-content;
 }
 
-.water-unit-toggle-btn-header {
-  padding: 0.625rem 1.25rem;
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.4);
-  border-radius: 10px;
-  color: #fca5a5;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.water-unit-toggle-btn-header:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.25);
-  border-color: rgba(239, 68, 68, 0.6);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
-  color: #f87171;
-}
-
-.water-unit-toggle-btn-header:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.water-unit-toggle-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+  padding: 0 0.5rem;
 }
 
 .water-unit-toggle-section {
