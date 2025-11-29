@@ -431,19 +431,44 @@ body::after {
   text-decoration: none;
   color: inherit;
   transition: all 0.3s ease;
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: rgba(26, 26, 46, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  position: relative;
+}
+
+.auth-cta-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
 }
 
 .auth-cta-button:hover {
   text-decoration: none;
   color: inherit;
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.5);
-  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 0 20px rgba(102, 126, 234, 0.2);
+  border-color: rgba(102, 126, 234, 0.5);
+}
+
+.auth-cta-button:hover::before {
+  opacity: 1;
 }
 
 .auth-cta-content {
@@ -453,6 +478,7 @@ body::after {
   padding: 1.25rem 1rem;
   position: relative;
   width: 100%;
+  z-index: 1;
 }
 
 .auth-cta-text {
@@ -460,17 +486,23 @@ body::after {
 }
 
 .auth-cta-title {
-  font-weight: 700;
-  font-size: 1rem;
-  color: white;
-  margin-bottom: 0.25rem;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: #e2e8f0;
+  margin-bottom: 0.375rem;
+  letter-spacing: 0.01em;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .auth-cta-subtitle {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.9);
-  font-weight: 500;
+  font-size: 0.8125rem;
+  color: rgba(226, 232, 240, 0.7);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
 }
 
 /* User Profile Button */
@@ -3654,7 +3686,7 @@ body::after {
   }
   
   .auth-cta-title {
-    font-size: 0.9rem;
+    font-size: 0.875rem;
   }
   
   .auth-cta-subtitle {

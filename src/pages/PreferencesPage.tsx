@@ -63,8 +63,7 @@ const PreferencesPage: React.FC = () => {
       <div className="preferences-page">
         <main className="preferences-content">
           <div className="muted" style={{ textAlign: 'center', padding: '2rem' }}>
-            <p>Not Signed In</p>
-            <p>Please sign in to view your preferences.</p>
+            <p>Please sign in to access personalized preferences.</p>
           </div>
         </main>
       </div>

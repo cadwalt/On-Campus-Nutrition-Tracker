@@ -48,6 +48,7 @@ const NutritionPlanCard: React.FC = () => {
     return (
       <div className="card">
         <h2>Nutrition Plan</h2>
+        <p> </p>
         <p className="muted">No nutrition goals yet. Set your goals to get a personalized plan.</p>
         <div style={{ marginTop: 12 }}>
           <a className="response-button" href="/profile">Set Goals</a>
