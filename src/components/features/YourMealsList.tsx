@@ -14,12 +14,22 @@ import MealDetailsModal from './modals/MealDetailsModal';
 import { calculateActualCalories, calculateActualMacros } from '../../utils/mealCalculations';
 import { canAccess } from '../../utils/authorization';
 
+type SortByType = 'date' | 'calories' | 'name';
+type SortOrderType = 'asc' | 'desc';
+
 interface YourMealsListProps {
   searchQuery?: string;
   dateRange?: { startMs: number; endMs: number } | null;
+  sortBy?: SortByType;
+  sortOrder?: SortOrderType;
 }
 
-const YourMealsList: React.FC<YourMealsListProps> = ({ searchQuery = '', dateRange = null }) => {
+const YourMealsList: React.FC<YourMealsListProps> = ({ 
+  searchQuery = '', 
+  dateRange = null,
+  sortBy = 'date',
+  sortOrder = 'desc'
+}) => {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; visible: boolean }>({
@@ -103,7 +113,7 @@ const YourMealsList: React.FC<YourMealsListProps> = ({ searchQuery = '', dateRan
     return () => { if (unsubLocal) unsubLocal(); };
   }, [user]);
 
-  // Apply search and date filters
+  // Apply search, date filters, and sorting
   const filteredMeals = useMemo(() => {
     let filtered = [...meals];
 
@@ -123,8 +133,37 @@ const YourMealsList: React.FC<YourMealsListProps> = ({ searchQuery = '', dateRan
       });
     }
 
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortBy) {
+        case 'date':
+          const aMs = toMillis(a.createdAt);
+          const bMs = toMillis(b.createdAt);
+          comparison = aMs - bMs;
+          break;
+        
+        case 'calories':
+          const aCals = calculateActualCalories(a);
+          const bCals = calculateActualCalories(b);
+          comparison = aCals - bCals;
+          break;
+        
+        case 'name':
+          comparison = a.name.localeCompare(b.name);
+          break;
+        
+        default:
+          comparison = 0;
+      }
+
+      // Apply sort order (ascending or descending)
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
     return filtered;
-  }, [meals, searchQuery, dateRange]);
+  }, [meals, searchQuery, dateRange, sortBy, sortOrder]);
 
   const showToast = (message: string, type: 'success' | 'error') => setToast({ message, type, visible: true });
   const closeToast = () => setToast((t) => ({ ...t, visible: false }));

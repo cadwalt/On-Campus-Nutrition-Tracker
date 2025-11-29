@@ -5,12 +5,16 @@ import TodaySummaryCard from '../components/features/TodaySummaryCard';
 import { SearchIcon } from '../components/ui/Icons';
 
 type DateFilterType = 'all' | 'today' | 'thisWeek' | 'thisMonth' | 'custom';
+type SortByType = 'date' | 'calories' | 'name';
+type SortOrderType = 'asc' | 'desc';
 
 const MealTrackerPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState<DateFilterType>('all');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
+  const [sortBy, setSortBy] = useState<SortByType>('date');
+  const [sortOrder, setSortOrder] = useState<SortOrderType>('desc');
 
   // Calculate date range based on filter type
   const dateRange = useMemo(() => {
@@ -266,12 +270,73 @@ const MealTrackerPage: React.FC = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Sort Options */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <label style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--muted, #9aa7bf)' }}>
+                    Sort by
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as SortByType)}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '6px',
+                        color: '#fff',
+                        fontSize: '0.875rem',
+                        cursor: 'pointer',
+                        outline: 'none',
+                        minWidth: '120px'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = 'rgba(99, 102, 241, 0.5)'}
+                      onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)'}
+                    >
+                      <option value="date">Date</option>
+                      <option value="calories">Calories</option>
+                      <option value="name">Name</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '6px',
+                        color: '#fff',
+                        fontSize: '0.875rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                        e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.5)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                      }}
+                      title={sortOrder === 'asc' ? 'Ascending' : 'Descending'}
+                    >
+                      <span>{sortOrder === 'asc' ? '↑' : '↓'}</span>
+                      <span>{sortOrder === 'asc' ? 'Ascending' : 'Descending'}</span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div style={{ marginTop: 12 }}>
                 <YourMealsList 
                   searchQuery={searchQuery}
                   dateRange={dateRange}
+                  sortBy={sortBy}
+                  sortOrder={sortOrder}
                 />
               </div>
             </div>
