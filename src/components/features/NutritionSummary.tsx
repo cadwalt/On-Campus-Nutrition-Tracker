@@ -208,7 +208,7 @@ const NutritionSummary: React.FC = () => {
   return (
     <div className="nutrition-summary-card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h3 style={{ margin: 0 }}>Today's Nutrition Summary</h3>
+        <h2 style={{ margin: 0 }}>Today's Nutrition Summary</h2>
         <div style={{ 
           padding: '0.25rem 0.75rem', 
           background: caloriePercent >= 90 && caloriePercent <= 110 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(249, 115, 22, 0.2)',
