@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import MealForm from '../components/features/MealForm';
 import YourMealsList from '../components/features/YourMealsList';
+import TodaySummaryCard from '../components/features/TodaySummaryCard';
 import { SearchIcon } from '../components/ui/Icons';
 
 type DateFilterType = 'all' | 'today' | 'thisWeek' | 'thisMonth' | 'custom';
@@ -63,6 +64,8 @@ const MealTrackerPage: React.FC = () => {
       <main className="dashboard-content">
         <div className="dashboard-grid">
           <div className="dashboard-left">
+            <TodaySummaryCard />
+            
             <div className="card" style={{ marginBottom: '1.5rem' }}>
               <h2>Add a Meal</h2>
               <p style={{ color: 'var(--muted, #9aa7bf)', marginTop: 6 }}>
