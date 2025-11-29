@@ -12,9 +12,11 @@ import Toast from '../ui/Toast';
 
 interface MealFormProps {
   onMealAdded: (meal: Meal) => void;
+  initialMeal?: Meal | null;
+  onInitialMealSet?: () => void;
 }
 
-const MealForm: React.FC<MealFormProps> = ({ onMealAdded }) => {
+const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitialMealSet }) => {
   const [form, setForm] = useState({
     name: '',
     calories: '',
@@ -40,6 +42,32 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded }) => {
   const [showOptional, setShowOptional] = useState(false);
   const [priorMeals, setPriorMeals] = useState<Meal[] | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Fill form when initialMeal is provided
+  useEffect(() => {
+    if (initialMeal) {
+      setForm({
+        name: initialMeal.name || '',
+        calories: String(initialMeal.calories ?? ''),
+        servingSize: initialMeal.servingSize || '',
+        servingsHad: initialMeal.servingsHad != null ? String(initialMeal.servingsHad) : '',
+        totalCarbs: initialMeal.totalCarbs != null ? String(initialMeal.totalCarbs) : '',
+        totalFat: initialMeal.totalFat != null ? String(initialMeal.totalFat) : '',
+        protein: initialMeal.protein != null ? String(initialMeal.protein) : '',
+        fatCategories: initialMeal.fatCategories || '',
+        sodium: initialMeal.sodium != null ? String(initialMeal.sodium) : '',
+        sugars: initialMeal.sugars != null ? String(initialMeal.sugars) : '',
+        calcium: initialMeal.calcium != null ? String(initialMeal.calcium) : '',
+        vitamins: initialMeal.vitamins || '',
+        iron: initialMeal.iron != null ? String(initialMeal.iron) : '',
+        otherInfo: initialMeal.otherInfo || '',
+      });
+      setShowSuggestions(false);
+      if (onInitialMealSet) {
+        onInitialMealSet();
+      }
+    }
+  }, [initialMeal, onInitialMealSet]);
 
   // fetch current user on-demand to avoid bundling auth into initial chunk
   const getCurrentUser = async () => {

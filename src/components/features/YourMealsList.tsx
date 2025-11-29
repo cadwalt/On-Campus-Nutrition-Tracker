@@ -22,13 +22,15 @@ interface YourMealsListProps {
   dateRange?: { startMs: number; endMs: number } | null;
   sortBy?: SortByType;
   sortOrder?: SortOrderType;
+  onFillForm?: (meal: Meal) => void;
 }
 
 const YourMealsList: React.FC<YourMealsListProps> = ({ 
   searchQuery = '', 
   dateRange = null,
   sortBy = 'date',
-  sortOrder = 'desc'
+  sortOrder = 'desc',
+  onFillForm
 }) => {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -206,6 +208,47 @@ const YourMealsList: React.FC<YourMealsListProps> = ({
     setDetailsOpen(true);
   };
 
+  const handleDuplicate = async (meal: Meal) => {
+    if (!user) {
+      showToast('You must be signed in to duplicate meals', 'error');
+      return;
+    }
+
+    if (!canAccess(user.uid, meal.userId)) {
+      showToast('Unauthorized: Cannot duplicate this meal', 'error');
+      return;
+    }
+
+    try {
+      const { db, firestore } = await resolveFirebase();
+      const base: Meal = {
+        userId: user.uid,
+        name: meal.name,
+        calories: meal.calories,
+        servingSize: meal.servingSize,
+        createdAt: Date.now(),
+      };
+      const optional: Partial<Meal> = {};
+      if (typeof meal.servingsHad === 'number') optional.servingsHad = meal.servingsHad;
+      if (typeof meal.totalCarbs === 'number') optional.totalCarbs = meal.totalCarbs;
+      if (typeof meal.totalFat === 'number') optional.totalFat = meal.totalFat;
+      if (typeof meal.protein === 'number') optional.protein = meal.protein;
+      if (typeof meal.sodium === 'number') optional.sodium = meal.sodium;
+      if (typeof meal.sugars === 'number') optional.sugars = meal.sugars;
+      if (typeof meal.calcium === 'number') optional.calcium = meal.calcium;
+      if (typeof meal.iron === 'number') optional.iron = meal.iron;
+      if (meal.fatCategories && meal.fatCategories.trim()) optional.fatCategories = meal.fatCategories.trim();
+      if (meal.vitamins && meal.vitamins.trim()) optional.vitamins = meal.vitamins.trim();
+      if (meal.otherInfo && meal.otherInfo.trim()) optional.otherInfo = meal.otherInfo.trim();
+
+      const newMeal: Meal = { ...base, ...optional } as Meal;
+      await firestore.addDoc(firestore.collection(db, 'meals'), newMeal);
+      showToast('Meal duplicated', 'success');
+    } catch (e: any) {
+      showToast(e.message || 'Failed to duplicate meal', 'error');
+    }
+  };
+
   if (!user) {
     return <div className="muted">Sign in to view your meals.</div>;
   }
@@ -277,12 +320,51 @@ const YourMealsList: React.FC<YourMealsListProps> = ({
           </div>
           <div className="meal-right">
             <div className="meal-calories">{calculateActualCalories(m)} cal</div>
-            <button
-              className="cancel-button"
-              onClick={(e) => { e.stopPropagation(); handleDelete(m.id); }}
-            >
-              Remove
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              {onFillForm && (
+                <button
+                  className="cancel-button"
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    onFillForm(m);
+                  }}
+                  style={{
+                    padding: '0.4rem 0.75rem',
+                    fontSize: '0.8125rem',
+                    background: 'rgba(99, 102, 241, 0.2)',
+                    border: '1px solid rgba(99, 102, 241, 0.4)',
+                    color: '#a5b4fc'
+                  }}
+                  title="Fill form with this meal"
+                >
+                  Fill Form
+                </button>
+              )}
+              <button
+                className="cancel-button"
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  handleDuplicate(m);
+                }}
+                style={{
+                  padding: '0.4rem 0.75rem',
+                  fontSize: '0.8125rem',
+                  background: 'rgba(34, 197, 94, 0.2)',
+                  border: '1px solid rgba(34, 197, 94, 0.4)',
+                  color: '#86efac'
+                }}
+                title="Duplicate this meal"
+              >
+                Duplicate
+              </button>
+              <button
+                className="cancel-button"
+                onClick={(e) => { e.stopPropagation(); handleDelete(m.id); }}
+                title="Remove this meal"
+              >
+                Remove
+              </button>
+            </div>
           </div>
         </div>
       ))}

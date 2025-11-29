@@ -3,6 +3,7 @@ import MealForm from '../components/features/MealForm';
 import YourMealsList from '../components/features/YourMealsList';
 import TodaySummaryCard from '../components/features/TodaySummaryCard';
 import { SearchIcon } from '../components/ui/Icons';
+import type { Meal } from '../types/meal';
 
 type DateFilterType = 'all' | 'today' | 'thisWeek' | 'thisMonth' | 'custom';
 type SortByType = 'date' | 'calories' | 'name';
@@ -15,6 +16,7 @@ const MealTrackerPage: React.FC = () => {
   const [customEndDate, setCustomEndDate] = useState('');
   const [sortBy, setSortBy] = useState<SortByType>('date');
   const [sortOrder, setSortOrder] = useState<SortOrderType>('desc');
+  const [mealToFill, setMealToFill] = useState<Meal | null>(null);
 
   // Calculate date range based on filter type
   const dateRange = useMemo(() => {
@@ -76,7 +78,11 @@ const MealTrackerPage: React.FC = () => {
                 Provide nutrition facts for a meal you ate. Required fields are marked with an asterisk (*).
               </p>
               <div style={{ marginTop: 16 }}>
-                <MealForm onMealAdded={() => { /* no-op; list auto updates via snapshot */ }} />
+                <MealForm 
+                  onMealAdded={() => { /* no-op; list auto updates via snapshot */ }}
+                  initialMeal={mealToFill}
+                  onInitialMealSet={() => setMealToFill(null)}
+                />
               </div>
             </div>
             <div className="card">
@@ -311,6 +317,16 @@ const MealTrackerPage: React.FC = () => {
                   dateRange={dateRange}
                   sortBy={sortBy}
                   sortOrder={sortOrder}
+                  onFillForm={(meal) => {
+                    setMealToFill(meal);
+                    // Scroll to form
+                    setTimeout(() => {
+                      const formCard = document.querySelector('.card');
+                      if (formCard) {
+                        formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }
+                    }, 100);
+                  }}
                 />
               </div>
             </div>
