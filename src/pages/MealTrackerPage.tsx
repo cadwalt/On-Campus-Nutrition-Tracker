@@ -1,15 +1,30 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import MealForm from '../components/features/MealForm';
 import YourMealsList from '../components/features/YourMealsList';
 import TodaySummaryCard from '../components/features/TodaySummaryCard';
-import { SearchIcon } from '../components/ui/Icons';
+import RestaurantList from '../components/features/restaurants/RestaurantList';
+import MenuView from '../components/features/restaurants/MenuView';
+import { WeeklyCalendar, DailyPlanner } from '../components/features/planning';
+import Tabs from '../components/ui/Tabs';
+import { SearchIcon, UtensilsIcon, CalendarIcon, PackageIcon } from '../components/ui/Icons';
 import type { Meal } from '../types/meal';
+import type { User } from 'firebase/auth';
+import { resolveFirebase } from '../lib/resolveFirebase';
 
 type DateFilterType = 'all' | 'today' | 'thisWeek' | 'thisMonth' | 'custom';
 type SortByType = 'date' | 'calories' | 'name';
 type SortOrderType = 'asc' | 'desc';
 
+type TabType = 'overview' | 'restaurants' | 'planning';
+
 const MealTrackerPage: React.FC = () => {
+  // Tab state - remember last selected tab
+  const [activeTab, setActiveTab] = useState<TabType>(() => {
+    const saved = localStorage.getItem('mealTrackerActiveTab');
+    return (saved as TabType) || 'overview';
+  });
+
+  // Overview tab state
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState<DateFilterType>('all');
   const [customStartDate, setCustomStartDate] = useState('');
@@ -17,6 +32,26 @@ const MealTrackerPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<SortByType>('date');
   const [sortOrder, setSortOrder] = useState<SortOrderType>('desc');
   const [mealToFill, setMealToFill] = useState<Meal | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+
+  // Track auth state
+  useEffect(() => {
+    let unsub: (() => void) | null = null;
+    (async () => {
+      try {
+        const { auth, firebaseAuth } = await resolveFirebase();
+        unsub = firebaseAuth.onAuthStateChanged(auth, (u: User | null) => setUser(u));
+      } catch (err) {
+        console.error('Auth listener init failed', err);
+      }
+    })();
+    return () => { if (unsub) unsub(); };
+  }, []);
+
+  // Save tab selection to localStorage
+  useEffect(() => {
+    localStorage.setItem('mealTrackerActiveTab', activeTab);
+  }, [activeTab]);
 
   // Calculate date range based on filter type
   const dateRange = useMemo(() => {
@@ -65,27 +100,32 @@ const MealTrackerPage: React.FC = () => {
     }
   }, [dateFilter, customStartDate, customEndDate]);
 
-  return (
-    <div className="page meal-tracker-page">
-      <main className="dashboard-content">
-        <div className="dashboard-grid">
-          <div className="dashboard-left">
-            <TodaySummaryCard />
-            
-            <div className="card" style={{ marginBottom: '1.5rem' }}>
-              <h2>Add a Meal</h2>
-              <p style={{ color: 'var(--muted, #9aa7bf)', marginTop: 6 }}>
-                Provide nutrition facts for a meal you ate. Required fields are marked with an asterisk (*).
-              </p>
-              <div style={{ marginTop: 16 }}>
-                <MealForm 
-                  onMealAdded={() => { /* no-op; list auto updates via snapshot */ }}
-                  initialMeal={mealToFill}
-                  onInitialMealSet={() => setMealToFill(null)}
-                />
-              </div>
-            </div>
-            <div className="card">
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: <UtensilsIcon size={18} /> },
+    { id: 'restaurants', label: 'OU Restaurants', icon: <PackageIcon size={18} /> },
+    { id: 'planning', label: 'Meal Planning', icon: <CalendarIcon size={18} /> },
+  ];
+
+  // Overview Tab Content
+  const OverviewTab = () => (
+    <div className="dashboard-grid">
+      <div className="dashboard-left">
+        <TodaySummaryCard />
+        
+        <div className="card" style={{ marginBottom: '1.5rem' }}>
+          <h2>Add a Meal</h2>
+          <p style={{ color: 'var(--muted, #9aa7bf)', marginTop: 6 }}>
+            Provide nutrition facts for a meal you ate. Required fields are marked with an asterisk (*).
+          </p>
+          <div style={{ marginTop: 16 }}>
+            <MealForm 
+              onMealAdded={() => { /* no-op; list auto updates via snapshot */ }}
+              initialMeal={mealToFill}
+              onInitialMealSet={() => setMealToFill(null)}
+            />
+          </div>
+        </div>
+        <div className="card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
                   <h2 style={{ margin: 0 }}>Your Meals</h2>
@@ -330,6 +370,219 @@ const MealTrackerPage: React.FC = () => {
                 />
               </div>
             </div>
+          </div>
+        </div>
+  );
+
+  // OU Restaurants Tab State
+  const [selectedRestaurant, setSelectedRestaurant] = useState<{ id: string; name: string; location: string } | null>(null);
+  const [restaurantLocationFilter, setRestaurantLocationFilter] = useState<string>('');
+  const [restaurantMealTypeFilter, setRestaurantMealTypeFilter] = useState<string>('');
+
+  // OU Restaurants Tab Content
+  const RestaurantsTab = () => {
+    const handleAddToMeals = async (menuItem: any) => {
+      if (!user) {
+        alert('Please sign in to add meals');
+        return;
+      }
+
+      try {
+        const { db, firestore } = await resolveFirebase();
+        const meal: Meal = {
+          userId: user.uid,
+          name: menuItem.name,
+          calories: menuItem.nutritionInfo.calories,
+          servingSize: menuItem.servingSize,
+          createdAt: Date.now(),
+        };
+
+        // Add optional nutrition fields
+        if (menuItem.nutritionInfo.protein !== undefined) meal.protein = menuItem.nutritionInfo.protein;
+        if (menuItem.nutritionInfo.totalCarbs !== undefined) meal.totalCarbs = menuItem.nutritionInfo.totalCarbs;
+        if (menuItem.nutritionInfo.totalFat !== undefined) meal.totalFat = menuItem.nutritionInfo.totalFat;
+        if (menuItem.nutritionInfo.sodium !== undefined) meal.sodium = menuItem.nutritionInfo.sodium;
+        if (menuItem.nutritionInfo.sugars !== undefined) meal.sugars = menuItem.nutritionInfo.sugars;
+        if (menuItem.nutritionInfo.calcium !== undefined) meal.calcium = menuItem.nutritionInfo.calcium;
+        if (menuItem.nutritionInfo.iron !== undefined) meal.iron = menuItem.nutritionInfo.iron;
+
+        // Add other info
+        if (menuItem.description) {
+          meal.otherInfo = `From ${selectedRestaurant?.name || 'restaurant'}. ${menuItem.description}`;
+        }
+        if (menuItem.allergens.length > 0) {
+          const allergenNote = `Allergens: ${menuItem.allergens.join(', ')}`;
+          meal.otherInfo = meal.otherInfo ? `${meal.otherInfo}. ${allergenNote}` : allergenNote;
+        }
+
+        await firestore.addDoc(firestore.collection(db, 'meals'), meal);
+        
+        // Show success and optionally switch to Overview tab
+        if (confirm('Meal added successfully! Switch to Overview tab to see it?')) {
+          setActiveTab('overview');
+        }
+      } catch (error: any) {
+        console.error('Error adding meal:', error);
+        alert('Failed to add meal. Please try again.');
+      }
+    };
+
+    if (selectedRestaurant) {
+      return (
+        <div className="card">
+          <MenuView
+            restaurant={selectedRestaurant}
+            onBack={() => setSelectedRestaurant(null)}
+            onAddToMeals={handleAddToMeals}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className="card">
+        <div style={{ marginBottom: '1.5rem' }}>
+          <h2 style={{ margin: 0, marginBottom: '0.5rem' }}>OU Campus Restaurants</h2>
+          <p style={{ color: 'var(--muted, #9aa7bf)', margin: 0 }}>
+            Browse OU campus dining locations and quickly log meals with pre-filled nutrition information.
+          </p>
+        </div>
+
+        <RestaurantList
+          onSelectRestaurant={(restaurant) => setSelectedRestaurant(restaurant)}
+          locationFilter={restaurantLocationFilter}
+          mealTypeFilter={restaurantMealTypeFilter}
+          onLocationFilterChange={setRestaurantLocationFilter}
+          onMealTypeFilterChange={setRestaurantMealTypeFilter}
+        />
+      </div>
+    );
+  };
+
+  // Meal Planning Tab State
+  const [selectedPlanningDate, setSelectedPlanningDate] = useState<Date>(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+  });
+  const [plannedMealsCount, setPlannedMealsCount] = useState<Record<string, number>>({});
+  const [projectedCalories, setProjectedCalories] = useState<Record<string, number>>({});
+  const [targetCalories, setTargetCalories] = useState(2000);
+
+  // Load nutrition goals for target calories
+  useEffect(() => {
+    if (!user) return;
+
+    (async () => {
+      try {
+        const { db, firestore } = await resolveFirebase();
+        const userDocRef = firestore.doc(db, 'users', user.uid);
+        const userDocSnap = await firestore.getDoc(userDocRef);
+        
+        if (userDocSnap.exists()) {
+          const data = userDocSnap.data();
+          const goals = data.nutrition_goals;
+          if (goals) {
+            const { computeNutritionPlan } = await import('../utils/nutritionPlan');
+            const plan = computeNutritionPlan(goals);
+            if (plan) {
+              setTargetCalories(plan.targetCalories);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error loading nutrition goals:', err);
+      }
+    })();
+  }, [user]);
+
+  // Load planned meals counts for calendar
+  useEffect(() => {
+    if (!user) return;
+
+    let unsub: (() => void) | null = null;
+    (async () => {
+      try {
+        const { db, firestore } = await resolveFirebase();
+        // Firestore path structure: mealPlans/{userId}/dates/{date}/meals
+        const mealPlansRef = firestore.collection(db, 'mealPlans');
+        const userPlanDocRef = firestore.doc(mealPlansRef, user.uid);
+        const datesRef = firestore.collection(userPlanDocRef, 'dates');
+
+        // Get all date plans
+        unsub = firestore.onSnapshot(datesRef, async (snap: any) => {
+          const counts: Record<string, number> = {};
+          const calories: Record<string, number> = {};
+
+          for (const doc of snap.docs) {
+            const dateKey = doc.id;
+            const mealsRef = firestore.collection(doc.ref, 'meals');
+            const mealsSnap = await firestore.getDocs(mealsRef);
+            
+            counts[dateKey] = mealsSnap.size;
+            
+            let totalCal = 0;
+            mealsSnap.forEach((mealDoc: any) => {
+              const mealData = mealDoc.data();
+              totalCal += mealData.calories || 0;
+            });
+            calories[dateKey] = totalCal;
+          }
+
+          setPlannedMealsCount(counts);
+          setProjectedCalories(calories);
+        });
+      } catch (err) {
+        console.error('Error loading planned meals counts:', err);
+      }
+    })();
+
+    return () => { if (unsub) unsub(); };
+  }, [user]);
+
+  // Meal Planning Tab Content
+  const PlanningTab = () => {
+    return (
+      <div>
+        <div style={{ marginBottom: '1.5rem' }}>
+          <WeeklyCalendar
+            selectedDate={selectedPlanningDate}
+            onDateSelect={setSelectedPlanningDate}
+            plannedMealsCount={plannedMealsCount}
+            projectedCalories={projectedCalories}
+            targetCalories={targetCalories}
+          />
+        </div>
+
+        <div className="card">
+          <DailyPlanner
+            selectedDate={selectedPlanningDate}
+            user={user}
+            onMealAdded={() => {
+              // Refresh counts
+              const dateKey = selectedPlanningDate.toISOString().split('T')[0];
+              // The snapshot listener will update automatically
+            }}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="page meal-tracker-page">
+      <main className="dashboard-content">
+        <div className="dashboard-grid">
+          <div className="dashboard-left" style={{ width: '100%' }}>
+            <Tabs 
+              tabs={tabs} 
+              activeTab={activeTab} 
+              onTabChange={(tabId) => setActiveTab(tabId as TabType)} 
+            />
+            
+            {activeTab === 'overview' && <OverviewTab />}
+            {activeTab === 'restaurants' && <RestaurantsTab />}
+            {activeTab === 'planning' && <PlanningTab />}
           </div>
         </div>
       </main>
