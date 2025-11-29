@@ -8,6 +8,7 @@ const resolveAuthClient = async () => {
   return { auth, firebaseAuth };
 };
 import AiAssistantChatbot from '../components/features/AiAssistantChatbot';
+import Disclaimer from '../components/ui/Disclaimer';
 
 const AiAssistantPage: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -54,6 +55,7 @@ const AiAssistantPage: React.FC = () => {
       <main className="ai-assistant-content">
         <div className="ai-assistant-container">
           <AiAssistantChatbot />
+          <Disclaimer className="ai-assistant-page-disclaimer" />
         </div>
       </main>
     </div>

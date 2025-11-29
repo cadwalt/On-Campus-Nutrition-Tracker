@@ -657,6 +657,115 @@ body::after {
   max-width: 1200px;
   display: flex;
   flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Disclaimer Component */
+.disclaimer {
+  background: rgba(26, 26, 46, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 14px;
+  border: 1px solid rgba(249, 115, 22, 0.3);
+  padding: 1.25rem 1.5rem;
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.disclaimer-compact {
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+}
+
+.disclaimer-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+}
+
+.disclaimer-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.disclaimer-compact .disclaimer-header {
+  margin-bottom: 0.75rem;
+}
+
+.disclaimer-icon {
+  color: #f97316;
+  flex-shrink: 0;
+}
+
+.disclaimer-inline .disclaimer-icon {
+  color: rgba(249, 115, 22, 0.8);
+}
+
+.disclaimer-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  letter-spacing: 0.01em;
+}
+
+.disclaimer-compact .disclaimer-title {
+  font-size: 0.9375rem;
+}
+
+.disclaimer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.disclaimer-compact .disclaimer-content {
+  gap: 0.625rem;
+}
+
+.disclaimer-text {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: rgba(226, 232, 240, 0.85);
+  margin: 0;
+  letter-spacing: 0.01em;
+}
+
+.disclaimer-compact .disclaimer-text {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.disclaimer-inline .disclaimer-text {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: rgba(226, 232, 240, 0.75);
+}
+
+.disclaimer-text strong {
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.disclaimer-inline .disclaimer-text strong {
+  color: rgba(249, 115, 22, 0.9);
+}
+
+/* Disclaimer positioning in AI Assistant */
+.ai-chatbot-disclaimer {
+  margin-top: 1rem;
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+.ai-assistant-page-disclaimer {
+  margin-top: 0;
+  width: 100%;
 }
 
 /* Enhanced AI Assistant Chatbot */
@@ -3603,6 +3712,30 @@ body::after {
     right: auto;
   }
   
+  .disclaimer {
+    padding: 1rem 1.25rem;
+  }
+  
+  .disclaimer-compact {
+    padding: 0.875rem 1rem;
+  }
+  
+  .disclaimer-title {
+    font-size: 0.9375rem;
+  }
+  
+  .disclaimer-text {
+    font-size: 0.8125rem;
+  }
+  
+  .disclaimer-compact .disclaimer-text {
+    font-size: 0.75rem;
+  }
+  
+  .ai-assistant-container {
+    gap: 1rem;
+  }
+  
   .dashboard-welcome-header .welcome-icon-wrapper {
     width: 72px;
     height: 72px;
@@ -3712,6 +3845,39 @@ body::after {
   
   .user-profile-status {
     font-size: 0.7rem;
+  }
+  
+  .disclaimer {
+    padding: 0.875rem 1rem;
+  }
+  
+  .disclaimer-compact {
+    padding: 0.75rem 0.875rem;
+  }
+  
+  .disclaimer-header {
+    margin-bottom: 0.625rem;
+  }
+  
+  .disclaimer-title {
+    font-size: 0.875rem;
+  }
+  
+  .disclaimer-text {
+    font-size: 0.75rem;
+    line-height: 1.5;
+  }
+  
+  .disclaimer-compact .disclaimer-text {
+    font-size: 0.6875rem;
+  }
+  
+  .disclaimer-content {
+    gap: 0.5rem;
+  }
+  
+  .ai-assistant-container {
+    gap: 1rem;
   }
   
   .user-profile-arrow {

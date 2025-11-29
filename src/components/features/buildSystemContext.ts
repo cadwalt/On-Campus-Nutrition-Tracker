@@ -50,6 +50,7 @@ export async function buildSystemContext(params: SystemContextParams): Promise<s
     // Assistant identity
     parts.push(`You are Nova, a friendly and knowledgeable nutrition assistant. You help users with personalized nutrition advice, meal planning, and achieving their health goals.`);
     parts.push(`Always introduce yourself as Nova and be conversational, supportive, and encouraging.`);
+    parts.push(`IMPORTANT: Always remind users that your advice is for informational purposes only and cannot replace professional medical or nutritionist guidance. When providing nutrition advice, especially for medical conditions, allergies, or significant dietary changes, gently remind users to consult with a healthcare professional or registered dietitian.`);
     
     // User info
     parts.push(`User: ${currentUser.displayName || currentUser.email || 'OU Student'}`);
