@@ -27,6 +27,9 @@ const PersonalInformation: React.FC<PersonalInformationProps> = ({ user, onSucce
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Load existing profile picture on component mount
+  // Note: this uses a local dynamic resolver to avoid importing the
+  // Firebase SDK at module-evaluation time. Firestore calls are made
+  // only when this component mounts and a user is present.
   useEffect(() => {
     const loadProfilePicture = async () => {
       try {
@@ -104,16 +107,21 @@ const PersonalInformation: React.FC<PersonalInformationProps> = ({ user, onSucce
     setIsUploading(true);
 
     try {
-      // Convert image to base64
+      // Convert image to base64 for quick storage in Firestore. This
+      // is acceptable for small profile images but not recommended for
+      // large files — consider Cloud Storage for bigger images.
       const base64String = await convertToBase64(file);
       
-      // Update Firebase Auth profile with a placeholder (photoURL has length limits)
+      // Update Firebase Auth profile with a stable placeholder. Many
+      // browsers and providers limit `photoURL` length, so we store the
+      // base64 in Firestore under `profile_picture` and keep Auth's
+      // photoURL as a short placeholder for backward compatibility.
       const { firestore, firebaseAuth } = await resolveFirebase();
       await firebaseAuth.updateProfile(user, {
         photoURL: `https://via.placeholder.com/150/667eea/ffffff?text=${user.displayName?.charAt(0) || 'U'}`
       });
 
-      // Update Firestore document with base64 image
+      // Persist base64 to the user's Firestore document and update UI.
       const { db } = await resolveFirebase();
       const userDocRef = firestore.doc(db, 'users', user.uid);
       await firestore.updateDoc(userDocRef, {
@@ -124,11 +132,13 @@ const PersonalInformation: React.FC<PersonalInformationProps> = ({ user, onSucce
       setProfilePicture(base64String);
       onSuccess('Profile picture updated successfully!');
     } catch (error: any) {
+      // Surface upload errors to the parent via `onError` and log for
+      // debugging.
       console.error('Profile picture upload error:', error);
       onError(error.message || 'Failed to upload profile picture');
     } finally {
       setIsUploading(false);
-      // Reset file input
+      // Reset file input so the same file can be selected again if needed.
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
