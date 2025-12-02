@@ -52,7 +52,6 @@ interface NutritionGoalsModalProps {
 const NutritionGoalsModal: React.FC<NutritionGoalsModalProps> = ({
   isOpen,
   onClose,
-  onSave,
   loading,
   validationErrors,
   nutritionGoals,
@@ -72,7 +71,6 @@ const NutritionGoalsModal: React.FC<NutritionGoalsModalProps> = ({
   onCarbsChange,
   onFatChange,
   onResetToRecommended,
-  initialValues,
   onPersisted,
   user
 }) => {

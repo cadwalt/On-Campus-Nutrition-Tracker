@@ -131,14 +131,18 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
     try { document.body.style.overflow = ''; } catch (e) {}
     // Merge saved preferences into the in-memory nutritionGoals so the
     // display reads the updated nested values consistently.
-    setNutritionGoals(prev => ({
-      ...(prev || {}),
+    setNutritionGoals(prev => prev ? ({
+      ...prev,
       preferences: {
         ...((prev && prev.preferences) || {}),
-        ...(saved.cooking_skill !== undefined ? { cooking_skill: saved.cooking_skill } : {}),
-        ...(saved.meal_frequency !== undefined ? { meal_frequency: saved.meal_frequency } : {})
+        // Ensure dietary_restrictions is always present to satisfy NutritionGoals type
+        dietary_restrictions: (prev && prev.preferences && prev.preferences.dietary_restrictions) ? prev.preferences.dietary_restrictions : [],
+        // Ensure meal_frequency is always a number (default to previous or 3)
+        meal_frequency: saved.meal_frequency !== undefined ? saved.meal_frequency : ((prev && prev.preferences && typeof prev.preferences.meal_frequency === 'number') ? prev.preferences.meal_frequency : 3),
+        // Preserve cooking_skill if not provided in saved payload
+        cooking_skill: saved.cooking_skill !== undefined ? saved.cooking_skill : ((prev && prev.preferences && prev.preferences.cooking_skill) ? prev.preferences.cooking_skill : null)
       }
-    }));
+    }) : prev);
 
     onSuccess('Meal preferences saved successfully!');
     setIsEditing(false);
