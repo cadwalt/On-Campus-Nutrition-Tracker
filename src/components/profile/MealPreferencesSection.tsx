@@ -1,12 +1,7 @@
 import React, { useState, useEffect } from 'react';
-
-const resolveFirebase = async () => {
-  const mod: any = await import('../../firebase');
-  const db = (mod.getFirestoreClient ? await mod.getFirestoreClient() : mod.db) as any;
-  const firestore = await import('firebase/firestore');
-  return { db, firestore };
-};
 import type { User } from 'firebase/auth';
+// Use shared lazy resolver to import Firebase clients/modules at runtime
+import { resolveFirebase } from '../../lib/resolveFirebase';
 import type { CookingSkill, NutritionGoals } from '../../types/nutrition';
 import { COOKING_SKILLS } from '../../constants/nutrition';
 import MealPreferencesModal from './modals/MealPreferencesModal';
@@ -29,6 +24,8 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [newFavorite, setNewFavorite] = useState<string>('');
 
   // Load existing meal preferences from Firestore
   useEffect(() => {
@@ -44,6 +41,7 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
             setNutritionGoals(goals || null);
             setCookingSkill(goals?.preferences?.cooking_skill || null);
             setMealFrequency(goals?.preferences?.meal_frequency || 3);
+            setFavorites(data.favorites || []);
           }
         } catch (error) {
           console.error('Error loading meal preferences:', error);
@@ -131,19 +129,82 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
     try { document.body.style.overflow = ''; } catch (e) {}
     // Merge saved preferences into the in-memory nutritionGoals so the
     // display reads the updated nested values consistently.
-    setNutritionGoals(prev => ({
-      ...(prev || {}),
-      preferences: {
-        ...((prev && prev.preferences) || {}),
-        ...(saved.cooking_skill !== undefined ? { cooking_skill: saved.cooking_skill } : {}),
-        ...(saved.meal_frequency !== undefined ? { meal_frequency: saved.meal_frequency } : {})
-      }
-    }));
+    setNutritionGoals(prev => {
+      const merged: NutritionGoals = {
+        primary_goal: (prev && prev.primary_goal) || 'general_health',
+        activity_level: (prev && prev.activity_level) || 'moderately_active',
+        preferences: {
+          // ensure required preference fields have sensible defaults
+          dietary_restrictions: (prev && prev.preferences && prev.preferences.dietary_restrictions) || [],
+          cooking_skill: (saved.cooking_skill !== undefined ? saved.cooking_skill : (prev && prev.preferences && prev.preferences.cooking_skill) || 'beginner') as any,
+          meal_frequency: (saved.meal_frequency !== undefined ? saved.meal_frequency : (prev && prev.preferences && prev.preferences.meal_frequency) || 3)
+        },
+        // preserve optional fields when available
+        ...(prev && prev.current_weight !== undefined ? { current_weight: prev.current_weight } : {}),
+        ...(prev && prev.target_weight !== undefined ? { target_weight: prev.target_weight } : {}),
+        ...(prev && prev.height !== undefined ? { height: prev.height } : {}),
+        ...(prev && prev.macro_targets ? { macro_targets: prev.macro_targets } : {})
+      };
+      return merged;
+    });
 
     onSuccess('Meal preferences saved successfully!');
     setIsEditing(false);
     console.groupEnd();
   }
+
+  // Favorite meals handlers
+  const handleAddFavorite = async () => {
+    if (!user) return;
+    const name = newFavorite.trim();
+    if (!name) return;
+    if (favorites.includes(name)) {
+      onError('This meal is already in your favorites');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { db, firestore } = await resolveFirebase();
+      const userDocRef = firestore.doc(db, 'users', user.uid);
+
+      const updated = [...favorites, name];
+      await firestore.updateDoc(userDocRef, {
+        favorites: updated,
+        updated_at: new Date()
+      });
+
+      setFavorites(updated);
+      setNewFavorite('');
+      onSuccess('Added to favorites');
+    } catch (err: any) {
+      onError(err.message || 'Failed to add favorite');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemoveFavorite = async (meal: string) => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const { db, firestore } = await resolveFirebase();
+      const userDocRef = firestore.doc(db, 'users', user.uid);
+
+      const updated = favorites.filter(f => f !== meal);
+      await firestore.updateDoc(userDocRef, {
+        favorites: updated,
+        updated_at: new Date()
+      });
+
+      setFavorites(updated);
+      onSuccess('Removed favorite');
+    } catch (err: any) {
+      onError(err.message || 'Failed to remove favorite');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Cancel editing and reset to original state
   const handleCancelEdit = () => {
@@ -331,10 +392,42 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
                             fontWeight: '500'
                           }}
                         >
-                          {nutritionGoals.preferences.meal_frequency === 1 ? `${nutritionGoals.preferences.meal_frequency} meal per day` : `${nutritionGoals.preferences.meal_frequency} meals per day`}
+                          {nutritionGoals?.preferences?.meal_frequency === 1 ? `${nutritionGoals.preferences?.meal_frequency} meal per day` : `${nutritionGoals?.preferences?.meal_frequency} meals per day`}
                         </p>
                       </div>
                     </div>
+                  )}
+                </div>
+                {/* Favorite Meals Section */}
+                <div className="favorites-section" style={{ marginTop: '1rem' }}>
+                  <h3 style={{ margin: '0 0 0.5rem 0', color: '#e2e8f0' }}>Favorite Meals</h3>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                    <input
+                      type="text"
+                      value={newFavorite}
+                      onChange={(e) => setNewFavorite(e.target.value)}
+                      placeholder="Add a favorite meal (e.g., Caesar Salad)"
+                      style={{ flex: '1', padding: '0.5rem', borderRadius: '8px' }}
+                      disabled={loading}
+                    />
+                    <button
+                      onClick={handleAddFavorite}
+                      disabled={loading || !newFavorite.trim()}
+                      style={{ padding: '0.5rem 0.75rem', borderRadius: '8px' }}
+                    >Add</button>
+                  </div>
+
+                  {favorites.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {favorites.map((meal) => (
+                        <div key={meal} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
+                          <span style={{ color: '#cbd5e1' }}>{meal}</span>
+                          <button onClick={() => handleRemoveFavorite(meal)} style={{ color: '#f87171', background: 'transparent', border: 'none' }}>Remove</button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ margin: 0, color: '#94a3b8' }}>No favorite meals yet. Add one above.</p>
                   )}
                 </div>
               </div>
