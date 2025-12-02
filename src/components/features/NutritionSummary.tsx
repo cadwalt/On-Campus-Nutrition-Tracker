@@ -1,4 +1,11 @@
 // Nutrition Summary Component - Shows logged intake vs goals
+// Responsibilities:
+// - Subscribe to the current user's meals and aggregate today's intake
+// - Load the user's stored nutrition goals and compute a nutrition plan
+// - Render progress bars for calories and each macro
+// Notes:
+// - Uses `resolveFirebase` to lazily get auth / firestore clients to keep
+//   the initial client bundle small.
 import React, { useState, useEffect } from 'react';
 import type { User } from 'firebase/auth';
 import { resolveFirebase } from '../../lib/resolveFirebase';

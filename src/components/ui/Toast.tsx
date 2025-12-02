@@ -9,6 +9,10 @@ interface ToastProps {
   duration?: number;
 }
 
+// Toast is rendered via a Portal to `document.body` so notifications
+// are visually above other UI layers (modals, overlays). The component
+// manages its own entrance/exit animation flags and calls `onClose`
+// after the exit animation completes.
 const Toast: React.FC<ToastProps> = ({ 
   message, 
   type, 

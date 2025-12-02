@@ -92,6 +92,17 @@ const AllergensSection: React.FC<AllergensSectionProps> = ({ user, onSuccess, on
     setIsEditing(true);
   };
 
+  // Called by modal after it verifies persistence
+  function handlePersistedAllergens(saved: { allergens?: string[] }) {
+    console.groupCollapsed('AllergensSection: handlePersistedAllergens');
+    console.log('saved:', saved);
+    if (saved.allergens !== undefined) setSelectedAllergens(saved.allergens);
+    try { document.body.style.overflow = ''; } catch (e) {}
+    onSuccess('Allergens saved successfully!');
+    setIsEditing(false);
+    console.groupEnd();
+  }
+
   return (
     <div className="profile-section">
       <div className="section-header">
@@ -119,6 +130,8 @@ const AllergensSection: React.FC<AllergensSectionProps> = ({ user, onSuccess, on
           isOpen={isEditing}
           onClose={handleCancelEdit}
           onSave={handleSaveAllergens}
+          onPersisted={handlePersistedAllergens}
+          user={user}
           loading={loading}
           selectedAllergens={selectedAllergens}
           onAllergenChange={handleAllergenChange}
