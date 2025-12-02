@@ -1,5 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import type { User } from 'firebase/auth';
+import { doc, updateDoc, setDoc, getDoc } from 'firebase/firestore';
+import { resolveFirebase } from '../../../lib/resolveFirebase';
+import Toast from '../../ui/Toast';
 import type { 
   NutritionGoals, 
   PrimaryGoal, 
@@ -14,7 +18,9 @@ import { Tooltip } from '../../ui';
 interface NutritionGoalsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: () => void;
+  // Optional parent save handler (kept for compatibility). Modal will
+  // perform saving itself; parent may still pass this if it needs to.
+  onSave?: () => void | Promise<void>;
   loading: boolean;
   validationErrors: string[];
   nutritionGoals: NutritionGoals | null;
@@ -34,6 +40,13 @@ interface NutritionGoalsModalProps {
   onCarbsChange: (value: number) => void;
   onFatChange: (value: number) => void;
   onResetToRecommended: () => void;
+  // Optional initial values passed when opening the modal. Can be `null`.
+  initialValues?: NutritionGoals | null;
+  // Optional callback invoked by the modal after a verified save so the
+  // parent can refresh derived state without navigating.
+  onPersisted?: (savedGoals: NutritionGoals) => void;
+  // Current signed-in user (needed to write the user's document).
+  user: User;
 }
 
 const NutritionGoalsModal: React.FC<NutritionGoalsModalProps> = ({
@@ -58,9 +71,26 @@ const NutritionGoalsModal: React.FC<NutritionGoalsModalProps> = ({
   onProteinChange,
   onCarbsChange,
   onFatChange,
-  onResetToRecommended
+  onResetToRecommended,
+  initialValues,
+  onPersisted,
+  user
 }) => {
+  const [localLoading, setLocalLoading] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
+  const [showToast, setShowToast] = useState(false);
+
+  const showLocalToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+  };
   // Handle ESC key to close modal and body scroll management
+  // Important: when the modal is open we prevent body scroll by setting
+  // `document.body.style.overflow = 'hidden'`. We store and restore the
+  // original value on unmount so we don't accidentally break page scrolling
+  // if multiple modals/components interact with body styles.
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && isOpen) {
@@ -77,7 +107,8 @@ const NutritionGoalsModal: React.FC<NutritionGoalsModalProps> = ({
       
       return () => {
         document.removeEventListener('keydown', handleKeyDown);
-        // Restore original overflow value
+        // Restore original overflow value to avoid leaving the page
+        // non-scrollable after the modal closes.
         document.body.style.overflow = originalOverflow;
       };
     }
@@ -94,11 +125,95 @@ const NutritionGoalsModal: React.FC<NutritionGoalsModalProps> = ({
     }
   };
 
+  // Unique classes to avoid removing unrelated overlays/content
+  const OVERLAY_CLASS = "nutrition-modal-overlay";
+  const CONTENT_CLASS = "nutrition-modal-content";
+
+  // Internal save: writes nutrition goals to users/{uid} and verifies
+  const handleSaveInternal = async () => {
+    if (!user) {
+      showLocalToast('Not authenticated', 'error');
+      return;
+    }
+
+    if (!nutritionGoals) {
+      showLocalToast('No goals to save', 'error');
+      return;
+    }
+
+    setLocalLoading(true);
+
+    // Build the object to persist (mirror parent construction)
+    const macroTargets = {
+      protein_percentage: proteinPercentage,
+      carbs_percentage: carbsPercentage,
+      fat_percentage: fatPercentage
+    };
+
+    const completeGoals: NutritionGoals = {
+      ...nutritionGoals,
+      current_weight: (currentWeight as any) || undefined,
+      target_weight: (targetWeight as any) || undefined,
+      height: (height as any) || undefined,
+      macro_targets: macroTargets
+    };
+
+    try {
+      const { db } = await resolveFirebase();
+      const userDocRef = doc(db, 'users', user.uid);
+
+      try {
+        await updateDoc(userDocRef, {
+          nutrition_goals: completeGoals,
+          updated_at: new Date()
+        });
+      } catch (err) {
+        // Fallback to set with merge if the document doesn't exist
+        await setDoc(userDocRef, {
+          nutrition_goals: completeGoals,
+          updated_at: new Date()
+        }, { merge: true });
+      }
+
+      // Re-read and verify
+      const savedSnap = await getDoc(userDocRef);
+      const saved = savedSnap.exists() ? (savedSnap.data() as any).nutrition_goals : null;
+
+      if (saved && JSON.stringify(saved) === JSON.stringify(completeGoals)) {
+        showLocalToast('Nutrition goals saved', 'success');
+        // Let the parent refresh without navigating away
+        if (onPersisted) onPersisted(completeGoals);
+
+        // Important: do NOT call `onClose()` here. Let the parent update its
+        // state (including `nutritionGoals`) and then close the modal. If we
+        // call `onClose()` here the parent cancel/reset handler may read
+        // stale `nutritionGoals` and overwrite newer values.
+
+        // Restore body scrolling; don't remove portal nodes — React will
+        // unmount them when the parent closes the modal.
+        try {
+          document.body.style.overflow = '';
+        } catch (cleanupErr) {
+          // Non-fatal
+          // eslint-disable-next-line no-console
+          console.warn('Nutrition modal cleanup (restore overflow) failed', cleanupErr);
+        }
+      } else {
+        showLocalToast('Save verification failed — please try again', 'error');
+      }
+    } catch (err: any) {
+      console.error('Failed to save nutrition goals in modal', err);
+      showLocalToast(err?.message || 'Failed to save goals', 'error');
+    } finally {
+      setLocalLoading(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return createPortal(
     <div 
-      className="modal-overlay"
+      className={`modal-overlay ${OVERLAY_CLASS}`}
       style={{
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
         position: 'fixed',
@@ -116,7 +231,7 @@ const NutritionGoalsModal: React.FC<NutritionGoalsModalProps> = ({
       onClick={handleModalOverlayClick}
     >
       <div 
-        className="modal-content"
+        className={`modal-content ${CONTENT_CLASS}`}
         style={{
           backgroundColor: 'rgba(26, 26, 46, 0.95)',
           borderRadius: '16px',
@@ -182,6 +297,14 @@ const NutritionGoalsModal: React.FC<NutritionGoalsModalProps> = ({
             </svg>
           </button>
         </div>
+
+        {/* Local toast for modal-level messages */}
+        <Toast
+          message={toastMessage || ''}
+          type={toastType}
+          isVisible={showToast}
+          onClose={() => setShowToast(false)}
+        />
 
         {/* Modal Content */}
         <div 
@@ -500,12 +623,18 @@ const NutritionGoalsModal: React.FC<NutritionGoalsModalProps> = ({
           >
             Cancel
           </button>
+          {/*
+            The `Save` button delegates saving back to the parent via
+            the provided `onSave` prop. Parent components should validate
+            and persist data. Keep the button disabled while saving or
+            when required fields/validation fail to avoid partial writes.
+          */}
           <button 
-            onClick={onSave} 
+            onClick={handleSaveInternal}
             className="save-section-button"
-            disabled={loading || !nutritionGoals?.primary_goal || !nutritionGoals?.activity_level || Math.abs(totalPercentage - 100) > 1}
+            disabled={localLoading || !nutritionGoals?.primary_goal || !nutritionGoals?.activity_level || Math.abs(totalPercentage - 100) > 1}
           >
-            {loading ? 'Saving...' : 'Save Goals'}
+            {localLoading ? 'Saving...' : 'Save Goals'}
           </button>
         </div>
       </div>

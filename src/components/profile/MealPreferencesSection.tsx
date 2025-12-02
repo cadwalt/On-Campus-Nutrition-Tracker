@@ -122,6 +122,29 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
     }
   };
 
+  // Called by modal after it verifies persistence
+  function handlePersistedPreferences(saved: { cooking_skill?: any; meal_frequency?: number }) {
+    console.groupCollapsed('MealPreferencesSection: handlePersistedPreferences');
+    console.log('saved:', saved);
+    if (saved.cooking_skill !== undefined) setCookingSkill(saved.cooking_skill);
+    if (saved.meal_frequency !== undefined) setMealFrequency(saved.meal_frequency);
+    try { document.body.style.overflow = ''; } catch (e) {}
+    // Merge saved preferences into the in-memory nutritionGoals so the
+    // display reads the updated nested values consistently.
+    setNutritionGoals(prev => ({
+      ...(prev || {}),
+      preferences: {
+        ...((prev && prev.preferences) || {}),
+        ...(saved.cooking_skill !== undefined ? { cooking_skill: saved.cooking_skill } : {}),
+        ...(saved.meal_frequency !== undefined ? { meal_frequency: saved.meal_frequency } : {})
+      }
+    }));
+
+    onSuccess('Meal preferences saved successfully!');
+    setIsEditing(false);
+    console.groupEnd();
+  }
+
   // Cancel editing and reset to original state
   const handleCancelEdit = () => {
     setIsEditing(false);
@@ -163,6 +186,8 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
           isOpen={isEditing}
           onClose={handleCancelEdit}
           onSave={handleSavePreferences}
+          onPersisted={handlePersistedPreferences}
+          user={user}
           loading={loading}
           validationErrors={validationErrors}
           cookingSkill={cookingSkill}
