@@ -99,24 +99,51 @@ export const WeightTracker: React.FC = () => {
           )}
         </div>
       ) : null}
-      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
-        <input
-          type="number"
-          placeholder={unit === 'kg' ? "Weight (kg)" : "Weight (lbs)"}
-          value={weight}
-          onChange={(e) => { setWeight(e.target.value); if (error) setError(null); }}
-          style={{ width: 140 }}
-          step={0.1}
-          min={1}
-          max={unit === 'kg' ? 700 : 1500}
-          aria-label="Weight value"
-        />
-        <select value={unit} onChange={(e) => { setUnit(e.target.value as 'lb' | 'kg'); if (error) setError(null); }} aria-label="Weight units">
-          <option value="lb">lb</option>
-          <option value="kg">kg</option>
-        </select>
-        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        <button onClick={onAdd}>Add</button>
+      <div
+        className="water-custom-input-container"
+        style={{ marginBottom: 8, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}
+      >
+        <div className="water-custom-input-wrapper" style={{ flex: '0 1 auto', minWidth: 0 }}>
+          <input
+            type="number"
+            placeholder={unit === 'kg' ? "Weight (kg)" : "Weight (lbs)"}
+            value={weight}
+            onChange={(e) => { setWeight(e.target.value); if (error) setError(null); }}
+            className="water-custom-input"
+            step={0.1}
+            min={1}
+            max={unit === 'kg' ? 700 : 1500}
+            aria-label="Weight value"
+            style={{ minWidth: 180 }}
+          />
+          <select
+            className="water-custom-unit"
+            value={unit}
+            onChange={(e) => { setUnit(e.target.value as 'lb' | 'kg'); if (error) setError(null); }}
+            aria-label="Weight units"
+            style={{ marginLeft: 8 }}
+          >
+            <option value="lb">lb</option>
+            <option value="kg">kg</option>
+          </select>
+        </div>
+
+        <div style={{ flex: '0 0 auto', minWidth: 160 }}>
+          <div className="water-custom-input-wrapper" style={{ minWidth: 160 }}>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="water-custom-input"
+              aria-label="Date"
+              style={{ width: 160 }}
+            />
+          </div>
+        </div>
+
+        <div style={{ flex: '0 0 auto' }}>
+          <button className="water-add-btn-primary" onClick={onAdd} disabled={busy}>Add</button>
+        </div>
       </div>
 
       {/* conversion preview placed below the inputs */}
