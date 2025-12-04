@@ -3,10 +3,23 @@ import type { WeightEntry } from '../../types/weight';
 
 interface Props { entries: WeightEntry[]; height?: number; width?: number; range?: 'week'|'month'|'year'|'all'; centerFactor?: number; unit?: 'lb' | 'kg'; targetWeight?: number | null }
 
+// Helper to parse "YYYY-MM-DD" as a local date (midnight local time)
+function parseLocalDate(dateStr: string): Date {
+  // Only handle "YYYY-MM-DD" format; fallback to Date constructor otherwise
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+  if (m) {
+    const year = Number(m[1]);
+    const month = Number(m[2]) - 1; // JS months are 0-based
+    const day = Number(m[3]);
+    return new Date(year, month, day);
+  }
+  return new Date(dateStr);
+}
+
 export const WeightChart: React.FC<Props> = ({ entries, height = 160, width, range = 'month', centerFactor, unit = 'lb', targetWeight = null }) => {
   if (!entries) return <div>No chart data</div>;
 
-  const points = entries.length === 0 ? [] : entries.map(e => ({ x: new Date(e.date).getTime(), y: e.weightLb }));
+  const points = entries.length === 0 ? [] : entries.map(e => ({ x: parseLocalDate(e.date).getTime(), y: e.weightLb }));
   const xs = points.map(p => p.x);
   const ys = points.map(p => p.y);
   if (points.length === 0) return <div style={{ height }} />;
