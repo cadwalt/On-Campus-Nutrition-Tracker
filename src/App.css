@@ -2653,6 +2653,42 @@ body::after {
   font-family: inherit;
 }
 
+/* Favorites select styling to match meal-form inputs */
+.meal-form .favorite-select {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #e2e8f0;
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 100%;
+}
+
+.meal-form .favorite-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102,126,234,0.25);
+}
+
+/* Clear button next to the select */
+.meal-form .favorite-clear-button {
+  padding: 0.4rem 0.75rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #cbd5e1;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.meal-form .favorite-clear-button:hover {
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+}
+
 .meal-form input:focus,
 .meal-form textarea:focus {
   outline: none;
@@ -3322,6 +3358,42 @@ body::after {
 .meal-tracker-page .card > h2 {
   margin-bottom: 6px;
 }
+
+/* Add extra vertical spacing between Today's Summary and Add a Meal in Overview */
+.meal-tracker-page .overview-content > .card:first-child {
+  margin-bottom: 1.75rem;
+}
+
+/* Themed select controls: increase contrast and match input styles across the app */
+select,
+.meal-form select,
+.card select,
+.preferences-content select {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #e6eef9; /* higher-contrast off-white */
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0. ninerem;
+  font-family: inherit;
+  box-sizing: border-box;
+  appearance: none;
+}
+
+/* Option text contrast (applies where supported) */
+select option {
+  color: #111827;
+  background: #ffffff;
+}
+
+select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102,126,234,0.16);
+}
+
+/* Fallback: ensure small selects don't push layout */
+select { min-width: 0; }
 
 /* Prevent horizontal overflow inside the meal tracker page. Force
    single-column layout, make cards fluid and ensure inner grids

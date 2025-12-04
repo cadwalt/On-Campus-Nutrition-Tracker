@@ -8,6 +8,10 @@ export interface NutritionInfo {
   sugars?: number;
   calcium?: number;
   iron?: number;
+  // Optional textual/other fields to mirror Add-a-Meal
+  fatCategories?: string;
+  vitamins?: string;
+  otherInfo?: string;
 }
 
 export interface FavoriteItem {

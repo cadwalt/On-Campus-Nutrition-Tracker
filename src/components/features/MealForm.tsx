@@ -96,6 +96,7 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
     if (!form.name.trim()) missing.push('Meal name');
     if (!form.calories.trim()) missing.push('Calories');
     if (!form.servingSize.trim()) missing.push('Serving size');
+    if (!form.servingsHad.trim()) missing.push('Servings Had');
     return missing;
   };
 
@@ -341,6 +342,7 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
         <h4 style={{ margin: '0 0 6px 0' }}>Add a Favorite</h4>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <select
+            className="favorite-select"
             value={selectedFavoriteId}
             onChange={(e) => {
               const id = e.target.value;
@@ -348,18 +350,24 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
               if (!id) return;
               const fav = (favorites || []).find((f) => f.id === id);
               if (!fav) return;
-              // apply favorite to form
+              // apply favorite to form (populate all available nutritional fields and serving size)
               setForm((prev) => ({
                 ...prev,
                 name: fav.name || prev.name,
                 calories: fav.nutrition?.calories != null ? String(fav.nutrition.calories) : prev.calories,
-                servingSize: prev.servingSize,
+                servingSize: fav.servingSize != null ? fav.servingSize : prev.servingSize,
                 totalCarbs: fav.nutrition?.carbs != null ? String(fav.nutrition.carbs) : prev.totalCarbs,
                 totalFat: fav.nutrition?.fat != null ? String(fav.nutrition.fat) : prev.totalFat,
                 protein: fav.nutrition?.protein != null ? String(fav.nutrition.protein) : prev.protein,
+                sodium: fav.nutrition?.sodium != null ? String(fav.nutrition.sodium) : prev.sodium,
+                sugars: fav.nutrition?.sugars != null ? String(fav.nutrition.sugars) : prev.sugars,
+                calcium: fav.nutrition?.calcium != null ? String(fav.nutrition.calcium) : prev.calcium,
+                iron: fav.nutrition?.iron != null ? String(fav.nutrition.iron) : prev.iron,
+                fatCategories: fav.nutrition?.fatCategories != null ? String(fav.nutrition.fatCategories) : prev.fatCategories,
+                vitamins: fav.nutrition?.vitamins != null ? String(fav.nutrition.vitamins) : prev.vitamins,
+                otherInfo: fav.nutrition?.otherInfo != null ? String(fav.nutrition.otherInfo) : prev.otherInfo,
               }));
             }}
-            style={{ flex: 1, padding: '0.5rem', borderRadius: 6 }}
           >
             <option value="">Select a favorite to prefill the form...</option>
             {(favorites || []).map((f) => (
@@ -368,8 +376,8 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
           </select>
           <button
             type="button"
+            className="favorite-clear-button"
             onClick={() => setSelectedFavoriteId('')}
-            style={{ padding: '0.4rem 0.75rem' }}
           >Clear</button>
         </div>
       </div>
@@ -384,6 +392,8 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
               onFocus={() => setShowSuggestions(true)}
               onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
               placeholder="e.g. Grilled Chicken Salad"
+              required
+              aria-required="true"
             />
             {showSuggestions && filteredSuggestions.length > 0 && (
               <ul className="autocomplete-list">
@@ -424,15 +434,15 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
         </div>
         <div className="form-field required">
           <label>Calories *</label>
-          <input type="number" min={0} value={form.calories} onChange={(e) => updateField('calories', e.target.value)} placeholder="e.g. 450" />
+          <input required type="number" min={0} value={form.calories} onChange={(e) => updateField('calories', e.target.value)} placeholder="e.g. 450" aria-required="true" />
         </div>
         <div className="form-field required">
           <label>Serving Size *</label>
-          <input value={form.servingSize} onChange={(e) => updateField('servingSize', e.target.value)} placeholder="e.g. 1 bowl" />
+          <input required value={form.servingSize} onChange={(e) => updateField('servingSize', e.target.value)} placeholder="e.g. 1 bowl" aria-required="true" />
         </div>
-        <div className="form-field">
+        <div className="form-field required">
           <label>Servings Had</label>
-          <input type="number" min={0} step="0.1" value={form.servingsHad} onChange={(e) => updateField('servingsHad', e.target.value)} placeholder="e.g. 1.5" />
+          <input required type="number" min={0} step="0.1" value={form.servingsHad} onChange={(e) => updateField('servingsHad', e.target.value)} placeholder="e.g. 1.5" aria-required="true" />
         </div>
       </div>
 

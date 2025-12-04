@@ -29,7 +29,20 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   const [newFavorite, setNewFavorite] = useState<string>('');
-  const [newNutrition, setNewNutrition] = useState<{ calories?: number; protein?: number; carbs?: number; fat?: number; servingSize?: string }>({});
+  const [newNutrition, setNewNutrition] = useState<{
+    calories?: number;
+    protein?: number;
+    carbs?: number;
+    fat?: number;
+    servingSize?: string;
+    fatCategories?: string;
+    sodium?: number;
+    sugars?: number;
+    calcium?: number;
+    iron?: number;
+    vitamins?: string;
+    otherInfo?: string;
+  }>({});
   const [showFavOptional, setShowFavOptional] = useState(false);
   const [expandedFavorites, setExpandedFavorites] = useState<Record<string, boolean>>({});
   const [recentMeals, setRecentMeals] = useState<any[]>([]);
@@ -194,6 +207,12 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
       return;
     }
 
+    // Validate required fields for favorite
+    if (!newNutrition.servingSize || newNutrition.calories == null) {
+      onError('Please provide a serving size and calories for the favorite');
+      return;
+    }
+
     setLoading(true);
     try {
       const fav: FavoriteItem = {
@@ -209,6 +228,9 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
           sugars: (newNutrition as any).sugars,
           calcium: (newNutrition as any).calcium,
           iron: (newNutrition as any).iron,
+          fatCategories: (newNutrition as any).fatCategories,
+          vitamins: (newNutrition as any).vitamins,
+          otherInfo: (newNutrition as any).otherInfo,
         },
         servingSize: newNutrition.servingSize,
         created_at: Date.now(),
@@ -434,12 +456,14 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
                 </div>
                 {/* Favorite Meals Section */}
                 <div className="favorites-section" style={{ marginTop: '1rem' }}>
-                  <h3 style={{ margin: '0 0 0.5rem 0', color: '#e2e8f0' }}>Favorite Meals</h3>
+                  <h3 style={{ margin: '0 0 0.5rem 0', color: '#e2e8f0' }}>Add Your Favorite Meals</h3>
                   <div className="meal-form" style={{ marginBottom: '0.5rem' }}>
                     <div className="form-grid">
-                      <div className="form-field">
-                        <label>Favorite name</label>
+                      <div className="form-field required">
+                        <label>Favorite meal name</label>
                         <input
+                          required
+                          aria-required="true"
                           type="text"
                           value={newFavorite}
                           onChange={(e) => setNewFavorite(e.target.value)}
@@ -447,31 +471,22 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
                           disabled={loading}
                         />
                       </div>
-                      <div className="form-field">
-                        <label>Serving</label>
+                      <div className="form-field required">
+                        <label>Serving Size</label>
                         <input
+                          required
+                          aria-required="true"
                           type="text"
                           placeholder="e.g. 1 bowl"
                           value={newNutrition.servingSize ?? ''}
                           onChange={(e) => setNewNutrition(prev => ({ ...prev, servingSize: e.target.value || undefined }))}
                         />
                       </div>
-                      <div className="form-field">
+                      <div className="form-field required">
                         <label>Calories</label>
-                        <input type="number" placeholder="cal" value={newNutrition.calories ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, calories: e.target.value ? Number(e.target.value) : undefined }))} />
+                        <input required type="number" placeholder="cal" value={newNutrition.calories ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, calories: e.target.value ? Number(e.target.value) : undefined }))} aria-required="true" />
                       </div>
-                      <div className="form-field">
-                        <label>Protein (g)</label>
-                        <input type="number" placeholder="protein" value={newNutrition.protein ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, protein: e.target.value ? Number(e.target.value) : undefined }))} />
-                      </div>
-                      <div className="form-field">
-                        <label>Carbs (g)</label>
-                        <input type="number" placeholder="carbs" value={newNutrition.carbs ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, carbs: e.target.value ? Number(e.target.value) : undefined }))} />
-                      </div>
-                      <div className="form-field">
-                        <label>Fat (g)</label>
-                        <input type="number" placeholder="fat" value={newNutrition.fat ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, fat: e.target.value ? Number(e.target.value) : undefined }))} />
-                      </div>
+                      {/* other nutrition fields moved to optional section */}
                     </div>
 
                     <div className="form-toggle-row">
@@ -490,6 +505,18 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
                     {showFavOptional && (
                       <div className="form-grid" id="favorite-optional-fields" style={{ marginTop: 4 }}>
                         <div className="form-field">
+                          <label>Protein (g)</label>
+                          <input type="number" placeholder="protein" value={(newNutrition as any).protein ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, protein: e.target.value ? Number(e.target.value) : undefined }))} />
+                        </div>
+                        <div className="form-field">
+                          <label>Total Carbs (g)</label>
+                          <input type="number" placeholder="carbs" value={(newNutrition as any).carbs ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, carbs: e.target.value ? Number(e.target.value) : undefined }))} />
+                        </div>
+                        <div className="form-field">
+                          <label>Total Fat (g)</label>
+                          <input type="number" placeholder="fat" value={(newNutrition as any).fat ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, fat: e.target.value ? Number(e.target.value) : undefined }))} />
+                        </div>
+                        <div className="form-field">
                           <label>Sodium (mg)</label>
                           <input type="number" placeholder="sodium" value={(newNutrition as any).sodium ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, sodium: e.target.value ? Number(e.target.value) : undefined }))} />
                         </div>
@@ -505,12 +532,24 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
                           <label>Iron (mg)</label>
                           <input type="number" placeholder="iron" value={(newNutrition as any).iron ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, iron: e.target.value ? Number(e.target.value) : undefined }))} />
                         </div>
+                        <div className="form-field">
+                          <label>Fat Categories</label>
+                          <input type="text" placeholder="e.g. saturated, unsaturated" value={(newNutrition as any).fatCategories ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, fatCategories: e.target.value || undefined }))} />
+                        </div>
+                        <div className="form-field">
+                          <label>Vitamins</label>
+                          <input type="text" placeholder="e.g. Vit A, C" value={(newNutrition as any).vitamins ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, vitamins: e.target.value || undefined }))} />
+                        </div>
+                        <div className="form-field">
+                          <label>Other Info</label>
+                          <input type="text" placeholder="Notes" value={(newNutrition as any).otherInfo ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, otherInfo: e.target.value || undefined }))} />
+                        </div>
                       </div>
                     )}
 
                     <div className="form-actions" style={{ marginTop: 6 }}>
                       <button className="response-button small" type="button" onClick={() => { setNewFavorite(''); setNewNutrition({}); setShowFavOptional(false); }} style={{ marginRight: 8 }}>Clear</button>
-                      <button className="response-button small" onClick={handleAddFavorite} disabled={loading || !newFavorite.trim()}>Add</button>
+                      <button className="response-button small" onClick={handleAddFavorite} disabled={loading || !newFavorite.trim() || !newNutrition.servingSize || newNutrition.calories == null}>Add</button>
                     </div>
                   </div>
 
@@ -542,6 +581,10 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
                             sugars: chosen.sugars,
                             calcium: chosen.calcium,
                             iron: chosen.iron,
+                            fatCategories: chosen.fatCategories,
+                            vitamins: chosen.vitamins,
+                            otherInfo: chosen.otherInfo,
+                            // do not store servingsHad on favorites
                           },
                           servingSize: chosen.servingSize,
                           created_at: Date.now(),
@@ -568,7 +611,7 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
                             name: fav.name,
                             calories: fav.nutrition?.calories ?? 0,
                             servingSize: fav.servingSize || '',
-                            servingsHad: 1,
+                            // leave servingsHad undefined so Add-a-Meal prompts user to enter it
                             totalCarbs: fav.nutrition?.carbs,
                             totalFat: fav.nutrition?.fat,
                             protein: fav.nutrition?.protein,
