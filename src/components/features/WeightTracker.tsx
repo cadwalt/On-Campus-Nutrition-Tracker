@@ -24,27 +24,42 @@ export const WeightTracker: React.FC = () => {
 
   useEffect(() => {
     let mounted = true;
+    let unsubscribe: (() => void) | undefined;
     (async () => {
       try {
         const { auth, firebaseAuth, db, firestore } = await resolveFirebase();
-        const user = auth?.currentUser;
-        if (!user) return;
-        const userDocRef = firestore.doc(db, 'users', user.uid);
-        const snap = await firestore.getDoc(userDocRef);
-        if (!mounted) return;
-        if (snap.exists()) {
-          const data = snap.data();
-          const goals = data?.nutrition_goals;
-          if (goals && typeof goals.target_weight === 'number') {
-            setTargetLbs(goals.target_weight);
+        // Wait for auth state to be ready before fetching target weight
+        unsubscribe = firebaseAuth.onAuthStateChanged(auth, async (user) => {
+          if (!mounted) return;
+          if (!user) {
+            setTargetLbs(null);
+            return;
           }
-        }
+          try {
+            const userDocRef = firestore.doc(db, 'users', user.uid);
+            const snap = await firestore.getDoc(userDocRef);
+            if (!mounted) return;
+            if (snap.exists()) {
+              const data = snap.data();
+              const goals = data?.nutrition_goals;
+              if (goals && typeof goals.target_weight === 'number') {
+                setTargetLbs(goals.target_weight);
+              }
+            }
+          } catch (err) {
+            // non-fatal: leave target as null
+            // console.error('Failed to load target weight', err);
+          }
+        });
       } catch (err) {
         // non-fatal: leave target as null
-        // console.error('Failed to load target weight', err);
+        // console.error('Failed to setup auth listener', err);
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
   const onAdd = async () => {
     const val = parseFloat(weight);
@@ -90,25 +105,53 @@ export const WeightTracker: React.FC = () => {
   else if (range === 'year') start.setFullYear(now.getFullYear() - 1);
   const filteredEntries = range === 'all' ? allSorted : allSorted.filter((e) => new Date(e.date) >= start);
 
+  // compute average weight for the currently selected period (filteredEntries)
+  const averageWeightLb: number | null = filteredEntries.length === 0
+    ? null
+    : Math.round((filteredEntries.reduce((s, it) => s + it.weightLb, 0) / filteredEntries.length) * 10) / 10;
+
+  // convert average to display unit
+  const averageWeightDisplay = averageWeightLb != null
+    ? (unit === 'kg' ? Math.round((averageWeightLb / 2.20462) * 10) / 10 : averageWeightLb)
+    : null;
+
+  const targetMessage = (() => {
+    if (!targetLbs) return null;
+    if (entries && entries.length > 0) {
+      const latest = entries[entries.length - 1];
+      const latestLbs = latest ? latest.weightLb : null;
+      if (latestLbs == null) return 'Latest weight unavailable';
+      const diff = Math.round((targetLbs - latestLbs) * 10) / 10; // one decimal
+      // convert diff to display unit
+      const diffDisplay = unit === 'kg' ? Math.round((diff / 2.20462) * 10) / 10 : diff;
+      const unitLabel = unit === 'kg' ? 'kg' : 'lbs';
+      if (diff === 0) return 'At goal ✅';
+      if (diff > 0) return `${Math.abs(diffDisplay)} ${unitLabel} to reach target`;
+      return `${Math.abs(diffDisplay)} ${unitLabel} to lose to reach target`;
+    }
+    const targetDisplay = unit === 'kg' ? Math.round((targetLbs / 2.20462) * 10) / 10 : targetLbs;
+    const unitLabel = unit === 'kg' ? 'kg' : 'lbs';
+    return `No weight entries yet — add your first entry to see progress toward ${targetDisplay} ${unitLabel}.`;
+  })();
+
   return (
     <div className="weight-tracker">
-      {targetLbs ? (
-        <div style={{ marginBottom: 8, color: '#555' }}>
-          {entries && entries.length > 0 ? (
-            (() => {
-              const latest = entries[entries.length - 1];
-              const latestLbs = latest ? latest.weightLb : null;
-              if (latestLbs == null) return <span>Latest weight unavailable</span>;
-              const diff = Math.round((targetLbs - latestLbs) * 10) / 10; // one decimal
-              if (diff === 0) return <span>At goal ✅</span>;
-              if (diff > 0) return <span>{Math.abs(diff)} lbs to reach target</span>;
-              return <span>{Math.abs(diff)} lbs to lose to reach target</span>;
-            })()
-          ) : (
-            <span>No weight entries yet — add your first entry to see progress toward {targetLbs} lbs.</span>
-          )}
-        </div>
-      ) : null}
+      <div style={{ width: '100%', maxWidth: '97.5%', padding: '0 0', margin: '0 2.5% 0 0', boxSizing: 'border-box' }}>
+        <header style={{ marginBottom: 12, display: 'flex', gap: 16, alignItems: 'baseline', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, minWidth: 0, marginLeft: '0 rem' }}>
+            {averageWeightDisplay != null ? (
+              <h1 style={{ margin: 0, fontSize: '3rem', display: 'inline-flex', gap: 8, alignItems: 'baseline', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <span style={{ fontWeight: 700 }}>{averageWeightDisplay.toFixed(1)}</span>
+                <span style={{ fontSize: '1.5rem', color: '#666' }}>{unit} (avg)</span>
+              </h1>
+            ) : null}
+          </div>
+
+          <div style={{ color: 'inherit', fontSize: '1.5rem', textAlign: 'right', minWidth: 0, marginRight: '0 0', fontWeight: 700 }}>
+            {targetMessage}
+          </div>
+        </header>
+      </div>
       <div
         className="water-custom-input-container"
         style={{ marginBottom: 8, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}
