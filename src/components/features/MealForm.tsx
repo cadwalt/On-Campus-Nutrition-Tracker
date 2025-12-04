@@ -384,7 +384,7 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
       {/* Required fields */}
       <div className="form-grid">
         <div className="form-field required">
-          <label>Meal Name *</label>
+          <label>Meal Name</label>
           <div className="autocomplete">
             <input
               value={form.name}
@@ -433,11 +433,11 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
           </div>
         </div>
         <div className="form-field required">
-          <label>Calories *</label>
+          <label>Calories</label>
           <input required type="number" min={0} value={form.calories} onChange={(e) => updateField('calories', e.target.value)} placeholder="e.g. 450" aria-required="true" />
         </div>
         <div className="form-field required">
-          <label>Serving Size *</label>
+          <label>Serving Size</label>
           <input required value={form.servingSize} onChange={(e) => updateField('servingSize', e.target.value)} placeholder="e.g. 1 bowl" aria-required="true" />
         </div>
         <div className="form-field required">
