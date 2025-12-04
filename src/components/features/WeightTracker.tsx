@@ -193,17 +193,45 @@ export const WeightTracker: React.FC = () => {
           <div>No entries in this range</div>
         ) : (
           <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-              <label style={{ fontSize: '0.95rem', color: '#333' }}>View:</label>
-              <select value={range} onChange={(e) => setRange(e.target.value as any)} style={{ padding: '6px 8px', borderRadius: 6 }}>
-                <option value="week">Week</option>
-                <option value="month">Month</option>
-                <option value="year">Year</option>
-                <option value="all">All time</option>
-              </select>
-            </div>
+            {(() => {
+              const tabs: { key: typeof range; label: string }[] = [
+                { key: 'week', label: 'Week' },
+                { key: 'month', label: 'Month' },
+                { key: 'year', label: 'Year' },
+                { key: 'all', label: 'All time' },
+              ];
+              return (
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+                  <div style={{ width: '100%', maxWidth: 980, padding: '0 24px' }}>
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                      {tabs.map((t) => (
+                        <button
+                          key={t.key}
+                          onClick={() => setRange(t.key)}
+                          aria-pressed={range === t.key}
+                          style={{
+                            padding: '8px 14px',
+                            borderRadius: 10,
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            background: range === t.key ? 'linear-gradient(135deg,#3b82f6 0%,#60a5fa 100%)' : 'transparent',
+                            color: range === t.key ? '#fff' : '#374151',
+                            boxShadow: range === t.key ? '0 4px 12px rgba(59,130,246,0.2)' : 'none',
+                          }}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
-            <WeightChart entries={filteredEntries} width={600} height={160} />
+            <div style={{ width: '100%', maxWidth: 980, padding: '0 24px', margin: '0 auto' }}>
+              <WeightChart entries={filteredEntries} height={220} range={range} />
+            </div>
 
             <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8 }}>
             <thead>
