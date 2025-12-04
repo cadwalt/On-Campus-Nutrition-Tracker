@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "react-easy-crop": "^4.6.0",
     "express": "^5.1.0",
     "file-type": "^21.1.1",
     "firebase": "^12.2.1",
