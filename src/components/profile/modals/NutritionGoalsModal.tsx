@@ -18,9 +18,6 @@ import { Tooltip } from '../../ui';
 interface NutritionGoalsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  // Optional parent save handler (kept for compatibility). Modal will
-  // perform saving itself; parent may still pass this if it needs to.
-  onSave?: () => void | Promise<void>;
   loading: boolean;
   validationErrors: string[];
   nutritionGoals: NutritionGoals | null;
@@ -41,7 +38,8 @@ interface NutritionGoalsModalProps {
   onFatChange: (value: number) => void;
   onResetToRecommended: () => void;
   // Optional initial values passed when opening the modal. Can be `null`.
-  initialValues?: NutritionGoals | null;
+  // Note: modal reads from `nutritionGoals` prop; `initialValues` removed
+  // from usage to avoid unused-parameter errors during build.
   // Optional callback invoked by the modal after a verified save so the
   // parent can refresh derived state without navigating.
   onPersisted?: (savedGoals: NutritionGoals) => void;
