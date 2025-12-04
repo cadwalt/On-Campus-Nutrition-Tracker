@@ -14,6 +14,13 @@ const MealTrackerPage = React.lazy(() => import('./pages/MealTrackerPage'));
 const PreferencesPage = React.lazy(() => import('./pages/PreferencesPage'));
 const AiAssistantPage = React.lazy(() => import('./pages/AiAssistantPage'));
 const WaterIntakePage = React.lazy(() => import('./pages/WaterIntakePage'));
+const WeightTrackerPage = React.lazy(() =>
+  // Provide a lightweight inline fallback component so the app builds even if the real page file is not yet present.
+  // This avoids the "Cannot find module './pages/WeightTrackerPage'" TypeScript error.
+  Promise.resolve({
+    default: () => <div className="placeholder">Weight tracker coming soon</div>,
+  })
+);
 
 function AppContent() {
   // Hide sidebar and switch to minimal auth layout on auth routes
@@ -42,6 +49,7 @@ function AppContent() {
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/ai-assistant" element={<AiAssistantPage />} />
               <Route path="/water-intake" element={<WaterIntakePage />} />
+              <Route path="/weight" element={<WeightTrackerPage />} />
               <Route path="*" element={<Navigate to="/signin" replace />} />
             </Routes>
           </Suspense>
