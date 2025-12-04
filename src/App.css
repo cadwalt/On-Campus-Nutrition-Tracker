@@ -2627,6 +2627,11 @@ body::after {
   gap: 0.35rem;
 }
 
+/* Ensure form fields can shrink inside grid cells to avoid overlapping inputs */
+.meal-form .form-field {
+  min-width: 0;
+}
+
 .meal-form .form-field.required label::after {
   content: ' *';
   color: #ef4444;
@@ -2651,6 +2656,14 @@ body::after {
   font-size: 0.85rem;
   resize: vertical;
   font-family: inherit;
+}
+
+/* Make inputs fill their container and use border-box sizing to avoid overflow */
+.meal-form input,
+.meal-form textarea,
+.meal-form .favorite-select {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Favorites select styling to match meal-form inputs */
