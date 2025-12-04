@@ -116,6 +116,17 @@ const DietaryRestrictionsSection: React.FC<DietaryRestrictionsSectionProps> = ({
     setIsEditing(true);
   };
 
+  // Called by modal after it verifies persistence
+  function handlePersistedRestrictions(saved: { dietary_restrictions?: any[] }) {
+    console.groupCollapsed('DietaryRestrictionsSection: handlePersistedRestrictions');
+    console.log('saved:', saved);
+    if (saved.dietary_restrictions !== undefined) setSelectedRestrictions(saved.dietary_restrictions);
+    try { document.body.style.overflow = ''; } catch (e) {}
+    onSuccess('Dietary restrictions saved successfully!');
+    setIsEditing(false);
+    console.groupEnd();
+  }
+
   return (
     <div className="profile-section">
       <div className="section-header">
@@ -143,6 +154,8 @@ const DietaryRestrictionsSection: React.FC<DietaryRestrictionsSectionProps> = ({
           isOpen={isEditing}
           onClose={handleCancelEdit}
           onSave={handleSaveRestrictions}
+          onPersisted={handlePersistedRestrictions}
+          user={user}
           loading={loading}
           selectedRestrictions={selectedRestrictions}
           onRestrictionChange={handleRestrictionChange}

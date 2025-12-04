@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { Tooltip } from '../ui';
 
-const resolveFirebase = async () => {
-  const mod: any = await import('../../firebase');
-  const db = (mod.getFirestoreClient ? await mod.getFirestoreClient() : mod.db) as any;
-  const firestore = await import('firebase/firestore');
-  return { db, firestore };
-};
+// Use the named resolver export (match how lib/resolveFirebase is exported)
+import { resolveFirebase } from '../../lib/resolveFirebase';
 import type { User } from 'firebase/auth';
 import type { 
   NutritionGoals, 
@@ -20,7 +18,6 @@ import {
 } from '../../constants/nutrition';
 import { validatePhysicalMetricsValues } from './nutritionValidation'; // import helper from same folder
 import NutritionGoalsModal from './modals/NutritionGoalsModal';
-import { Tooltip } from '../ui';
 
 interface NutritionGoalsSectionProps {
   user: User;
@@ -55,9 +52,11 @@ const NutritionGoalsSection: React.FC<NutritionGoalsSectionProps> = ({
     const loadNutritionGoals = async () => {
       if (user) {
         try {
-          const { db, firestore } = await resolveFirebase();
-          const userDocRef = firestore.doc(db, 'users', user.uid);
-          const userDocSnap = await firestore.getDoc(userDocRef);
+          console.groupCollapsed('NutritionGoalsSection: loadNutritionGoals');
+          console.log('uid:', user.uid);
+          const { db } = await resolveFirebase();
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDocSnap = await getDoc(userDocRef);
           if (userDocSnap.exists()) {
             const data = userDocSnap.data();
             const goals = data.nutrition_goals;
@@ -75,7 +74,11 @@ const NutritionGoalsSection: React.FC<NutritionGoalsSectionProps> = ({
               setFatPercentage(goals.macro_targets.fat_percentage);
             }
           }
+          console.groupEnd();
         } catch (error) {
+          // Log load errors for easier debugging in the browser console.
+          // Failures here should not break the entire page; we leave the
+          // UI in a non-editing state and allow the user to retry.
           console.error('Error loading nutrition goals:', error);
         }
       }
@@ -243,8 +246,10 @@ const NutritionGoalsSection: React.FC<NutritionGoalsSectionProps> = ({
     setValidationErrors([]);
 
     try {
-      const { db, firestore } = await resolveFirebase();
-      const userDocRef = firestore.doc(db, 'users', user.uid);
+      console.groupCollapsed('NutritionGoalsSection: handleSaveGoals');
+      console.log('uid:', user.uid);
+      const { db } = await resolveFirebase();
+      const userDocRef = doc(db, 'users', user.uid);
 
       // Create macro targets object
       const macroTargets: MacroTargets = {
@@ -262,14 +267,23 @@ const NutritionGoalsSection: React.FC<NutritionGoalsSectionProps> = ({
         macro_targets: macroTargets
       };
 
-      await firestore.updateDoc(userDocRef, {
+      // Write the nutrition goals to the user's document. `updateDoc` is
+      // used to avoid overwriting unrelated fields; callers should ensure
+      // the object shape is correct. If update fails because the document
+      // doesn't exist, higher-level code can fallback to `setDoc`.
+      await updateDoc(userDocRef, {
         nutrition_goals: completeGoals,
         updated_at: new Date()
       });
-      
+      console.log('updateDoc succeeded (parent handler)');
+
+      // Update local component state to reflect the saved values so the
+      // display immediately shows the updated goals without requiring a
+      // full reload.
       setNutritionGoals(completeGoals);
       onSuccess('Nutrition goals saved successfully!');
       setIsEditing(false);
+      console.groupEnd();
     } catch (error: any) {
       onError(error.message || 'Failed to save nutrition goals');
     } finally {
@@ -284,9 +298,9 @@ const NutritionGoalsSection: React.FC<NutritionGoalsSectionProps> = ({
     // Reload original data
     const loadOriginalGoals = async () => {
       if (user) {
-        const { db, firestore } = await resolveFirebase();
-        const userDocRef = firestore.doc(db, 'users', user.uid);
-        const userDocSnap = await firestore.getDoc(userDocRef);
+        const { db } = await resolveFirebase();
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
           const data = userDocSnap.data();
           const goals = data.nutrition_goals;
@@ -314,7 +328,53 @@ const NutritionGoalsSection: React.FC<NutritionGoalsSectionProps> = ({
     setValidationErrors([]);
   };
 
+  // NOTE: removed duplicate/unused displayedGoals state to avoid stale-data bugs.
 
+  // re-read the user document and update parent state/UI
+  async function refreshUserDoc() {
+    try {
+      console.groupCollapsed('NutritionGoalsSection: refreshUserDoc');
+        const { db, auth } = await resolveFirebase();
+        const uid = auth.currentUser?.uid;
+        if (!uid) return;
+        const userRef = doc(db, "users", uid);
+        const snap = await getDoc(userRef);
+        const data = snap.exists() ? snap.data() : null;
+        if (data) {
+            setNutritionGoals(data.nutrition_goals ?? null);
+            // If you have a broader user object in parent state, update it here:
+            // setUserDocState(prev => ({ ...prev, ...data }));
+        }
+      console.log('refreshUserDoc finished, data present:', !!data);
+      console.groupEnd();
+    } catch (err) {
+        console.error("Failed to refresh user doc after save", err);
+    }
+  }
+
+  // handler passed to modal; called after modal verifies persistence
+  function handlePersistedGoals(savedGoals: NutritionGoals) {
+    console.groupCollapsed('NutritionGoalsSection: handlePersistedGoals');
+    console.log('savedGoals:', savedGoals);
+    setNutritionGoals(savedGoals);
+    (async () => {
+      await refreshUserDoc();
+
+      try {
+        // Merge persisted state into local state and notify user.
+        document.body.style.overflow = '';
+        // Notify parent UI of success so it can show a toast.
+        try { onSuccess('Nutrition goals saved successfully!'); } catch (e) { /* non-fatal */ }
+        // Close the modal (consistent with other sections)
+        setIsEditing(false);
+        console.log('Post-save cleanup: restored body overflow and closed editor');
+      } catch (cleanupErr) {
+        console.warn('Post-save cleanup failed', cleanupErr);
+      }
+      console.groupEnd();
+    })();
+  }
+  
   return (
     <div className="profile-section">
       <div className="section-header">
@@ -352,7 +412,6 @@ const NutritionGoalsSection: React.FC<NutritionGoalsSectionProps> = ({
         <NutritionGoalsModal
           isOpen={isEditing}
           onClose={handleCancelEdit}
-          onSave={handleSaveGoals}
           loading={loading}
           validationErrors={validationErrors}
           nutritionGoals={nutritionGoals}
@@ -372,6 +431,8 @@ const NutritionGoalsSection: React.FC<NutritionGoalsSectionProps> = ({
           onCarbsChange={handleCarbsChange}
           onFatChange={handleFatChange}
           onResetToRecommended={handleResetToRecommended}
+          onPersisted={handlePersistedGoals}
+          user={user}
         />
 
         {!isEditing && (

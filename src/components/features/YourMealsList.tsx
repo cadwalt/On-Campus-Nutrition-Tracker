@@ -11,6 +11,8 @@ const resolveFirebase = async () => {
 import type { Meal } from '../../types/meal';
 import Toast from '../ui/Toast';
 import MealDetailsModal from './modals/MealDetailsModal';
+import type { FavoriteItem } from '../../types/favorite';
+import { addFavoriteForUser, getFavoritesForUser } from '../services/favoritesService';
 import { calculateActualCalories, calculateActualMacros } from '../../utils/mealCalculations';
 import { canAccess } from '../../utils/authorization';
 
@@ -41,6 +43,7 @@ const YourMealsList: React.FC<YourMealsListProps> = ({
   });
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
 
   // Keep the modal's selected meal in sync after edits (snapshot updates meals)
   useEffect(() => {
@@ -79,6 +82,7 @@ const YourMealsList: React.FC<YourMealsListProps> = ({
     if (!user) {
       setMeals([]);
       setLoading(false);
+      setFavorites([]);
       return;
     }
 
@@ -113,6 +117,24 @@ const YourMealsList: React.FC<YourMealsListProps> = ({
       }
     })();
     return () => { if (unsubLocal) unsubLocal(); };
+  }, [user]);
+
+  // Load user's favorites once when user changes
+  useEffect(() => {
+    if (!user) {
+      setFavorites([]);
+      return;
+    }
+
+    (async () => {
+      try {
+        const favs = await getFavoritesForUser(user.uid);
+        setFavorites(favs || []);
+      } catch (err) {
+        console.error('Failed to load favorites', err);
+        setFavorites([]);
+      }
+    })();
   }, [user]);
 
   // Apply search, date filters, and sorting
@@ -249,6 +271,50 @@ const YourMealsList: React.FC<YourMealsListProps> = ({
     }
   };
 
+  const handleFavorite = async (meal: Meal) => {
+    if (!user) {
+      showToast('You must be signed in to favorite meals', 'error');
+      return;
+    }
+
+    if (!canAccess(user.uid, meal.userId)) {
+      showToast('Unauthorized: Cannot favorite this meal', 'error');
+      return;
+    }
+
+    try {
+      const fav: FavoriteItem = {
+        id: `fav_meal_${meal.id}`,
+        name: meal.name,
+        source: 'meal',
+        nutrition: {
+          calories: meal.calories,
+          protein: meal.protein,
+          carbs: meal.totalCarbs,
+          fat: meal.totalFat,
+        },
+        created_at: Date.now(),
+      };
+
+      const updated = await addFavoriteForUser(user.uid, fav);
+      // refresh local favorites so UI updates immediately
+      if (Array.isArray(updated)) setFavorites(updated as FavoriteItem[]);
+      showToast('Added to favorites', 'success');
+    } catch (e: any) {
+      // If favorite already exists, still set local state from server to be safe
+      const msg = e?.message || 'Failed to add favorite';
+      if (msg.includes('already exists')) {
+        try {
+          const favs = await getFavoritesForUser(user.uid);
+          setFavorites(favs || []);
+        } catch (_) {}
+        showToast('Already in favorites', 'success');
+      } else {
+        showToast(msg, 'error');
+      }
+    }
+  };
+
   if (!user) {
     return <div className="muted">Sign in to view your meals.</div>;
   }
@@ -293,81 +359,121 @@ const YourMealsList: React.FC<YourMealsListProps> = ({
           Showing {filteredMeals.length} of {meals.length} meal{meals.length !== 1 ? 's' : ''}
         </div>
       )}
-      {filteredMeals.map((m) => (
-        <div
-          key={m.id}
-          className="meal-item"
-          style={{ cursor: 'pointer' }}
-          onClick={() => handleMealClick(m)}
-        >
-          <div className="meal-left">
-            <div className="meal-time">
-              {(() => {
-                const ms = toMillis(m.createdAt);
-                return ms ? new Date(ms).toLocaleString() : '';
-              })()}
+      {filteredMeals.map((m) => {
+        const isFavorited = favorites.some((f) => f.id === `fav_meal_${m.id}` || (f.name || '').trim().toLowerCase() === (m.name || '').trim().toLowerCase());
+        return (
+          <div
+            key={m.id}
+            className="meal-item"
+            style={{ cursor: 'pointer' }}
+            onClick={() => handleMealClick(m)}
+          >
+            <div className="meal-left">
+              <div className="meal-time">
+                {(() => {
+                  const ms = toMillis(m.createdAt);
+                  return ms ? new Date(ms).toLocaleString() : '';
+                })()}
+              </div>
+              <div className="meal-name">
+                {m.name} <small style={{ color: '#94a3b8' }}>({m.servingSize}{m.servingsHad ? ` × ${m.servingsHad}` : ''})</small>
+              </div>
+              <div className="meal-subtext" style={{ color: '#9aa7bf', fontSize: 12, marginTop: 4 }}>
+                {(() => {
+                  const actualCals = calculateActualCalories(m);
+                  const macros = calculateActualMacros(m);
+                  return `${actualCals} cal • ${macros.protein ?? '-'}g protein • ${macros.carbs ?? '-'}g carbs • ${macros.fat ?? '-'}g fat`;
+                })()}
+              </div>
             </div>
-            <div className="meal-name">
-              {m.name} <small style={{ color: '#94a3b8' }}>({m.servingSize}{m.servingsHad ? ` × ${m.servingsHad}` : ''})</small>
-            </div>
-            <div className="meal-subtext" style={{ color: '#9aa7bf', fontSize: 12, marginTop: 4 }}>
-              {(() => {
-                const actualCals = calculateActualCalories(m);
-                const macros = calculateActualMacros(m);
-                return `${actualCals} cal • ${macros.protein ?? '-'}g protein • ${macros.carbs ?? '-'}g carbs • ${macros.fat ?? '-'}g fat`;
-              })()}
-            </div>
-          </div>
-          <div className="meal-right">
-            <div className="meal-calories">{calculateActualCalories(m)} cal</div>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              {onFillForm && (
+            <div className="meal-right">
+              <div className="meal-calories">{calculateActualCalories(m)} cal</div>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                {onFillForm && (
+                  <button
+                    className="cancel-button"
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      onFillForm(m);
+                    }}
+                    style={{
+                      padding: '0.4rem 0.75rem',
+                      fontSize: '0.8125rem',
+                      background: 'rgba(99, 102, 241, 0.2)',
+                      border: '1px solid rgba(99, 102, 241, 0.4)',
+                      color: '#a5b4fc'
+                    }}
+                    title="Fill form with this meal"
+                  >
+                    Fill Form
+                  </button>
+                )}
                 <button
                   className="cancel-button"
                   onClick={(e) => { 
                     e.stopPropagation(); 
-                    onFillForm(m);
+                    handleDuplicate(m);
                   }}
                   style={{
                     padding: '0.4rem 0.75rem',
                     fontSize: '0.8125rem',
-                    background: 'rgba(99, 102, 241, 0.2)',
-                    border: '1px solid rgba(99, 102, 241, 0.4)',
-                    color: '#a5b4fc'
+                    background: 'rgba(34, 197, 94, 0.2)',
+                    border: '1px solid rgba(34, 197, 94, 0.4)',
+                    color: '#86efac'
                   }}
-                  title="Fill form with this meal"
+                  title="Duplicate this meal"
                 >
-                  Fill Form
+                  Duplicate
                 </button>
-              )}
-              <button
-                className="cancel-button"
-                onClick={(e) => { 
-                  e.stopPropagation(); 
-                  handleDuplicate(m);
-                }}
-                style={{
-                  padding: '0.4rem 0.75rem',
-                  fontSize: '0.8125rem',
-                  background: 'rgba(34, 197, 94, 0.2)',
-                  border: '1px solid rgba(34, 197, 94, 0.4)',
-                  color: '#86efac'
-                }}
-                title="Duplicate this meal"
-              >
-                Duplicate
-              </button>
-              <button
-                className="cancel-button"
-                onClick={(e) => { e.stopPropagation(); handleDelete(m.id); }}
-                title="Remove this meal"
-              >
-                Remove
-              </button>
+                {!isFavorited ? (
+                  <button
+                    className="cancel-button"
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      handleFavorite(m);
+                    }}
+                    style={{
+                      padding: '0.4rem 0.75rem',
+                      fontSize: '0.8125rem',
+                      background: 'rgba(245, 158, 11, 0.12)',
+                      border: '1px solid rgba(245, 158, 11, 0.2)',
+                      color: '#fbbf24',
+                      cursor: 'pointer'
+                    }}
+                    title="Add to favorites"
+                  >
+                    Favorite
+                  </button>
+                ) : (
+                  <button
+                    className="cancel-button"
+                    disabled
+                    style={{
+                      padding: '0.4rem 0.75rem',
+                      fontSize: '0.8125rem',
+                      background: 'rgba(245, 158, 11, 0.12)',
+                      border: '1px solid rgba(245, 158, 11, 0.2)',
+                      color: '#f59e0b',
+                      opacity: 0.85,
+                      cursor: 'default'
+                    }}
+                    title="Already in favorites"
+                  >
+                    Favorited
+                  </button>
+                )}
+                <button
+                  className="cancel-button"
+                  onClick={(e) => { e.stopPropagation(); handleDelete(m.id); }}
+                  title="Remove this meal"
+                >
+                  Remove
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
       <Toast message={toast.message} type={toast.type} isVisible={toast.visible} onClose={closeToast} />
       <MealDetailsModal
         isOpen={detailsOpen}
@@ -376,6 +482,7 @@ const YourMealsList: React.FC<YourMealsListProps> = ({
       />
     </div>
   );
+
 };
 
 export default YourMealsList;

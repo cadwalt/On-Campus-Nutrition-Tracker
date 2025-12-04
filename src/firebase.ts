@@ -1,8 +1,11 @@
-// Import the functions you need from the SDKs you need
-// Lazily initialize Firebase SDK to avoid pulling it into the initial client bundle.
-// This module exposes async getters `getApp`, `getAuthClient`, and `getFirestoreClient`.
-// Call sites should use `await import('../firebase')` then `await mod.getAuthClient()` etc.
-
+// Firebase initialization module (lazy getters)
+// Notes:
+// - We intentionally expose async getters (`getApp`, `getAuthClient`,
+//   `getFirestoreClient`) so that the rest of the app can avoid static
+//   imports of the Firebase SDK. Components should dynamically import this
+//   module and call the getters to keep the initial bundle small.
+// - A runtime guard is included to provide a clearer error when build-time
+//   env variables (Vite `import.meta.env.*`) are missing in production.
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -56,5 +59,6 @@ export async function getFirestoreClient() {
   return _db;
 }
 
-// NOTE: we intentionally do not export synchronous `auth`/`db` variables here to avoid
-// accidental static imports of the Firebase SDK. Use the async getters above.
+// NOTE: we intentionally do not export synchronous `auth`/`db` variables here.
+// Always use the async getters above from caller code. This avoids accidental
+// static SDK imports and keeps the initial app bundle smaller.
