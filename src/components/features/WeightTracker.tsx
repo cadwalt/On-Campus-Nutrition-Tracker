@@ -3,6 +3,7 @@ import { useWeightEntries } from "../../hooks/useWeightEntries";
 import type { WeightEntry } from "../../types/weight";
 import WeightChart from './WeightChart';
 import { resolveFirebase } from '../../lib/resolveFirebase';
+import { useNavigate } from 'react-router-dom';
 
 function formatDateInput(d: string) {
   // ensure YYYY-MM-DD
@@ -10,6 +11,7 @@ function formatDateInput(d: string) {
 }
 
 export const WeightTracker: React.FC = () => {
+  const navigate = useNavigate();
   const { entries, loading, add, remove, update } = useWeightEntries();
   const [date, setDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [weight, setWeight] = useState<string>(""); // weight value entered by user
@@ -24,6 +26,7 @@ export const WeightTracker: React.FC = () => {
   const [editingEntry, setEditingEntry] = useState<WeightEntry | null>(null);
   const [editWeight, setEditWeight] = useState<string>('');
   const [editDate, setEditDate] = useState<string>('');
+  const [showCongrats, setShowCongrats] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -70,6 +73,12 @@ export const WeightTracker: React.FC = () => {
       setError(unit === 'kg' ? 'Enter a valid weight in kg' : 'Enter a valid weight in lbs');
       return;
     }
+    // Prevent future dates
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (date > todayStr) {
+      setError('Cannot enter weight for a future date');
+      return;
+    }
     // enforce allowed input range in the entered unit
     const maxAllowed = unit === 'kg' ? 700 : 1500;
     if (val < 1 || val > maxAllowed) {
@@ -100,6 +109,20 @@ export const WeightTracker: React.FC = () => {
       setError(null);
       if (toastTimer.current) window.clearTimeout(toastTimer.current);
       toastTimer.current = window.setTimeout(() => setToast(null), 3000);
+      
+      // Check if goal was just reached
+      if (targetLbs !== null) {
+        const isWeightLoss = entries.length > 0 && lbs < entries[0].weightLb;
+        const goalReached = Math.abs(targetLbs - lbs) < 0.1 || (isWeightLoss ? lbs <= targetLbs : lbs >= targetLbs);
+        if (goalReached) {
+          // Only show congrats if this entry is the most recent
+          const allDates = [...entries.map(e => e.date), formattedDate];
+          const latestDate = allDates.reduce((a, b) => a > b ? a : b);
+          if (formattedDate === latestDate) {
+            setTimeout(() => setShowCongrats(true), 500);
+          }
+        }
+      }
     } finally {
       setBusy(false);
     }
@@ -157,6 +180,41 @@ export const WeightTracker: React.FC = () => {
         const startStr = start.toISOString().split('T')[0];
         return e.date >= startStr;
       });
+
+  // For chart: aggregate entries by month for year view and by year for all-time view
+  const chartEntries = (() => {
+    if (range === 'year') {
+      // Aggregate by month for year view
+      const byMonth = new Map<string, number[]>();
+      filteredEntries.forEach((e) => {
+        const d = new Date(e.date);
+        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        if (!byMonth.has(monthKey)) byMonth.set(monthKey, []);
+        byMonth.get(monthKey)!.push(e.weightLb);
+      });
+      return Array.from(byMonth.entries()).map(([monthKey, weights]) => {
+        const avg = weights.reduce((s, w) => s + w, 0) / weights.length;
+        const [year, month] = monthKey.split('-');
+        const firstDayOfMonth = new Date(parseInt(year), parseInt(month) - 1, 1).toISOString().split('T')[0];
+        return { id: monthKey, date: firstDayOfMonth, weightLb: avg };
+      });
+    } else if (range === 'all') {
+      // Aggregate by year for all-time view
+      const byYear = new Map<string, number[]>();
+      filteredEntries.forEach((e) => {
+        const d = new Date(e.date);
+        const year = d.getFullYear().toString();
+        if (!byYear.has(year)) byYear.set(year, []);
+        byYear.get(year)!.push(e.weightLb);
+      });
+      return Array.from(byYear.entries()).map(([year, weights]) => {
+        const avg = weights.reduce((s, w) => s + w, 0) / weights.length;
+        const firstDayOfYear = new Date(parseInt(year), 0, 1).toISOString().split('T')[0];
+        return { id: year, date: firstDayOfYear, weightLb: avg };
+      });
+    }
+    return filteredEntries;
+  })();
 
   // For year view: aggregate by month; for all-time view: aggregate by year
   type TableRow = {
@@ -242,7 +300,18 @@ export const WeightTracker: React.FC = () => {
       // convert diff to display unit
       const diffDisplay = unit === 'kg' ? Math.round((diff / 2.20462) * 10) / 10 : diff;
       const unitLabel = unit === 'kg' ? 'kg' : 'lbs';
-      if (diff === 0) return 'At goal ✅';
+      
+      // Goal is reached if current weight equals target OR has passed it
+      // For weight loss: latestLbs <= targetLbs (weight is at or below target)
+      // For weight gain: latestLbs >= targetLbs (weight is at or above target)
+      // We determine direction by checking all entries: if latest is below first entry, it's weight loss
+      const isWeightLoss = entries.length > 0 && latestLbs < entries[0].weightLb;
+      const goalReached = Math.abs(diff) < 0.1 || (isWeightLoss ? latestLbs <= targetLbs : latestLbs >= targetLbs);
+      
+      if (goalReached) {
+        return <span style={{ color: '#22c55e', fontWeight: 700 }}>Great Job! Target Reached!</span>;
+      }
+      
       if (diff > 0) return `${Math.abs(diffDisplay)} ${unitLabel} to reach target`;
       return `${Math.abs(diffDisplay)} ${unitLabel} to lose to reach target`;
     }
@@ -264,6 +333,12 @@ export const WeightTracker: React.FC = () => {
       setError('Enter a valid weight');
       return;
     }
+    // Prevent future dates
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (editDate > todayStr) {
+      setError('Cannot update weight for a future date');
+      return;
+    }
     const maxAllowed = unit === 'kg' ? 700 : 1500;
     if (val < 1 || val > maxAllowed) {
       setError(`Enter a weight between 1 and ${maxAllowed}`);
@@ -282,6 +357,16 @@ export const WeightTracker: React.FC = () => {
       setToast('Weight updated');
       if (toastTimer.current) window.clearTimeout(toastTimer.current);
       toastTimer.current = window.setTimeout(() => setToast(null), 3000);
+      // Check if goal was just reached and this is the most recent entry
+      if (targetLbs !== null) {
+        const isWeightLoss = entries.length > 0 && lbs < entries[0].weightLb;
+        const goalReached = Math.abs(targetLbs - lbs) < 0.1 || (isWeightLoss ? lbs <= targetLbs : lbs >= targetLbs);
+        const allDates = [...entries.map(e => e.date), editDate];
+        const latestDate = allDates.reduce((a, b) => a > b ? a : b);
+        if (goalReached && editDate === latestDate) {
+          setTimeout(() => setShowCongrats(true), 500);
+        }
+      }
     } finally {
       setBusy(false);
     }
@@ -292,6 +377,20 @@ export const WeightTracker: React.FC = () => {
     setEditWeight('');
     setEditDate('');
     setError(null);
+  };
+
+  const handleDeleteEdit = async () => {
+    if (!editingEntry) return;
+    setBusy(true);
+    try {
+      await remove(editingEntry.id);
+      handleCancelEdit();
+      setToast('Weight Deleted');
+      if (toastTimer.current) window.clearTimeout(toastTimer.current);
+      toastTimer.current = window.setTimeout(() => setToast(null), 3000);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -371,7 +470,7 @@ export const WeightTracker: React.FC = () => {
                 {filteredEntries.length === 0 ? (
                   <div>No entries in this range</div>
                 ) : (
-                  <WeightChart entries={filteredEntries} height={220} range={range} unit={unit} targetWeight={targetLbs} />
+                  <WeightChart entries={chartEntries} height={220} range={range} unit={unit} targetWeight={targetLbs} />
                 )}
               </div>
 
@@ -420,7 +519,7 @@ export const WeightTracker: React.FC = () => {
                   </div>
 
                   <div style={{ flex: '0 0 auto' }}>
-                    <button className="water-add-btn-primary" onClick={onAdd} disabled={busy}>Add</button>
+                    <button className="water-add-btn-primary" onClick={onAdd} disabled={busy || date > new Date().toISOString().split('T')[0]}>Add</button>
                   </div>
 
                   <div style={{ flex: '1 1 auto', textAlign: 'right', color: '#9ca3af', fontSize: '0.85rem', marginBottom: '-0.5rem'}}>
@@ -455,13 +554,13 @@ export const WeightTracker: React.FC = () => {
               {/* Data table card */}
               {filteredEntries.length > 0 && (
                 <div className="card">
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                     <thead>
                       <tr>
-                        <th style={{ textAlign: "left", paddingBottom: 8 }}>
-                          {range === 'year' ? 'Month' : range === 'all' ? 'Year' : 'Date'}
+                        <th style={{ textAlign: "left", paddingBottom: 8, width: '50%' }}>
+                          {range === 'year' ? 'Month' : range === 'all' ? 'Year' : range === 'month' ? (() => { const d = new Date(date + 'T00:00:00'); return d.toLocaleString('default', { month: 'long', year: 'numeric' }); })() : range === 'week' ? (() => { const startMonth = start.toLocaleString('default', { month: 'short' }); const startDay = start.getDate(); const endMonth = end.toLocaleString('default', { month: 'short' }); const endDay = end.getDate(); const year = end.getFullYear(); return startMonth === endMonth ? `${startMonth} ${startDay} - ${endDay}, ${year}` : `${startMonth} ${startDay} - ${endMonth} ${endDay}, ${year}`; })() : 'Date'}
                         </th>
-                        <th style={{ textAlign: "left", paddingBottom: 8 }}>
+                        <th style={{ textAlign: "left", paddingBottom: 8, width: '50%' }}>
                           Weight ({unit}){range === 'year' || range === 'all' ? ' (avg)' : ''}
                         </th>
                       </tr>
@@ -470,10 +569,11 @@ export const WeightTracker: React.FC = () => {
                       {tableRows.map((row, idx) => {
                         const displayWeight = unit === 'kg' ? Math.round((row.weightLb / 2.20462) * 10) / 10 : row.weightLb;
                         const isClickable = !row.isAggregated;
+                        const entry = filteredEntries.find((e) => e.date === row.date && e.weightLb === row.weightLb);
                         return (
                           <tr
                             key={idx}
-                            onClick={() => isClickable && handleEditEntry({ id: '', date: row.date, weightLb: row.weightLb })}
+                            onClick={() => isClickable && entry && handleEditEntry(entry)}
                             style={{
                               borderTop: '1px solid rgba(255,255,255,0.1)',
                               cursor: isClickable ? 'pointer' : 'default',
@@ -483,8 +583,8 @@ export const WeightTracker: React.FC = () => {
                             onMouseEnter={(ev) => isClickable && (ev.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)')}
                             onMouseLeave={(ev) => (ev.currentTarget.style.backgroundColor = 'transparent')}
                           >
-                            <td style={{ paddingTop: 8, paddingBottom: 8 }}>{row.label || row.date}</td>
-                            <td style={{ paddingTop: 8, paddingBottom: 8 }}>{displayWeight.toFixed(1)}</td>
+                            <td style={{ paddingTop: 8, paddingBottom: 8, width: '50%' }}>{row.label || (() => { const d = new Date(row.date + 'T00:00:00'); return d.toLocaleString('default', { weekday: 'short', month: 'short', day: 'numeric' }); })()}</td>
+                            <td style={{ paddingTop: 8, paddingBottom: 8, width: '50%' }}>{displayWeight.toFixed(1)}</td>
                           </tr>
                         );
                       })}
@@ -580,7 +680,7 @@ export const WeightTracker: React.FC = () => {
                         Save
                       </button>
                       <button
-                        onClick={async () => { setBusy(true); try { await remove(editingEntry.id); handleCancelEdit(); setToast('Weight Deleted'); if (toastTimer.current) window.clearTimeout(toastTimer.current); toastTimer.current = window.setTimeout(() => setToast(null), 3000); } finally { setBusy(false); } }}
+                        onClick={handleDeleteEdit}
                         disabled={busy}
                         style={{
                           flex: 1,
@@ -620,6 +720,112 @@ export const WeightTracker: React.FC = () => {
             </>
           )}
         </div>
+
+        {/* Congratulations Modal */}
+        {showCongrats && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+          }}>
+            {/* Confetti effect */}
+            <div style={{
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+              pointerEvents: 'none',
+              overflow: 'hidden',
+            }}>
+              {Array.from({ length: 50 }).map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    position: 'absolute',
+                    width: '10px',
+                    height: '10px',
+                    backgroundColor: ['#3b82f6', '#60a5fa', '#22c55e', '#fbbf24', '#f97316'][i % 5],
+                    borderRadius: '50%',
+                    animation: `fall ${2 + Math.random() * 1}s linear forwards`,
+                    left: `${Math.random() * 100}%`,
+                    top: '-10px',
+                  }}
+                />
+              ))}
+              <style>{`
+                @keyframes fall {
+                  to {
+                    transform: translateY(100vh) rotate(360deg);
+                    opacity: 0;
+                  }
+                }
+              `}</style>
+            </div>
+
+            {/* Modal Content */}
+            <div style={{
+              backgroundColor: 'rgba(26, 26, 46, 0.95)',
+              borderRadius: 16,
+              padding: '3rem 2rem',
+              width: '90%',
+              maxWidth: 500,
+              border: '1px solid rgba(255,255,255,0.1)',
+              backdropFilter: 'blur(10px)',
+              textAlign: 'center',
+              position: 'relative',
+              zIndex: 10001,
+            }}>
+              <h1 style={{ fontSize: '3rem', marginBottom: '1rem', color: '#22c55e' }}>🎉 Congratulations! 🎉</h1>
+              <p style={{ fontSize: '1.2rem', marginBottom: '1.5rem', color: '#e5e7eb' }}>
+                You've reached your weight goal! Fantastic job on your dedication and hard work.
+              </p>
+              <p style={{ fontSize: '1rem', marginBottom: '2rem', color: '#9ca3af' }}>
+                Would you like to set a new goal and continue your wellness journey?
+              </p>
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                <button
+                  onClick={() => setShowCongrats(false)}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    borderRadius: 8,
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    backgroundColor: 'transparent',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  Maybe Later
+                </button>
+                <button
+                  onClick={() => {
+                    setShowCongrats(false);
+                    navigate('/preferences', { state: { openNutritionGoals: true } });
+                  }}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    borderRadius: 8,
+                    border: 'none',
+                    backgroundColor: '#3b82f6',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  Update Goal
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

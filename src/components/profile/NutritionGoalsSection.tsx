@@ -24,17 +24,19 @@ import { Tooltip } from '../ui';
 
 interface NutritionGoalsSectionProps {
   user: User;
+  initialOpen?: boolean;
   onSuccess: (message: string) => void;
   onError: (message: string) => void;
 }
 
 const NutritionGoalsSection: React.FC<NutritionGoalsSectionProps> = ({ 
-  user, 
+  user,
+  initialOpen = false,
   onSuccess, 
   onError 
 }) => {
   const [nutritionGoals, setNutritionGoals] = useState<NutritionGoals | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(initialOpen);
   const [loading, setLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
