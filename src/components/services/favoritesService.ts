@@ -64,3 +64,19 @@ export async function removeFavoriteForUser(uid: string, favId: string) {
   });
   return updated;
 }
+
+export async function updateFavoriteForUser(uid: string, favId: string, partial: Partial<FavoriteItem>) {
+  const { db, firestore } = await resolveFirebase();
+  const userDocRef = firestore.doc(db, 'users', uid);
+  const snap = await firestore.getDoc(userDocRef);
+  const data = snap.exists() ? snap.data() : {};
+  const existing: FavoriteItem[] = Array.isArray(data?.favorites_v2) ? data.favorites_v2 : (Array.isArray(data?.favorites) ? data.favorites.map((n: string, i: number) => ({ id: `legacy_${i}_${n.replace(/\s+/g, '_')}`, name: n, source: 'manual', created_at: Date.now() })) : []);
+
+  const updated = existing.map((f) => f.id === favId ? { ...f, ...partial, nutrition: { ...(f.nutrition || {}), ...(partial.nutrition || {}) } } : f);
+
+  await firestore.updateDoc(userDocRef, { favorites_v2: updated, updated_at: new Date() }).catch(async (_err: any) => {
+    await firestore.setDoc(userDocRef, { favorites_v2: updated, updated_at: new Date() }, { merge: true });
+  });
+
+  return updated;
+}
