@@ -9,6 +9,8 @@ const resolveFirebase = async () => {
 };
 import type { Meal } from '../../types/meal';
 import Toast from '../ui/Toast';
+import type { FavoriteItem } from '../../types/favorite';
+import { getFavoritesForUser } from '../services/favoritesService';
 
 interface MealFormProps {
   onMealAdded: (meal: Meal) => void;
@@ -43,6 +45,8 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
   const [showOptional, setShowOptional] = useState(false);
   const [priorMeals, setPriorMeals] = useState<Meal[] | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [favorites, setFavorites] = useState<FavoriteItem[] | null>(null);
+  const [selectedFavoriteId, setSelectedFavoriteId] = useState<string>('');
 
   // Fill form when initialMeal is provided
   useEffect(() => {
@@ -128,6 +132,26 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
       );
       return () => unsub();
     })();
+  }, []);
+
+  // Load user's favorites for quick-add
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const user = await getCurrentUser();
+        if (!user) {
+          if (mounted) setFavorites([]);
+          return;
+        }
+        const favs = await getFavoritesForUser(user.uid);
+        if (mounted) setFavorites(favs || []);
+      } catch (e) {
+        console.error('Failed to load favorites', e);
+        if (mounted) setFavorites([]);
+      }
+    })();
+    return () => { mounted = false; };
   }, []);
 
   const filteredSuggestions = useMemo(() => {
@@ -312,6 +336,43 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
 
   return (
     <form className="meal-form" onSubmit={handleSubmit}>
+      {/* Add a Favorite quick-fill */}
+      <div style={{ marginBottom: 12 }}>
+        <h4 style={{ margin: '0 0 6px 0' }}>Add a Favorite</h4>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <select
+            value={selectedFavoriteId}
+            onChange={(e) => {
+              const id = e.target.value;
+              setSelectedFavoriteId(id);
+              if (!id) return;
+              const fav = (favorites || []).find((f) => f.id === id);
+              if (!fav) return;
+              // apply favorite to form
+              setForm((prev) => ({
+                ...prev,
+                name: fav.name || prev.name,
+                calories: fav.nutrition?.calories != null ? String(fav.nutrition.calories) : prev.calories,
+                servingSize: prev.servingSize,
+                totalCarbs: fav.nutrition?.carbs != null ? String(fav.nutrition.carbs) : prev.totalCarbs,
+                totalFat: fav.nutrition?.fat != null ? String(fav.nutrition.fat) : prev.totalFat,
+                protein: fav.nutrition?.protein != null ? String(fav.nutrition.protein) : prev.protein,
+              }));
+            }}
+            style={{ flex: 1, padding: '0.5rem', borderRadius: 6 }}
+          >
+            <option value="">Select a favorite to prefill the form...</option>
+            {(favorites || []).map((f) => (
+              <option key={f.id} value={f.id}>{f.name}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => setSelectedFavoriteId('')}
+            style={{ padding: '0.4rem 0.75rem' }}
+          >Clear</button>
+        </div>
+      </div>
       {/* Required fields */}
       <div className="form-grid">
         <div className="form-field required">

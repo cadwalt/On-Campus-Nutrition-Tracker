@@ -11,6 +11,8 @@ const resolveFirebase = async () => {
 import type { Meal } from '../../types/meal';
 import Toast from '../ui/Toast';
 import MealDetailsModal from './modals/MealDetailsModal';
+import type { FavoriteItem } from '../../types/favorite';
+import { addFavoriteForUser } from '../services/favoritesService';
 import { calculateActualCalories, calculateActualMacros } from '../../utils/mealCalculations';
 import { canAccess } from '../../utils/authorization';
 
@@ -249,6 +251,38 @@ const YourMealsList: React.FC<YourMealsListProps> = ({
     }
   };
 
+  const handleFavorite = async (meal: Meal) => {
+    if (!user) {
+      showToast('You must be signed in to favorite meals', 'error');
+      return;
+    }
+
+    if (!canAccess(user.uid, meal.userId)) {
+      showToast('Unauthorized: Cannot favorite this meal', 'error');
+      return;
+    }
+
+    try {
+      const fav: FavoriteItem = {
+        id: `fav_meal_${meal.id}`,
+        name: meal.name,
+        source: 'meal',
+        nutrition: {
+          calories: meal.calories,
+          protein: meal.protein,
+          carbs: meal.totalCarbs,
+          fat: meal.totalFat,
+        },
+        created_at: Date.now(),
+      };
+
+      await addFavoriteForUser(user.uid, fav);
+      showToast('Added to favorites', 'success');
+    } catch (e: any) {
+      showToast(e?.message || 'Failed to add favorite', 'error');
+    }
+  };
+
   if (!user) {
     return <div className="muted">Sign in to view your meals.</div>;
   }
@@ -356,6 +390,23 @@ const YourMealsList: React.FC<YourMealsListProps> = ({
                 title="Duplicate this meal"
               >
                 Duplicate
+              </button>
+              <button
+                className="cancel-button"
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  handleFavorite(m);
+                }}
+                style={{
+                  padding: '0.4rem 0.75rem',
+                  fontSize: '0.8125rem',
+                  background: 'rgba(245, 158, 11, 0.12)',
+                  border: '1px solid rgba(245, 158, 11, 0.2)',
+                  color: '#fbbf24'
+                }}
+                title="Add to favorites"
+              >
+                Favorite
               </button>
               <button
                 className="cancel-button"

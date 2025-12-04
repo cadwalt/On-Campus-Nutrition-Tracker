@@ -359,13 +359,11 @@ const NutritionGoalsSection: React.FC<NutritionGoalsSectionProps> = ({
       await refreshUserDoc();
 
       try {
-        // Merge persisted state into local state and notify user.
+        // Only restore page scrolling. Do NOT remove DOM nodes that React manages —
+        // removing nodes can cause React to attempt to delete the same nodes and
+        // produce "removeChild" NotFoundError and an empty root.
         document.body.style.overflow = '';
-        // Notify parent UI of success so it can show a toast.
-        try { onSuccess('Nutrition goals saved successfully!'); } catch (e) { /* non-fatal */ }
-        // Close the modal (consistent with other sections)
-        setIsEditing(false);
-        console.log('Post-save cleanup: restored body overflow and closed editor');
+        console.log('Post-save cleanup: restored body overflow only');
       } catch (cleanupErr) {
         console.warn('Post-save cleanup failed', cleanupErr);
       }
