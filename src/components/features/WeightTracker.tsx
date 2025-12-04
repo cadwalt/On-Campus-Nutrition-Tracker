@@ -135,118 +135,54 @@ export const WeightTracker: React.FC = () => {
   })();
 
   return (
-    <div className="weight-tracker">
-      <div style={{ width: '100%', maxWidth: '97.5%', padding: '0 0', margin: '0 2.5% 0 0', boxSizing: 'border-box' }}>
-        <header style={{ marginBottom: 12, display: 'flex', gap: 16, alignItems: 'baseline', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, minWidth: 0, marginLeft: '0 rem' }}>
-            {averageWeightDisplay != null ? (
-              <h1 style={{ margin: 0, fontSize: '3rem', display: 'inline-flex', gap: 8, alignItems: 'baseline', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                <span style={{ fontWeight: 700 }}>{averageWeightDisplay.toFixed(1)}</span>
-                <span style={{ fontSize: '1.5rem', color: '#666' }}>{unit} (avg)</span>
-              </h1>
-            ) : null}
+    <div className="page weight-tracker-page">
+      <main className="dashboard-content">
+        {/* Toast notification */}
+        {toast ? (
+          <div role="status" aria-live="polite" style={{ position: 'fixed', right: 16, bottom: 16 }}>
+            <div style={{ background: '#1b5e20', color: '#fff', padding: '8px 12px', borderRadius: 6, boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }}>{toast}</div>
+          </div>
+        ) : null}
+
+        <div className="weight-tracker-grid">
+          {/* Header card - Average weight and target */}
+          <div className="card" style={{ marginBottom: '2rem' }}>
+            <header
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '0.5rem',
+                flexWrap: 'wrap',
+              }}
+            >
+              <div style={{ color: 'inherit', fontSize: '1.5rem', textAlign: 'left', minWidth: 0, marginLeft: '0.5rem', fontWeight: 700 }}>
+                {averageWeightDisplay} {unit} (avg)
+              </div>
+              <div style={{ color: 'inherit', fontSize: '1.5rem', textAlign: 'right', minWidth: 0, marginRight: '0.5rem', fontWeight: 700 }}>
+                {targetMessage}
+              </div>
+            </header>
           </div>
 
-          <div style={{ color: 'inherit', fontSize: '1.5rem', textAlign: 'right', minWidth: 0, marginRight: '0 0', fontWeight: 700 }}>
-            {targetMessage}
-          </div>
-        </header>
-      </div>
-      <div
-        className="water-custom-input-container"
-        style={{ marginBottom: 8, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}
-      >
-        <div className="water-custom-input-wrapper" style={{ flex: '0 1 auto', minWidth: 0 }}>
-          <input
-            type="number"
-            placeholder={unit === 'kg' ? "Weight (kg)" : "Weight (lbs)"}
-            value={weight}
-            onChange={(e) => { setWeight(e.target.value); if (error) setError(null); }}
-            className="water-custom-input"
-            step={0.1}
-            min={1}
-            max={unit === 'kg' ? 700 : 1500}
-            aria-label="Weight value"
-            style={{ minWidth: 180 }}
-          />
-          <select
-            className="water-custom-unit"
-            value={unit}
-            onChange={(e) => { setUnit(e.target.value as 'lb' | 'kg'); if (error) setError(null); }}
-            aria-label="Weight units"
-            style={{ marginLeft: 8 }}
-          >
-            <option value="lb">lb</option>
-            <option value="kg">kg</option>
-          </select>
-        </div>
-
-        <div style={{ flex: '0 0 auto', minWidth: 160 }}>
-          <div className="water-custom-input-wrapper" style={{ minWidth: 160 }}>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="water-custom-input"
-              aria-label="Date"
-              style={{ width: 160 }}
-            />
-          </div>
-        </div>
-
-        <div style={{ flex: '0 0 auto' }}>
-          <button className="water-add-btn-primary" onClick={onAdd} disabled={busy}>Add</button>
-        </div>
-      </div>
-
-      {/* conversion preview placed below the inputs */}
-      {weight && !isNaN(Number(weight)) ? (
-        <div style={{ fontSize: '0.9em', color: '#666', marginBottom: 8 }}>
-          {unit === 'kg' ? (
-            (() => {
-              const val = parseFloat(weight);
-              if (isNaN(val)) return null;
-              const lb = Math.round(val * 2.20462 * 10) / 10;
-              return `≈ ${lb} lb`;
-            })()
+          {/* Chart card */}
+          {loading ? (
+            <div className="card">Loading...</div>
+          ) : entries.length === 0 ? (
+            <div className="card">No entries yet</div>
           ) : (
-            (() => {
-              const val = parseFloat(weight);
-              if (isNaN(val)) return null;
-              const kg = Math.round((val / 2.20462) * 10) / 10;
-              return `≈ ${kg} kg`;
-            })()
-          )}
-        </div>
-      ) : null}
-      {error ? <div role="alert" style={{ color: 'crimson', marginTop: 6 }}>{error}</div> : null}
-      {/* toast */}
-      {toast ? (
-        <div role="status" aria-live="polite" style={{ position: 'fixed', right: 16, bottom: 16 }}>
-          <div style={{ background: '#1b5e20', color: '#fff', padding: '8px 12px', borderRadius: 6, boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }}>{toast}</div>
-        </div>
-      ) : null}
-
-      <div>
-        {loading ? (
-          <div>Loading...</div>
-        ) : entries.length === 0 ? (
-          <div>No entries yet</div>
-        ) : filteredEntries.length === 0 ? (
-          <div>No entries in this range</div>
-        ) : (
-          <>
-            {(() => {
-              const tabs: { key: typeof range; label: string }[] = [
-                { key: 'week', label: 'Week' },
-                { key: 'month', label: 'Month' },
-                { key: 'year', label: 'Year' },
-                { key: 'all', label: 'All time' },
-              ];
-              return (
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-                  <div style={{ width: '100%', maxWidth: 980, padding: '0 24px' }}>
-                    <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+            <>
+              <div className="card">
+                {/* Range tabs */}
+                {(() => {
+                  const tabs: { key: typeof range; label: string }[] = [
+                    { key: 'week', label: 'Week' },
+                    { key: 'month', label: 'Month' },
+                    { key: 'year', label: 'Year' },
+                    { key: 'all', label: 'All time' },
+                  ];
+                  return (
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 16 }}>
                       {tabs.map((t) => (
                         <button
                           key={t.key}
@@ -267,38 +203,119 @@ export const WeightTracker: React.FC = () => {
                         </button>
                       ))}
                     </div>
+                  );
+                })()}
+
+                {/* Chart */}
+                {filteredEntries.length === 0 ? (
+                  <div>No entries in this range</div>
+                ) : (
+                  <WeightChart entries={filteredEntries} height={220} range={range} />
+                )}
+              </div>
+
+              {/* Input card */}
+              <div className="card">
+                <div
+                  className="water-custom-input-container"
+                  style={{ marginBottom: 8, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}
+                >
+                  <div className="water-custom-input-wrapper" style={{ flex: '0 1 auto', minWidth: 0 }}>
+                    <input
+                      type="number"
+                      placeholder={unit === 'kg' ? "Weight (kg)" : "Weight (lbs)"}
+                      value={weight}
+                      onChange={(e) => { setWeight(e.target.value); if (error) setError(null); }}
+                      className="water-custom-input"
+                      step={0.1}
+                      min={1}
+                      max={unit === 'kg' ? 700 : 1500}
+                      aria-label="Weight value"
+                      style={{ minWidth: 180 }}
+                    />
+                    <select
+                      className="water-custom-unit"
+                      value={unit}
+                      onChange={(e) => { setUnit(e.target.value as 'lb' | 'kg'); if (error) setError(null); }}
+                      aria-label="Weight units"
+                      style={{ marginLeft: 8 }}
+                    >
+                      <option value="lb">lb</option>
+                      <option value="kg">kg</option>
+                    </select>
+                  </div>
+
+                  <div style={{ flex: '0 0 auto', minWidth: 160 }}>
+                    <div className="water-custom-input-wrapper" style={{ minWidth: 160 }}>
+                      <input
+                        type="date"
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                        className="water-custom-input"
+                        aria-label="Date"
+                        style={{ width: 160 }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ flex: '0 0 auto' }}>
+                    <button className="water-add-btn-primary" onClick={onAdd} disabled={busy}>Add</button>
                   </div>
                 </div>
-              );
-            })()}
 
-            <div style={{ width: '100%', maxWidth: 980, padding: '0 24px', margin: '0 auto' }}>
-              <WeightChart entries={filteredEntries} height={220} range={range} />
-            </div>
+                {/* conversion preview placed below the inputs */}
+                {weight && !isNaN(Number(weight)) ? (
+                  <div style={{ fontSize: '0.9em', color: '#666', marginBottom: 8, marginTop: 4 }}>
+                    {unit === 'kg' ? (
+                      (() => {
+                        const val = parseFloat(weight);
+                        if (isNaN(val)) return null;
+                        const lb = Math.round(val * 2.20462 * 10) / 10;
+                        return `≈ ${lb} lb`;
+                      })()
+                    ) : (
+                      (() => {
+                        const val = parseFloat(weight);
+                        if (isNaN(val)) return null;
+                        const kg = Math.round((val / 2.20462) * 10) / 10;
+                        return `≈ ${kg} kg`;
+                      })()
+                    )}
+                  </div>
+                ) : null}
 
-            <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8 }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: "left" }}>Date</th>
-                <th style={{ textAlign: "left" }}>Weight (lbs)</th>
-                <th style={{ textAlign: "left" }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredEntries.map((e: WeightEntry) => (
-                <tr key={e.id}>
-                  <td>{e.date}</td>
-                  <td>{e.weightLb.toFixed(1)}</td>
-                  <td>
-                    <button disabled={busy} onClick={async () => { setBusy(true); try { await remove(e.id); } finally { setBusy(false); } }}>Delete</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          </>
-        )}
-      </div>
+                {error ? <div role="alert" style={{ color: 'crimson', marginTop: 6 }}>{error}</div> : null}
+              </div>
+
+              {/* Data table card */}
+              {filteredEntries.length > 0 && (
+                <div className="card">
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr>
+                        <th style={{ textAlign: "left", paddingBottom: 8 }}>Date</th>
+                        <th style={{ textAlign: "left", paddingBottom: 8 }}>Weight (lbs)</th>
+                        <th style={{ textAlign: "left", paddingBottom: 8 }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredEntries.map((e: WeightEntry) => (
+                        <tr key={e.id} style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                          <td style={{ paddingTop: 8, paddingBottom: 8 }}>{e.date}</td>
+                          <td style={{ paddingTop: 8, paddingBottom: 8 }}>{e.weightLb.toFixed(1)}</td>
+                          <td style={{ paddingTop: 8, paddingBottom: 8 }}>
+                            <button disabled={busy} onClick={async () => { setBusy(true); try { await remove(e.id); } finally { setBusy(false); } }}>Delete</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </main>
     </div>
   );
 };

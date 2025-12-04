@@ -175,6 +175,29 @@ body::after {
   padding: 1.5rem;
 }
 
+/* Weight Tracker Page Grid Layout */
+.weight-tracker-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.weight-tracker-page .card {
+  padding: 1.5rem;
+}
+
+/* Responsive adjustments for weight tracker */
+@media (max-width: 768px) {
+  .weight-tracker-grid {
+    gap: 1.5rem;
+    padding: 0 0.5rem;
+  }
+}
+
 /* Responsive adjustments for water intake grid */
 @media (max-width: 1024px) {
   .water-intake-grid {
