@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { WeightEntry } from "../types/weight";
 import * as weightService from "../services/weightService";
+import { resolveFirebase } from "../lib/resolveFirebase";
 
 export function useWeightEntries() {
   const [entries, setEntries] = useState<WeightEntry[]>([]);
@@ -10,23 +11,27 @@ export function useWeightEntries() {
     let unsub: (() => void) | null = null;
     (async () => {
       try {
-        // Start by subscribing to real-time updates
+        // Resolve the Firebase auth client (used elsewhere in the app) and get the current user uid
+        const { auth } = await resolveFirebase();
+        const uid = auth?.currentUser?.uid;
+
+        // First, do an immediate one-time load so the UI has data right away (use uid when available)
+        try {
+          const items = await weightService.getWeightEntries(uid);
+          if (mounted) setEntries(items);
+        } catch (errLoad) {
+          console.error('useWeightEntries: initial load failed', errLoad);
+        }
+
+        // Then subscribe to real-time updates to keep data fresh (pass uid)
         unsub = await weightService.subscribeToWeightEntries((items) => {
           if (!mounted) return;
           setEntries(items);
-          setLoading(false);
-        });
+        }, uid);
       } catch (err) {
         console.error("useWeightEntries: failed to subscribe", err);
-        // fallback to one-time load
-        try {
-          const items = await weightService.getWeightEntries();
-          if (mounted) setEntries(items);
-        } catch (err2) {
-          console.error("useWeightEntries: failed to load fallback", err2);
-        } finally {
-          if (mounted) setLoading(false);
-        }
+      } finally {
+        if (mounted) setLoading(false);
       }
     })();
     return () => {
