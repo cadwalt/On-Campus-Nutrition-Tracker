@@ -20,6 +20,7 @@ export const WeightTracker: React.FC = () => {
 
   const [busy, setBusy] = useState(false);
   const [targetLbs, setTargetLbs] = useState<number | null>(null);
+  const [range, setRange] = useState<'week' | 'month' | 'year' | 'all'>('month');
 
   useEffect(() => {
     let mounted = true;
@@ -79,6 +80,15 @@ export const WeightTracker: React.FC = () => {
       if (toastTimer.current) window.clearTimeout(toastTimer.current);
     };
   }, []);
+
+  // Prepare sorted and filtered entries according to selected range
+  const allSorted = [...entries].sort((a, b) => (a.date < b.date ? -1 : 1));
+  const now = new Date();
+  let start = new Date();
+  if (range === 'week') start.setDate(now.getDate() - 7);
+  else if (range === 'month') start.setMonth(now.getMonth() - 1);
+  else if (range === 'year') start.setFullYear(now.getFullYear() - 1);
+  const filteredEntries = range === 'all' ? allSorted : allSorted.filter((e) => new Date(e.date) >= start);
 
   return (
     <div className="weight-tracker">
@@ -179,9 +189,22 @@ export const WeightTracker: React.FC = () => {
           <div>Loading...</div>
         ) : entries.length === 0 ? (
           <div>No entries yet</div>
+        ) : filteredEntries.length === 0 ? (
+          <div>No entries in this range</div>
         ) : (
           <>
-            <WeightChart entries={entries} width={600} height={160} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+              <label style={{ fontSize: '0.95rem', color: '#333' }}>View:</label>
+              <select value={range} onChange={(e) => setRange(e.target.value as any)} style={{ padding: '6px 8px', borderRadius: 6 }}>
+                <option value="week">Week</option>
+                <option value="month">Month</option>
+                <option value="year">Year</option>
+                <option value="all">All time</option>
+              </select>
+            </div>
+
+            <WeightChart entries={filteredEntries} width={600} height={160} />
+
             <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8 }}>
             <thead>
               <tr>
@@ -191,7 +214,7 @@ export const WeightTracker: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {entries.map((e: WeightEntry) => (
+              {filteredEntries.map((e: WeightEntry) => (
                 <tr key={e.id}>
                   <td>{e.date}</td>
                   <td>{e.weightLb.toFixed(1)}</td>
