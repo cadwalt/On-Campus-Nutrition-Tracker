@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { WeightEntry } from '../../types/weight';
 
-interface Props { entries: WeightEntry[]; height?: number; width?: number; range?: 'week'|'month'|'year'|'all'; centerFactor?: number }
+interface Props { entries: WeightEntry[]; height?: number; width?: number; range?: 'week'|'month'|'year'|'all'; centerFactor?: number; unit?: 'lb' | 'kg'; targetWeight?: number | null }
 
-export const WeightChart: React.FC<Props> = ({ entries, height = 160, width, range = 'month', centerFactor }) => {
+export const WeightChart: React.FC<Props> = ({ entries, height = 160, width, range = 'month', centerFactor, unit = 'lb', targetWeight = null }) => {
   if (!entries) return <div>No chart data</div>;
 
   const points = entries.length === 0 ? [] : entries.map(e => ({ x: new Date(e.date).getTime(), y: e.weightLb }));
@@ -13,8 +13,14 @@ export const WeightChart: React.FC<Props> = ({ entries, height = 160, width, ran
 
   const minX = Math.min(...xs);
   const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
+  let minY = Math.min(...ys);
+  let maxY = Math.max(...ys);
+  
+  // Expand bounds to include target weight if provided
+  if (targetWeight !== null) {
+    minY = Math.min(minY, targetWeight);
+    maxY = Math.max(maxY, targetWeight);
+  }
 
   // axisMargin: space reserved for axis labels; innerPad: extra gap between axis labels and plotted line
   const axisMargin = 28;
@@ -215,22 +221,52 @@ export const WeightChart: React.FC<Props> = ({ entries, height = 160, width, ran
           {points.map((p, i) => (
             <circle key={i} cx={scaleX(p.x)} cy={scaleY(p.y)} r={3} fill="#fff" stroke="rgba(0,0,0,0.2)" />
           ))}
+          
+          {/* Target weight line */}
+          {targetWeight !== null && (
+            <line
+              x1={plotLeft}
+              y1={scaleY(targetWeight)}
+              x2={plotRight}
+              y2={scaleY(targetWeight)}
+              stroke="#3b82f6"
+              strokeWidth={2}
+              strokeDasharray="5,5"
+              opacity={0.7}
+            />
+          )}
         </g>
 
         {/* Y tick labels on the right side (not shifted) */}
         {(() => {
           // Place Y ticks at the plotted area's right edge so labels sit immediately to the right
           return yTicks.map((t, i) => {
+            // Skip labels within +/- 20 lbs of target weight
+            if (targetWeight !== null && Math.abs(t.y - targetWeight) <= 20) {
+              return null;
+            }
             const yPos = scaleY(t.y);
             const tickX = plotRight; // align tick with plot edge
+            // Convert label value to display unit
+            const labelValue = unit === 'kg' ? Math.round((t.y / 2.20462) * 10) / 10 : t.y;
             return (
               <g key={i}>
-                {/* small tick mark at plot edge */}
-                <line x1={tickX} y1={yPos} x2={tickX + 6} y2={yPos} stroke="rgba(255,255,255,0.12)" />
-                <text x={tickX + 10} y={yPos + 4} textAnchor="start" fontSize={yLabelFont} fill="#fff">{t.label}</text>
+                <text x={tickX + 10} y={yPos + 4} textAnchor="start" fontSize={yLabelFont} fill="#fff">{labelValue}</text>
               </g>
             );
           });
+        })()}
+        
+        {/* Target weight label */}
+        {targetWeight !== null && (() => {
+          const targetYPos = scaleY(targetWeight);
+          const tickX = plotRight;
+          const targetLabelValue = unit === 'kg' ? Math.round((targetWeight / 2.20462) * 10) / 10 : targetWeight;
+          return (
+            <g>
+              <text x={tickX + 10} y={targetYPos + 4} textAnchor="start" fontSize={yLabelFont} fill="#3b82f6" fontWeight={600}>{targetLabelValue}</text>
+            </g>
+          );
         })()}
       </svg>
     </div>

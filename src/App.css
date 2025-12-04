@@ -181,20 +181,23 @@ body::after {
   flex-direction: column;
   gap: 2rem;
   width: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 1rem;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 .weight-tracker-page .card {
   padding: 1.5rem;
+  width: 97.5%;
+  box-sizing: border-box;
 }
 
 /* Responsive adjustments for weight tracker */
 @media (max-width: 768px) {
   .weight-tracker-grid {
     gap: 1.5rem;
-    padding: 0 0.5rem;
   }
 }
 

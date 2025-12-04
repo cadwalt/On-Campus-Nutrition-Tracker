@@ -10,7 +10,7 @@ function formatDateInput(d: string) {
 }
 
 export const WeightTracker: React.FC = () => {
-  const { entries, loading, add, remove } = useWeightEntries();
+  const { entries, loading, add, remove, update } = useWeightEntries();
   const [date, setDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [weight, setWeight] = useState<string>(""); // weight value entered by user
   const [unit, setUnit] = useState<'lb' | 'kg'>('lb');
@@ -21,6 +21,9 @@ export const WeightTracker: React.FC = () => {
   const [busy, setBusy] = useState(false);
   const [targetLbs, setTargetLbs] = useState<number | null>(null);
   const [range, setRange] = useState<'week' | 'month' | 'year' | 'all'>('month');
+  const [editingEntry, setEditingEntry] = useState<WeightEntry | null>(null);
+  const [editWeight, setEditWeight] = useState<string>('');
+  const [editDate, setEditDate] = useState<string>('');
 
   useEffect(() => {
     let mounted = true;
@@ -76,13 +79,25 @@ export const WeightTracker: React.FC = () => {
     // convert (if kg) and round to 1 decimal place
     const lbsRaw = unit === 'kg' ? val * 2.20462 : val;
     const lbs = Math.round(lbsRaw * 10) / 10;
+    const formattedDate = formatDateInput(date);
+    
     setBusy(true);
     try {
-      await add({ date: formatDateInput(date), weightLb: lbs });
+      // Check if an entry already exists for this date
+      const existingEntry = entries.find((e) => e.date === formattedDate);
+      
+      if (existingEntry) {
+        // Update existing entry
+        await update(existingEntry.id, { weightLb: lbs });
+        setToast('Weight Updated');
+      } else {
+        // Add new entry
+        await add({ date: formattedDate, weightLb: lbs });
+        setToast('Weight Saved');
+      }
+      
       setWeight("");
       setError(null);
-      // show non-blocking confirmation toast
-      setToast('Weight saved');
       if (toastTimer.current) window.clearTimeout(toastTimer.current);
       toastTimer.current = window.setTimeout(() => setToast(null), 3000);
     } finally {
@@ -98,12 +113,114 @@ export const WeightTracker: React.FC = () => {
 
   // Prepare sorted and filtered entries according to selected range
   const allSorted = [...entries].sort((a, b) => (a.date < b.date ? -1 : 1));
-  const now = new Date();
+  
+  // For week/month views: use the selected date from the input box as the reference point
+  // For year/all views: use the current date as the reference point
+  // Parse the date string as local time (YYYY-MM-DD format) to avoid UTC timezone issues
+  const parseLocalDate = (dateStr: string) => {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+  
+  const referenceDate = (range === 'week' || range === 'month') ? parseLocalDate(date) : new Date();
+  
   let start = new Date();
-  if (range === 'week') start.setDate(now.getDate() - 7);
-  else if (range === 'month') start.setMonth(now.getMonth() - 1);
-  else if (range === 'year') start.setFullYear(now.getFullYear() - 1);
-  const filteredEntries = range === 'all' ? allSorted : allSorted.filter((e) => new Date(e.date) >= start);
+  let end = new Date(referenceDate);
+  
+  if (range === 'week') {
+    // Get Sunday of the week containing the selected date
+    start = new Date(referenceDate);
+    const day = start.getDay();
+    start.setDate(start.getDate() - day); // Sunday is day 0
+    // Get Saturday of the same week
+    end = new Date(start);
+    end.setDate(end.getDate() + 6);
+  } else if (range === 'month') {
+    start = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
+    end = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0);
+  } else if (range === 'year') {
+    start = new Date(referenceDate);
+    start.setFullYear(referenceDate.getFullYear() - 1);
+  }
+  
+  const filteredEntries = range === 'all' 
+    ? allSorted 
+    : allSorted.filter((e) => {
+        // Normalize comparison: compare date strings directly (YYYY-MM-DD format)
+        // to avoid timezone issues
+        if (range === 'week' || range === 'month') {
+          const startStr = start.toISOString().split('T')[0];
+          const endStr = end.toISOString().split('T')[0];
+          return e.date >= startStr && e.date <= endStr;
+        }
+        // For year/other views, use the start comparison
+        const startStr = start.toISOString().split('T')[0];
+        return e.date >= startStr;
+      });
+
+  // For year view: aggregate by month; for all-time view: aggregate by year
+  type TableRow = {
+    label: string; // month/year label for aggregated views, or empty for detail views
+    date: string; // original date for detail views, ISO month/year for aggregated
+    weightLb: number;
+    isAggregated: boolean; // true if this is a monthly/yearly average
+  };
+
+  const tableRows: TableRow[] = (() => {
+    if (range === 'year') {
+      // Group by month-year, compute average for each month
+      const byMonth = new Map<string, number[]>();
+      filteredEntries.forEach((e) => {
+        const d = new Date(e.date);
+        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        if (!byMonth.has(monthKey)) byMonth.set(monthKey, []);
+        byMonth.get(monthKey)!.push(e.weightLb);
+      });
+      // Sort by month and create rows
+      return Array.from(byMonth.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([monthKey, weights]) => {
+          const avg = Math.round((weights.reduce((s, w) => s + w, 0) / weights.length) * 10) / 10;
+          const [year, month] = monthKey.split('-');
+          const monthName = new Date(parseInt(year), parseInt(month) - 1).toLocaleString('default', { month: 'long' });
+          return {
+            label: monthName,
+            date: monthKey,
+            weightLb: avg,
+            isAggregated: true,
+          };
+        });
+    } else if (range === 'all') {
+      // Group by year, compute average for each year
+      const byYear = new Map<string, number[]>();
+      filteredEntries.forEach((e) => {
+        const d = new Date(e.date);
+        const year = d.getFullYear().toString();
+        if (!byYear.has(year)) byYear.set(year, []);
+        byYear.get(year)!.push(e.weightLb);
+      });
+      // Sort by year and create rows
+      return Array.from(byYear.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([year, weights]) => {
+          const avg = Math.round((weights.reduce((s, w) => s + w, 0) / weights.length) * 10) / 10;
+          return {
+            label: year,
+            date: year,
+            weightLb: avg,
+            isAggregated: true,
+          };
+        });
+    } else {
+      // Detail view: week and month show individual entries
+      return filteredEntries.map((e) => ({
+        label: '',
+        date: e.date,
+        weightLb: e.weightLb,
+        isAggregated: false,
+      }));
+    }
+  })();
 
   // compute average weight for the currently selected period (filteredEntries)
   const averageWeightLb: number | null = filteredEntries.length === 0
@@ -134,12 +251,55 @@ export const WeightTracker: React.FC = () => {
     return `No weight entries yet — add your first entry to see progress toward ${targetDisplay} ${unitLabel}.`;
   })();
 
+  const handleEditEntry = (entry: WeightEntry) => {
+    setEditingEntry(entry);
+    setEditWeight(entry.weightLb.toString());
+    setEditDate(entry.date);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingEntry) return;
+    const val = parseFloat(editWeight);
+    if (isNaN(val)) {
+      setError('Enter a valid weight');
+      return;
+    }
+    const maxAllowed = unit === 'kg' ? 700 : 1500;
+    if (val < 1 || val > maxAllowed) {
+      setError(`Enter a weight between 1 and ${maxAllowed}`);
+      return;
+    }
+    const lbsRaw = unit === 'kg' ? val * 2.20462 : val;
+    const lbs = Math.round(lbsRaw * 10) / 10;
+    setBusy(true);
+    try {
+      await remove(editingEntry.id);
+      await add({ date: editDate, weightLb: lbs });
+      setEditingEntry(null);
+      setEditWeight('');
+      setEditDate('');
+      setError(null);
+      setToast('Weight updated');
+      if (toastTimer.current) window.clearTimeout(toastTimer.current);
+      toastTimer.current = window.setTimeout(() => setToast(null), 3000);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingEntry(null);
+    setEditWeight('');
+    setEditDate('');
+    setError(null);
+  };
+
   return (
     <div className="page weight-tracker-page">
       <main className="dashboard-content">
         {/* Toast notification */}
         {toast ? (
-          <div role="status" aria-live="polite" style={{ position: 'fixed', right: 16, bottom: 16 }}>
+          <div role="status" aria-live="polite" style={{ position: 'fixed', right: 16, bottom: 16, zIndex: 9999 }}>
             <div style={{ background: '#1b5e20', color: '#fff', padding: '8px 12px', borderRadius: 6, boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }}>{toast}</div>
           </div>
         ) : null}
@@ -156,10 +316,11 @@ export const WeightTracker: React.FC = () => {
                 flexWrap: 'wrap',
               }}
             >
-              <div style={{ color: 'inherit', fontSize: '1.5rem', textAlign: 'left', minWidth: 0, marginLeft: '0.5rem', fontWeight: 700 }}>
-                {averageWeightDisplay} {unit} (avg)
+              <div style={{ color: 'inherit', fontSize: '3rem', textAlign: 'left', minWidth: 0, marginLeft: '0.5rem', fontWeight: 700, display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                <span>{averageWeightDisplay}</span>
+                <span style={{ fontSize: '1.5rem', fontWeight: 500, color: '#9ca3af' }}>{unit} (avg)</span>
               </div>
-              <div style={{ color: 'inherit', fontSize: '1.5rem', textAlign: 'right', minWidth: 0, marginRight: '0.5rem', fontWeight: 700 }}>
+              <div style={{ color: 'inherit', fontSize: '1.5rem', textAlign: 'right', minWidth: 0, marginRight: '0.5rem', marginBottom: '-1.5rem', fontWeight: 700 }}>
                 {targetMessage}
               </div>
             </header>
@@ -195,7 +356,7 @@ export const WeightTracker: React.FC = () => {
                             cursor: 'pointer',
                             fontWeight: 600,
                             background: range === t.key ? 'linear-gradient(135deg,#3b82f6 0%,#60a5fa 100%)' : 'transparent',
-                            color: range === t.key ? '#fff' : '#374151',
+                            color: range === t.key ? '#fff' : '#9ca3af',
                             boxShadow: range === t.key ? '0 4px 12px rgba(59,130,246,0.2)' : 'none',
                           }}
                         >
@@ -210,7 +371,7 @@ export const WeightTracker: React.FC = () => {
                 {filteredEntries.length === 0 ? (
                   <div>No entries in this range</div>
                 ) : (
-                  <WeightChart entries={filteredEntries} height={220} range={range} />
+                  <WeightChart entries={filteredEntries} height={220} range={range} unit={unit} targetWeight={targetLbs} />
                 )}
               </div>
 
@@ -261,6 +422,10 @@ export const WeightTracker: React.FC = () => {
                   <div style={{ flex: '0 0 auto' }}>
                     <button className="water-add-btn-primary" onClick={onAdd} disabled={busy}>Add</button>
                   </div>
+
+                  <div style={{ flex: '1 1 auto', textAlign: 'right', color: '#9ca3af', fontSize: '0.85rem', marginBottom: '-0.5rem'}}>
+                    ~Enter new weight or use dropdown and date to adjust units and time period displayed~
+                  </div>
                 </div>
 
                 {/* conversion preview placed below the inputs */}
@@ -293,23 +458,163 @@ export const WeightTracker: React.FC = () => {
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr>
-                        <th style={{ textAlign: "left", paddingBottom: 8 }}>Date</th>
-                        <th style={{ textAlign: "left", paddingBottom: 8 }}>Weight (lbs)</th>
-                        <th style={{ textAlign: "left", paddingBottom: 8 }}>Actions</th>
+                        <th style={{ textAlign: "left", paddingBottom: 8 }}>
+                          {range === 'year' ? 'Month' : range === 'all' ? 'Year' : 'Date'}
+                        </th>
+                        <th style={{ textAlign: "left", paddingBottom: 8 }}>
+                          Weight ({unit}){range === 'year' || range === 'all' ? ' (avg)' : ''}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredEntries.map((e: WeightEntry) => (
-                        <tr key={e.id} style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                          <td style={{ paddingTop: 8, paddingBottom: 8 }}>{e.date}</td>
-                          <td style={{ paddingTop: 8, paddingBottom: 8 }}>{e.weightLb.toFixed(1)}</td>
-                          <td style={{ paddingTop: 8, paddingBottom: 8 }}>
-                            <button disabled={busy} onClick={async () => { setBusy(true); try { await remove(e.id); } finally { setBusy(false); } }}>Delete</button>
-                          </td>
-                        </tr>
-                      ))}
+                      {tableRows.map((row, idx) => {
+                        const displayWeight = unit === 'kg' ? Math.round((row.weightLb / 2.20462) * 10) / 10 : row.weightLb;
+                        const isClickable = !row.isAggregated;
+                        return (
+                          <tr
+                            key={idx}
+                            onClick={() => isClickable && handleEditEntry({ id: '', date: row.date, weightLb: row.weightLb })}
+                            style={{
+                              borderTop: '1px solid rgba(255,255,255,0.1)',
+                              cursor: isClickable ? 'pointer' : 'default',
+                              transition: 'background-color 0.2s',
+                              opacity: row.isAggregated ? 0.7 : 1,
+                            }}
+                            onMouseEnter={(ev) => isClickable && (ev.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)')}
+                            onMouseLeave={(ev) => (ev.currentTarget.style.backgroundColor = 'transparent')}
+                          >
+                            <td style={{ paddingTop: 8, paddingBottom: 8 }}>{row.label || row.date}</td>
+                            <td style={{ paddingTop: 8, paddingBottom: 8 }}>{displayWeight.toFixed(1)}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
+                </div>
+              )}
+
+              {/* Edit Modal */}
+              {editingEntry && (
+                <div style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: 'rgba(0,0,0,0.5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 1000,
+                }}>
+                  <div style={{
+                    backgroundColor: 'rgba(26, 26, 46, 0.95)',
+                    borderRadius: 16,
+                    padding: '2rem',
+                    width: '90%',
+                    maxWidth: 400,
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    backdropFilter: 'blur(10px)',
+                  }}>
+                    <h2 style={{ marginTop: 0, marginBottom: '1.5rem' }}>Edit Weight Entry</h2>
+
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#9ca3af' }}>Weight ({unit})</label>
+                      <input
+                        type="number"
+                        value={editWeight}
+                        onChange={(e) => setEditWeight(e.target.value)}
+                        step={0.1}
+                        min={1}
+                        max={unit === 'kg' ? 700 : 1500}
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem',
+                          borderRadius: 8,
+                          border: '1px solid rgba(255,255,255,0.2)',
+                          backgroundColor: 'rgba(255,255,255,0.05)',
+                          color: '#fff',
+                          fontSize: '1rem',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#9ca3af' }}>Date</label>
+                      <input
+                        type="date"
+                        value={editDate}
+                        onChange={(e) => setEditDate(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem',
+                          borderRadius: 8,
+                          border: '1px solid rgba(255,255,255,0.2)',
+                          backgroundColor: 'rgba(255,255,255,0.05)',
+                          color: '#fff',
+                          fontSize: '1rem',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+
+                    {error && <div style={{ color: 'crimson', marginBottom: '1rem', fontSize: '0.9rem' }}>{error}</div>}
+
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <button
+                        onClick={handleSaveEdit}
+                        disabled={busy}
+                        style={{
+                          flex: 1,
+                          padding: '0.75rem',
+                          borderRadius: 8,
+                          border: 'none',
+                          backgroundColor: '#3b82f6',
+                          color: '#fff',
+                          cursor: busy ? 'not-allowed' : 'pointer',
+                          fontSize: '1rem',
+                          fontWeight: 600,
+                        }}
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={async () => { setBusy(true); try { await remove(editingEntry.id); handleCancelEdit(); setToast('Weight Deleted'); if (toastTimer.current) window.clearTimeout(toastTimer.current); toastTimer.current = window.setTimeout(() => setToast(null), 3000); } finally { setBusy(false); } }}
+                        disabled={busy}
+                        style={{
+                          flex: 1,
+                          padding: '0.75rem',
+                          borderRadius: 8,
+                          border: 'none',
+                          backgroundColor: '#dc2626',
+                          color: '#fff',
+                          cursor: busy ? 'not-allowed' : 'pointer',
+                          fontSize: '1rem',
+                          fontWeight: 600,
+                        }}
+                      >
+                        Delete
+                      </button>
+                      <button
+                        onClick={handleCancelEdit}
+                        disabled={busy}
+                        style={{
+                          flex: 1,
+                          padding: '0.75rem',
+                          borderRadius: 8,
+                          border: '1px solid rgba(255,255,255,0.2)',
+                          backgroundColor: 'transparent',
+                          color: '#fff',
+                          cursor: busy ? 'not-allowed' : 'pointer',
+                          fontSize: '1rem',
+                          fontWeight: 600,
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
             </>

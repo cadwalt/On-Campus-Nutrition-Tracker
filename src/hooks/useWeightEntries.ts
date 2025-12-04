@@ -41,9 +41,7 @@ export function useWeightEntries() {
   }, []);
 
   const add = async (entry: Omit<WeightEntry, "id">) => {
-    const e = await weightService.addWeightEntry(entry);
-    setEntries((s) => [...s, e].sort((a, b) => (a.date < b.date ? -1 : 1)));
-    return e;
+    return await weightService.addWeightEntry(entry);
   };
 
   const update = async (id: string, patch: Partial<WeightEntry>) => {
