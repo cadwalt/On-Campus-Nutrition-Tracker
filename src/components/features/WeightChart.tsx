@@ -6,7 +6,7 @@ interface Props { entries: WeightEntry[]; height?: number; width?: number }
 export const WeightChart: React.FC<Props> = ({ entries, height = 120, width = 400 }) => {
   if (!entries || entries.length === 0) return <div>No chart data</div>;
 
-  const points = entries.map(e => ({ x: new Date(e.date).getTime(), y: e.weightKg }));
+  const points = entries.map(e => ({ x: new Date(e.date).getTime(), y: e.weightLb }));
   const xs = points.map(p => p.x);
   const ys = points.map(p => p.y);
   const minX = Math.min(...xs);

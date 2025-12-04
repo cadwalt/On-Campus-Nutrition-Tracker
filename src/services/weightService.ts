@@ -2,7 +2,7 @@ import type { WeightEntry } from "../types/weight";
 import { getFirestoreClient, getAuthClient } from "../firebase";
 
 // Firestore collection name
-const COLLECTION = "weight_entries";
+const COLLECTION = "weight";
 
 async function getOwnerUid(): Promise<string> {
   try {
@@ -33,7 +33,14 @@ export async function addWeightEntry(entry: Omit<WeightEntry, "id">): Promise<We
   const { collection, addDoc } = firebase as any;
   const owner = await getOwnerUid();
   const col = collection(db, COLLECTION);
-  const docRef = await addDoc(col, { ...entry, owner });
+  // Persist both `owner` (used by existing queries) and `userID` (explicit field requested)
+  const payload = { ...entry, owner, userID: owner } as any;
+  // If incoming entry uses weightKg (older entries), convert to weightLb for consistency.
+  if ((payload as any).weightKg !== undefined && (payload as any).weightLb === undefined) {
+    payload.weightLb = Math.round(((payload as any).weightKg * 2.20462) * 10) / 10;
+    delete payload.weightKg;
+  }
+  const docRef = await addDoc(col, payload);
   return { id: docRef.id, ...entry } as WeightEntry;
 }
 
@@ -70,7 +77,15 @@ export async function subscribeToWeightEntries(callback: (items: WeightEntry[]) 
   const col = collection(db, COLLECTION);
   const q = query(col, where('owner', '==', owner), orderBy('date'));
   const unsubscribe = onSnapshot(q, (snap: any) => {
-    const items: WeightEntry[] = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+    const items: WeightEntry[] = snap.docs.map((d: any) => {
+      const data = d.data();
+      // Normalize older documents that may have weightKg
+      if (data.weightKg !== undefined && data.weightLb === undefined) {
+        data.weightLb = Math.round((data.weightKg * 2.20462) * 10) / 10;
+        delete data.weightKg;
+      }
+      return { id: d.id, ...data } as WeightEntry;
+    });
     callback(items);
   }, (err: any) => {
     console.error('subscribeToWeightEntries error', err);
@@ -90,7 +105,12 @@ export async function batchAddWeightEntries(entries: Omit<WeightEntry, 'id'>[]) 
   const batch = writeBatch(db);
   for (const entry of entries) {
     const dref = doc(col);
-    batch.set(dref, { ...entry, owner });
+    const payload: any = { ...entry, owner, userID: owner };
+    if (payload.weightKg !== undefined && payload.weightLb === undefined) {
+      payload.weightLb = Math.round((payload.weightKg * 2.20462) * 10) / 10;
+      delete payload.weightKg;
+    }
+    batch.set(dref, payload);
   }
   await batch.commit();
 }
