@@ -2349,6 +2349,14 @@ body::after {
   transform: none;
 }
 
+/* Small variant for compact button uses (like in favorites add/clear) */
+.response-button.small {
+  padding: 0.45rem 0.8rem;
+  font-size: 0.9rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(102,126,234,0.18);
+}
+
 /* Response container */
 .response-container {
   text-align: left;
@@ -2524,6 +2532,82 @@ body::after {
   padding-right: 6px; /* room for scrollbar */
 }
 
+/* Make the meal tracker page responsive: allow the meals list to fill available viewport space
+   by using a flexible wrapper and making the meal list scroll when needed. */
+.meal-tracker-page {
+  /* ensure page root stretches and becomes a column flex container so children can grow */
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.meal-tracker-page .dashboard-left {
+  /* ensure left column can grow to viewport height */
+  min-height: calc(100vh - 140px);
+}
+
+.meal-tracker-page .dashboard-left .card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* allow children to shrink for overflow handling */
+}
+
+.meal-tracker-page .meals-list-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.meal-tracker-page .meals-list-wrapper .meal-list {
+  /* let the meal list grow inside the wrapper and scroll if content overflows */
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
+}
+
+/* Tabs content wrapper: make the area below the tabs fill available space and scroll */
+.meal-tracker-page .tabs-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* Ensure dashboard/content/grid/left form a true flex column stack so children can
+   shrink and tabs-content can take remaining space and scroll internally. */
+.meal-tracker-page .dashboard-content {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.meal-tracker-page .dashboard-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.meal-tracker-page .dashboard-left {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.meal-tracker-page .tabs-content .card {
+  /* allow cards inside the tabs-content to be flexible containers */
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+@media (max-width: 720px) {
+  .meal-tracker-page .dashboard-left {
+    min-height: auto;
+  }
+}
+
 /* Meal Form */
 .meal-form {
   display: flex;
@@ -2632,6 +2716,51 @@ body::after {
 
 .meal-form .form-toggle .chev.open {
   transform: rotate(180deg);
+}
+
+/* Favorites-specific tweaks to tighten spacing and make the optional fields match Add-a-Meal */
+.favorites-section .meal-form {
+  gap: 0.6rem;
+}
+
+.favorites-section .form-grid {
+  gap: 0.6rem;
+}
+
+.favorites-section .form-actions {
+  justify-content: flex-end;
+  margin-top: 0.25rem;
+}
+
+/* Favorites action button tweaks */
+.favorites-section .cancel-button {
+  background: transparent;
+  color: #a5b4fc;
+  border: 1px solid rgba(102,126,234,0.12);
+  padding: 6px 8px;
+  font-size: 0.9rem;
+  border-radius: 8px;
+}
+
+.favorites-section .cancel-button:hover:not(:disabled) {
+  background: rgba(255,255,255,0.02);
+  color: #c7b3ff;
+  transform: translateY(-1px);
+}
+
+.favorites-section .remove-favorite-button {
+  background: transparent;
+  border: none;
+  color: #fb7185; /* rose-400 */
+  padding: 6px 8px;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.favorites-section .remove-favorite-button:hover {
+  color: #f43f5e; /* rose-600 */
+  background: rgba(255,255,255,0.02);
+  transform: translateY(-1px);
 }
 
 .meal-item {
@@ -3192,6 +3321,45 @@ body::after {
 
 .meal-tracker-page .card > h2 {
   margin-bottom: 6px;
+}
+
+/* Prevent horizontal overflow inside the meal tracker page. Force
+   single-column layout, make cards fluid and ensure inner grids
+   wrap on smaller viewports. These rules are intentionally scoped
+   to the meal tracker page to avoid affecting other views. */
+.meal-tracker-page {
+  overflow-x: hidden;
+}
+
+.meal-tracker-page .card {
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.meal-tracker-page .dashboard-grid {
+  gap: 1rem;
+}
+
+.meal-tracker-page .dashboard-left,
+.meal-tracker-page .overview-content,
+.meal-tracker-page .tabs-content {
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0; /* allow children to shrink below their content width */
+}
+
+/* Make meal-fields-grid and similar grids wrap more aggressively */
+.meal-tracker-page .meal-fields-grid,
+.meal-tracker-page .meal-form .form-grid {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+/* Ensure lists/cards inside the tabs don't force horizontal scroll */
+.meal-tracker-page .meals-list-wrapper,
+.meal-tracker-page .meal-list,
+.meal-tracker-page .card > .card-inner {
+  overflow-x: hidden;
 }
 
 /* Stats Grid */

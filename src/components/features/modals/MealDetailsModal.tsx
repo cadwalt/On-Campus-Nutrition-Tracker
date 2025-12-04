@@ -17,9 +17,11 @@ interface MealDetailsModalProps {
   isOpen: boolean;
   meal: Meal | null;
   onClose: () => void;
+  /** Optional external save handler used when the modal is repurposed for favorites or other non-meal entities. If provided, it will be called instead of updating the `meals` collection. */
+  onSaveExternal?: (mealId: string | undefined, updates: Record<string, any>) => Promise<void>;
 }
 
-const MealDetailsModal: React.FC<MealDetailsModalProps> = ({ isOpen, meal, onClose }) => {
+const MealDetailsModal: React.FC<MealDetailsModalProps> = ({ isOpen, meal, onClose, onSaveExternal }) => {
   const [edit, setEdit] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; visible: boolean }>({
@@ -125,18 +127,19 @@ const MealDetailsModal: React.FC<MealDetailsModalProps> = ({ isOpen, meal, onClo
   const handleSave = async () => {
     const { firebaseAuth } = await resolveFirebase();
     const user = firebaseAuth.getAuth ? firebaseAuth.getAuth().currentUser : null;
-    if (!meal?.id || !user) return;
+    if (!meal) return;
+
     if (!form.name.trim() || !form.servingSize.trim() || !form.calories.trim()) {
       showToast('Name, calories, and serving size are required', 'error');
       return;
     }
-    
-    if (!canAccess(user.uid, meal.userId)) {
+
+    if (!canAccess(user?.uid || '', meal.userId)) {
       showToast('Unauthorized: Cannot modify this meal', 'error');
       setEdit(false);
       return;
     }
-    
+
     setSubmitting(true);
     try {
       const updates: any = {
@@ -170,11 +173,18 @@ const MealDetailsModal: React.FC<MealDetailsModalProps> = ({ isOpen, meal, onClo
         if (trimmed) updates[key] = trimmed; else updates[key] = null;
       });
 
-      const { db, firestore } = await resolveFirebase();
-      const ref = firestore.doc(db, 'meals', meal.id);
-      await firestore.updateDoc(ref, updates);
-      showToast('Meal updated', 'success');
-      setEdit(false);
+      // If an external save handler is provided (e.g., for favorites), call it instead
+      if (typeof onSaveExternal === 'function') {
+        await onSaveExternal(meal.id, updates);
+        showToast('Saved', 'success');
+        setEdit(false);
+      } else {
+        const { db, firestore } = await resolveFirebase();
+        const ref = firestore.doc(db, 'meals', meal.id!);
+        await firestore.updateDoc(ref, updates);
+        showToast('Meal updated', 'success');
+        setEdit(false);
+      }
     } catch (e: any) {
       console.error(e);
       showToast(e.message || 'Failed to update meal', 'error');

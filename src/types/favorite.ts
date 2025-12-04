@@ -3,6 +3,11 @@ export interface NutritionInfo {
   protein?: number;
   carbs?: number;
   fat?: number;
+  // Optional extended nutrition fields
+  sodium?: number;
+  sugars?: number;
+  calcium?: number;
+  iron?: number;
 }
 
 export interface FavoriteItem {
@@ -10,6 +15,8 @@ export interface FavoriteItem {
   name: string;
   source?: 'manual' | 'meal' | 'import';
   nutrition?: NutritionInfo;
+  // Human-readable serving size (e.g. "1 bowl", "150 g")
+  servingSize?: string;
   tags?: string[];
   created_at?: number;
 }

@@ -4,9 +4,10 @@ import type { User } from 'firebase/auth';
 import { resolveFirebase } from '../../lib/resolveFirebase';
 import type { CookingSkill, NutritionGoals } from '../../types/nutrition';
 import type { FavoriteItem } from '../../types/favorite';
-import { getFavoritesForUser, addFavoriteForUser, removeFavoriteForUser } from '../services/favoritesService';
+import { getFavoritesForUser, addFavoriteForUser, removeFavoriteForUser, updateFavoriteForUser } from '../services/favoritesService';
 import { COOKING_SKILLS } from '../../constants/nutrition';
 import MealPreferencesModal from './modals/MealPreferencesModal';
+import MealDetailsModal from '../features/modals/MealDetailsModal';
 import { Tooltip } from '../ui';
 
 interface MealPreferencesSectionProps {
@@ -28,8 +29,12 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   const [newFavorite, setNewFavorite] = useState<string>('');
-  const [newNutrition, setNewNutrition] = useState<{ calories?: number; protein?: number; carbs?: number; fat?: number }>({});
+  const [newNutrition, setNewNutrition] = useState<{ calories?: number; protein?: number; carbs?: number; fat?: number; servingSize?: string }>({});
+  const [showFavOptional, setShowFavOptional] = useState(false);
+  const [expandedFavorites, setExpandedFavorites] = useState<Record<string, boolean>>({});
   const [recentMeals, setRecentMeals] = useState<any[]>([]);
+  const [selectedFavMeal, setSelectedFavMeal] = useState<any | null>(null);
+  const [favModalOpen, setFavModalOpen] = useState(false);
 
   // Load existing meal preferences from Firestore
   useEffect(() => {
@@ -200,7 +205,12 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
           protein: newNutrition.protein,
           carbs: newNutrition.carbs,
           fat: newNutrition.fat,
+          sodium: (newNutrition as any).sodium,
+          sugars: (newNutrition as any).sugars,
+          calcium: (newNutrition as any).calcium,
+          iron: (newNutrition as any).iron,
         },
+        servingSize: newNutrition.servingSize,
         created_at: Date.now(),
       };
 
@@ -425,28 +435,83 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
                 {/* Favorite Meals Section */}
                 <div className="favorites-section" style={{ marginTop: '1rem' }}>
                   <h3 style={{ margin: '0 0 0.5rem 0', color: '#e2e8f0' }}>Favorite Meals</h3>
-                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', alignItems: 'center' }}>
-                    <input
-                      type="text"
-                      value={newFavorite}
-                      onChange={(e) => setNewFavorite(e.target.value)}
-                      placeholder="Add a favorite meal (e.g., Caesar Salad)"
-                      style={{ flex: '1', padding: '0.5rem', borderRadius: '8px' }}
-                      disabled={loading}
-                    />
-                    <button
-                      onClick={handleAddFavorite}
-                      disabled={loading || !newFavorite.trim()}
-                      style={{ padding: '0.5rem 0.75rem', borderRadius: '8px' }}
-                    >Add</button>
-                  </div>
+                  <div className="meal-form" style={{ marginBottom: '0.5rem' }}>
+                    <div className="form-grid">
+                      <div className="form-field">
+                        <label>Favorite name</label>
+                        <input
+                          type="text"
+                          value={newFavorite}
+                          onChange={(e) => setNewFavorite(e.target.value)}
+                          placeholder="e.g. Caesar Salad"
+                          disabled={loading}
+                        />
+                      </div>
+                      <div className="form-field">
+                        <label>Serving</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. 1 bowl"
+                          value={newNutrition.servingSize ?? ''}
+                          onChange={(e) => setNewNutrition(prev => ({ ...prev, servingSize: e.target.value || undefined }))}
+                        />
+                      </div>
+                      <div className="form-field">
+                        <label>Calories</label>
+                        <input type="number" placeholder="cal" value={newNutrition.calories ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, calories: e.target.value ? Number(e.target.value) : undefined }))} />
+                      </div>
+                      <div className="form-field">
+                        <label>Protein (g)</label>
+                        <input type="number" placeholder="protein" value={newNutrition.protein ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, protein: e.target.value ? Number(e.target.value) : undefined }))} />
+                      </div>
+                      <div className="form-field">
+                        <label>Carbs (g)</label>
+                        <input type="number" placeholder="carbs" value={newNutrition.carbs ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, carbs: e.target.value ? Number(e.target.value) : undefined }))} />
+                      </div>
+                      <div className="form-field">
+                        <label>Fat (g)</label>
+                        <input type="number" placeholder="fat" value={newNutrition.fat ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, fat: e.target.value ? Number(e.target.value) : undefined }))} />
+                      </div>
+                    </div>
 
-                  {/* Optional nutrition inputs for the manual favorite */}
-                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                    <input type="number" placeholder="cal" value={newNutrition.calories ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, calories: e.target.value ? Number(e.target.value) : undefined }))} style={{ width: 80, padding: '0.4rem', borderRadius: 6 }} />
-                    <input type="number" placeholder="protein g" value={newNutrition.protein ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, protein: e.target.value ? Number(e.target.value) : undefined }))} style={{ width: 100, padding: '0.4rem', borderRadius: 6 }} />
-                    <input type="number" placeholder="carbs g" value={newNutrition.carbs ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, carbs: e.target.value ? Number(e.target.value) : undefined }))} style={{ width: 100, padding: '0.4rem', borderRadius: 6 }} />
-                    <input type="number" placeholder="fat g" value={newNutrition.fat ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, fat: e.target.value ? Number(e.target.value) : undefined }))} style={{ width: 100, padding: '0.4rem', borderRadius: 6 }} />
+                    <div className="form-toggle-row">
+                      <button
+                        type="button"
+                        className="form-toggle"
+                        aria-expanded={showFavOptional}
+                        aria-controls="favorite-optional-fields"
+                        onClick={() => setShowFavOptional((v) => !v)}
+                      >
+                        <span className={`chev ${showFavOptional ? 'open' : ''}`}>▾</span>
+                        {showFavOptional ? 'Hide optional nutrition' : 'Show more nutrition values'}
+                      </button>
+                    </div>
+
+                    {showFavOptional && (
+                      <div className="form-grid" id="favorite-optional-fields" style={{ marginTop: 4 }}>
+                        <div className="form-field">
+                          <label>Sodium (mg)</label>
+                          <input type="number" placeholder="sodium" value={(newNutrition as any).sodium ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, sodium: e.target.value ? Number(e.target.value) : undefined }))} />
+                        </div>
+                        <div className="form-field">
+                          <label>Sugars (g)</label>
+                          <input type="number" placeholder="sugars" value={(newNutrition as any).sugars ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, sugars: e.target.value ? Number(e.target.value) : undefined }))} />
+                        </div>
+                        <div className="form-field">
+                          <label>Calcium (mg)</label>
+                          <input type="number" placeholder="calcium" value={(newNutrition as any).calcium ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, calcium: e.target.value ? Number(e.target.value) : undefined }))} />
+                        </div>
+                        <div className="form-field">
+                          <label>Iron (mg)</label>
+                          <input type="number" placeholder="iron" value={(newNutrition as any).iron ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, iron: e.target.value ? Number(e.target.value) : undefined }))} />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="form-actions" style={{ marginTop: 6 }}>
+                      <button className="response-button small" type="button" onClick={() => { setNewFavorite(''); setNewNutrition({}); setShowFavOptional(false); }} style={{ marginRight: 8 }}>Clear</button>
+                      <button className="response-button small" onClick={handleAddFavorite} disabled={loading || !newFavorite.trim()}>Add</button>
+                    </div>
                   </div>
 
                   {/* Quick-add from recent meals */}
@@ -458,7 +523,7 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
                           <option key={m.id} value={m.id}>{`${m.name} — ${m.servingSize || ''} • ${Math.round(m.calories || 0)} cal`}</option>
                         ))}
                       </select>
-                      <button onClick={async () => {
+                      <button className="response-button small" onClick={async () => {
                         const sel = (document.getElementById('recentMealSelect') as HTMLSelectElement).value;
                         if (!sel) return;
                         const chosen = recentMeals.find(r => r.id === sel);
@@ -473,7 +538,12 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
                             protein: chosen.protein,
                             carbs: chosen.totalCarbs ?? chosen.carbs,
                             fat: chosen.totalFat ?? chosen.fat,
+                            sodium: chosen.sodium,
+                            sugars: chosen.sugars,
+                            calcium: chosen.calcium,
+                            iron: chosen.iron,
                           },
+                          servingSize: chosen.servingSize,
                           created_at: Date.now(),
                         };
                         try {
@@ -491,16 +561,72 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
                   {favorites.length > 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                       {favorites.map((fav) => (
-                        <div key={fav.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ color: '#cbd5e1' }}>{fav.name}</span>
-                            {fav.nutrition && (
-                              <small style={{ color: '#94a3b8' }}>{`${fav.nutrition.calories ?? '-'} cal • ${fav.nutrition.protein ?? '-'}g protein • ${fav.nutrition.carbs ?? '-'}g carbs • ${fav.nutrition.fat ?? '-'}g fat`}</small>
-                            )}
+                        <div key={fav.id} className="preference-card favorite-item" onClick={() => {
+                          const mealLike = {
+                            id: fav.id,
+                            userId: user?.uid || 'me',
+                            name: fav.name,
+                            calories: fav.nutrition?.calories ?? 0,
+                            servingSize: fav.servingSize || '',
+                            servingsHad: 1,
+                            totalCarbs: fav.nutrition?.carbs,
+                            totalFat: fav.nutrition?.fat,
+                            protein: fav.nutrition?.protein,
+                            sodium: fav.nutrition?.sodium,
+                            sugars: fav.nutrition?.sugars,
+                            calcium: fav.nutrition?.calcium,
+                            iron: fav.nutrition?.iron,
+                            createdAt: fav.created_at || Date.now(),
+                            otherInfo: ''
+                          };
+                          setSelectedFavMeal(mealLike);
+                          setFavModalOpen(true);
+                        }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', padding: '1rem', background: 'rgba(26, 26, 46, 0.6)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', cursor: 'pointer' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <div style={{ fontSize: '1.6rem', width: '3rem', height: '3rem', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(139, 92, 246, 0.08)', borderRadius: '8px', border: '1px solid rgba(139,92,246,0.12)', flexShrink: 0 }}>
+                              {'🍽️'}
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{fav.name}</span>
+                              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                {fav.servingSize && <small style={{ color: '#94a3b8' }}>{fav.servingSize}</small>}
+                                {fav.nutrition && <small style={{ color: '#94a3b8' }}>{`${fav.nutrition.calories ?? '-'} cal • ${fav.nutrition.protein ?? '-'}g protein • ${fav.nutrition.carbs ?? '-'}g carbs • ${fav.nutrition.fat ?? '-'}g fat`}</small>}
+                              </div>
+                            </div>
                           </div>
-                          <button onClick={() => handleRemoveFavorite(fav)} style={{ color: '#f87171', background: 'transparent', border: 'none' }}>Remove</button>
+                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            <button onClick={(e) => { e.stopPropagation(); handleRemoveFavorite(fav); }} className="remove-favorite-button">Remove</button>
+                          </div>
                         </div>
                       ))}
+                      <MealDetailsModal
+                        isOpen={favModalOpen}
+                        onClose={() => setFavModalOpen(false)}
+                        meal={selectedFavMeal}
+                        onSaveExternal={async (mealId, updates) => {
+                          if (!user || !mealId) throw new Error('User not found');
+                          // Map meal updates to favorite structure
+                          const partial: any = {};
+                          if (updates.name !== undefined) partial.name = updates.name;
+                          if (updates.servingSize !== undefined) partial.servingSize = updates.servingSize;
+                          // Map nutrition fields: calories, protein, totalCarbs -> carbs, totalFat -> fat, sodium, sugars, calcium, iron
+                          partial.nutrition = {};
+                          if (updates.calories !== undefined) partial.nutrition.calories = updates.calories;
+                          if (updates.protein !== undefined) partial.nutrition.protein = updates.protein;
+                          if (updates.totalCarbs !== undefined) partial.nutrition.carbs = updates.totalCarbs;
+                          if (updates.totalFat !== undefined) partial.nutrition.fat = updates.totalFat;
+                          if (updates.sodium !== undefined) partial.nutrition.sodium = updates.sodium;
+                          if (updates.sugars !== undefined) partial.nutrition.sugars = updates.sugars;
+                          if (updates.calcium !== undefined) partial.nutrition.calcium = updates.calcium;
+                          if (updates.iron !== undefined) partial.nutrition.iron = updates.iron;
+
+                          // Persist update to user's favorites
+                          const updated = await updateFavoriteForUser(user.uid, mealId, partial);
+                          // Update local UI state
+                          setFavorites(updated as any);
+                          setFavModalOpen(false);
+                        }}
+                      />
                     </div>
                   ) : (
                     <p style={{ margin: 0, color: '#94a3b8' }}>No favorite meals yet. Add one above.</p>
