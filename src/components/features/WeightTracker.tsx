@@ -326,22 +326,32 @@ export const WeightTracker: React.FC = () => {
     setEditDate(entry.date);
   };
 
+  // Standardized weight validation helper
+  function validateWeightInput(value: string, unit: string): string | null {
+    const val = parseFloat(value);
+    if (isNaN(val)) {
+      return 'Enter a valid weight';
+    }
+    const minAllowed = 1;
+    const maxAllowed = unit === 'kg' ? 700 : 1500;
+    if (val < minAllowed || val > maxAllowed) {
+      return `Enter a weight between ${minAllowed} and ${maxAllowed} ${unit}`;
+    }
+    return null;
+  }
+
   const handleSaveEdit = async () => {
     if (!editingEntry) return;
-    const val = parseFloat(editWeight);
-    if (isNaN(val)) {
-      setError('Enter a valid weight');
+    const validationError = validateWeightInput(editWeight, unit);
+    if (validationError) {
+      setError(validationError);
       return;
     }
+    const val = parseFloat(editWeight);
     // Prevent future dates
     const todayStr = new Date().toISOString().split('T')[0];
     if (editDate > todayStr) {
       setError('Cannot update weight for a future date');
-      return;
-    }
-    const maxAllowed = unit === 'kg' ? 700 : 1500;
-    if (val < 1 || val > maxAllowed) {
-      setError(`Enter a weight between 1 and ${maxAllowed}`);
       return;
     }
     const lbsRaw = unit === 'kg' ? val * 2.20462 : val;
