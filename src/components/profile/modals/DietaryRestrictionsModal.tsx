@@ -1,5 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import type { User } from 'firebase/auth';
+import { doc, updateDoc, setDoc, getDoc } from 'firebase/firestore';
+import { resolveFirebase } from '../../../lib/resolveFirebase';
+import Toast from '../../ui/Toast';
 import type { DietaryRestriction } from '../../../types/nutrition';
 import { DIETARY_RESTRICTIONS } from '../../../constants/nutrition';
 import { Tooltip } from '../../ui';
@@ -11,6 +15,8 @@ interface DietaryRestrictionsModalProps {
   loading: boolean;
   selectedRestrictions: DietaryRestriction[];
   onRestrictionChange: (restriction: DietaryRestriction) => void;
+  onPersisted?: (saved: { dietary_restrictions?: DietaryRestriction[] }) => void;
+  user?: User;
 }
 
 const DietaryRestrictionsModal: React.FC<DietaryRestrictionsModalProps> = ({
@@ -20,7 +26,75 @@ const DietaryRestrictionsModal: React.FC<DietaryRestrictionsModalProps> = ({
   loading,
   selectedRestrictions,
   onRestrictionChange
+  , onPersisted, user
 }) => {
+  const [localLoading, setLocalLoading] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
+  const [showToast, setShowToast] = useState(false);
+
+  const showLocalToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+  };
+
+  const handleSaveInternal = async () => {
+    if (!user) return onSave();
+    setLocalLoading(true);
+    try {
+      console.groupCollapsed('DietaryRestrictionsModal: save start');
+      console.log('userUid:', user.uid);
+      console.log('selectedRestrictions:', selectedRestrictions);
+      const { db } = await resolveFirebase();
+      const userRef = doc(db, 'users', user.uid);
+
+      // Read existing document and merge dietary restrictions under nutrition_goals.preferences
+      const beforeSnap = await getDoc(userRef);
+      const current = beforeSnap.exists() ? (beforeSnap.data() as any) : {};
+      const currentNutritionGoals = current.nutrition_goals || {};
+
+      const updatedGoals = {
+        ...currentNutritionGoals,
+        preferences: {
+          ...(currentNutritionGoals.preferences || {}),
+          dietary_restrictions: selectedRestrictions
+        }
+      };
+
+      try {
+        await updateDoc(userRef, {
+          nutrition_goals: updatedGoals,
+          updated_at: new Date()
+        });
+      } catch (err) {
+        await setDoc(userRef, {
+          nutrition_goals: updatedGoals,
+          updated_at: new Date()
+        }, { merge: true });
+      }
+
+      const snap = await getDoc(userRef);
+      const data = snap.exists() ? (snap.data() as any) : null;
+      const savedRestrictions = data?.nutrition_goals?.preferences?.dietary_restrictions ?? null;
+
+      if (Array.isArray(savedRestrictions) && JSON.stringify(savedRestrictions) === JSON.stringify(selectedRestrictions)) {
+        showLocalToast('Dietary restrictions saved', 'success');
+        if (onPersisted) onPersisted({ dietary_restrictions: savedRestrictions });
+        // Let parent close modal after it updates local state to avoid races
+        try { document.body.style.overflow = ''; } catch (e) {}
+      } else {
+        showLocalToast('Save verification failed — please try again', 'error');
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('DietaryRestrictionsModal: save failed', err);
+      showLocalToast('Failed to save restrictions', 'error');
+    } finally {
+      setLocalLoading(false);
+      try { console.groupEnd(); } catch (e) {}
+    }
+  };
   // Handle ESC key to close modal and body scroll management
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -149,6 +223,13 @@ const DietaryRestrictionsModal: React.FC<DietaryRestrictionsModalProps> = ({
           className="modal-body"
           style={{ padding: '2rem' }}
         >
+          {/* Local toast for modal-level messages */}
+          <Toast
+            message={toastMessage || ''}
+            type={toastType}
+            isVisible={showToast}
+            onClose={() => setShowToast(false)}
+          />
           <div className="dietary-restrictions-editor">
             <div className="section-header-with-tooltip">
               <h3 style={{
@@ -314,9 +395,9 @@ const DietaryRestrictionsModal: React.FC<DietaryRestrictionsModalProps> = ({
             Cancel
           </button>
           <button 
-            onClick={onSave} 
+            onClick={handleSaveInternal} 
             className="save-section-button"
-            disabled={loading}
+            disabled={localLoading || loading}
             style={{
               background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
               color: 'white',

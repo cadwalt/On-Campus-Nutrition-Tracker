@@ -1,5 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import type { User } from 'firebase/auth';
+import { doc, updateDoc, setDoc, getDoc } from 'firebase/firestore';
+import { resolveFirebase } from '../../../lib/resolveFirebase';
+import Toast from '../../ui/Toast';
 import { Tooltip } from '../../ui';
 
 interface AllergensModalProps {
@@ -9,6 +13,8 @@ interface AllergensModalProps {
   loading: boolean;
   selectedAllergens: string[];
   onAllergenChange: (allergen: string) => void;
+  onPersisted?: (saved: { allergens?: string[] }) => void;
+  user?: User;
 }
 
 const AllergensModal: React.FC<AllergensModalProps> = ({
@@ -18,7 +24,53 @@ const AllergensModal: React.FC<AllergensModalProps> = ({
   loading,
   selectedAllergens,
   onAllergenChange
+  , onPersisted, user
 }) => {
+  const [localLoading, setLocalLoading] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
+  const [showToast, setShowToast] = useState(false);
+
+  const showLocalToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+  };
+
+  const handleSaveInternal = async () => {
+    if (!user) return onSave();
+    setLocalLoading(true);
+    try {
+      console.groupCollapsed('AllergensModal: save start');
+      console.log('userUid:', user.uid);
+      console.log('selectedAllergens:', selectedAllergens);
+      const { db } = await resolveFirebase();
+      const userRef = doc(db, 'users', user.uid);
+      const payload = { allergens: selectedAllergens, updated_at: new Date() };
+      try {
+        await updateDoc(userRef, payload);
+      } catch (err) {
+        await setDoc(userRef, payload, { merge: true });
+      }
+      const snap = await getDoc(userRef);
+      const data = snap.exists() ? snap.data() : null;
+      if (data && Array.isArray(data.allergens) && JSON.stringify(data.allergens) === JSON.stringify(selectedAllergens)) {
+        showLocalToast('Allergens saved', 'success');
+        if (onPersisted) onPersisted({ allergens: selectedAllergens });
+        // Let parent close modal after it updates its state to avoid races
+        try { document.body.style.overflow = ''; } catch (e) {}
+      } else {
+        showLocalToast('Save verification failed — please try again', 'error');
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('AllergensModal: save failed', err);
+      showLocalToast('Failed to save allergens', 'error');
+    } finally {
+      setLocalLoading(false);
+      try { console.groupEnd(); } catch (e) {}
+    }
+  };
   // Handle ESC key to close modal and body scroll management
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -160,6 +212,13 @@ const AllergensModal: React.FC<AllergensModalProps> = ({
           className="modal-body"
           style={{ padding: '2rem' }}
         >
+          {/* Local toast for modal-level messages */}
+          <Toast
+            message={toastMessage || ''}
+            type={toastType}
+            isVisible={showToast}
+            onClose={() => setShowToast(false)}
+          />
           <div className="allergens-editor">
             <div className="section-header-with-tooltip">
               <h3 style={{
@@ -322,9 +381,9 @@ const AllergensModal: React.FC<AllergensModalProps> = ({
             Cancel
           </button>
           <button 
-            onClick={onSave} 
+            onClick={handleSaveInternal} 
             className="save-section-button"
-            disabled={loading}
+            disabled={localLoading || loading}
             style={{
               background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
               color: 'white',

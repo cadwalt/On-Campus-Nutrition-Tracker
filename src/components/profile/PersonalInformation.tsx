@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+// Lazy-load cropper to avoid increasing initial bundle size
+const CropperLazy = React.lazy(() => import('../ui/ImageCropper'));
 
 const resolveFirebase = async () => {
   const mod: any = await import('../../firebase');
@@ -23,10 +25,14 @@ const PersonalInformation: React.FC<PersonalInformationProps> = ({ user, onSucce
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Load existing profile picture on component mount
+  // Note: this uses a local dynamic resolver to avoid importing the
+  // Firebase SDK at module-evaluation time. Firestore calls are made
+  // only when this component mounts and a user is present.
   useEffect(() => {
     const loadProfilePicture = async () => {
       try {
@@ -101,19 +107,25 @@ const PersonalInformation: React.FC<PersonalInformationProps> = ({ user, onSucce
       return;
     }
 
-    setIsUploading(true);
+    // Instead of immediately converting/uploading, open the cropper
+    // with an object URL for the chosen file. The cropper will return
+    // the final base64 which we then upload.
+    const objUrl = URL.createObjectURL(file);
+    setCropSrc(objUrl);
+    // keep the file input value so user can re-open same file if cancelled
+  };
 
+  // Called when cropper completes and returns a base64 image
+  const handleCropped = async (base64String: string) => {
+    setCropSrc(null);
+    setIsUploading(true);
     try {
-      // Convert image to base64
-      const base64String = await convertToBase64(file);
-      
-      // Update Firebase Auth profile with a placeholder (photoURL has length limits)
+      // Update Firebase Auth profile with a stable placeholder
       const { firestore, firebaseAuth } = await resolveFirebase();
       await firebaseAuth.updateProfile(user, {
         photoURL: `https://via.placeholder.com/150/667eea/ffffff?text=${user.displayName?.charAt(0) || 'U'}`
       });
 
-      // Update Firestore document with base64 image
       const { db } = await resolveFirebase();
       const userDocRef = firestore.doc(db, 'users', user.uid);
       await firestore.updateDoc(userDocRef, {
@@ -128,11 +140,15 @@ const PersonalInformation: React.FC<PersonalInformationProps> = ({ user, onSucce
       onError(error.message || 'Failed to upload profile picture');
     } finally {
       setIsUploading(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  const handleCropCancel = () => {
+    // revoke object URL if set and clear state
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropSrc(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const convertToBase64 = (file: File): Promise<string> => {
@@ -325,6 +341,12 @@ const PersonalInformation: React.FC<PersonalInformationProps> = ({ user, onSucce
         onChange={handleFileChange}
         style={{ display: 'none' }}
       />
+      {cropSrc && (
+        // Lazy-load ImageCropper to avoid bundling the library in the initial chunk
+        <React.Suspense fallback={<div>Loading cropper…</div>}>
+          <CropperLazy imageSrc={cropSrc} onCancel={handleCropCancel} onComplete={handleCropped} />
+        </React.Suspense>
+      )}
     </div>
   );
 };

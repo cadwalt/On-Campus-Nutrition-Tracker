@@ -106,11 +106,10 @@ const MealTrackerPage: React.FC = () => {
 
   // Overview Tab Content
   const OverviewTab = () => (
-    <div className="dashboard-grid">
-      <div className="dashboard-left">
-        <TodaySummaryCard />
-        
-        <div className="card" style={{ marginBottom: '1.5rem' }}>
+    <div className="overview-content">
+      <TodaySummaryCard />
+
+      <div className="card" style={{ marginBottom: '1.5rem' }}>
           <h2>Add a Meal</h2>
           <p style={{ color: 'var(--muted, #9aa7bf)', marginTop: 6 }}>
             Provide nutrition facts for a meal you ate. Required fields are marked with an asterisk (*).
@@ -305,7 +304,7 @@ const MealTrackerPage: React.FC = () => {
             )}
           </div>
 
-          <div style={{ marginTop: 12 }}>
+          <div className="meals-list-wrapper" style={{ marginTop: 12 }}>
             <YourMealsList 
               dateRange={dateRange}
               sortBy={sortBy}
@@ -314,7 +313,6 @@ const MealTrackerPage: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
   );
 
   // OU Restaurants Tab State
@@ -522,10 +520,12 @@ const MealTrackerPage: React.FC = () => {
               activeTab={activeTab} 
               onTabChange={(tabId) => setActiveTab(tabId as TabType)} 
             />
-            
-            {activeTab === 'overview' && <OverviewTab />}
-            {activeTab === 'restaurants' && <RestaurantsTab />}
-            {activeTab === 'planning' && <PlanningTab />}
+
+            <div className="tabs-content">
+              {activeTab === 'overview' && <OverviewTab />}
+              {activeTab === 'restaurants' && <RestaurantsTab />}
+              {activeTab === 'planning' && <PlanningTab />}
+            </div>
           </div>
         </div>
       </main>
