@@ -429,6 +429,8 @@ const NutritionGoalsSection: React.FC<NutritionGoalsSectionProps> = ({
           onCarbsChange={handleCarbsChange}
           onFatChange={handleFatChange}
           onResetToRecommended={handleResetToRecommended}
+          // pass null when there are no goals so the modal prop type is satisfied
+          initialValues={nutritionGoals ?? null}
           onPersisted={handlePersistedGoals}
           user={user}
         />
