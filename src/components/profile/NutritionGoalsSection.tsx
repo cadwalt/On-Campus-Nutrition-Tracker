@@ -364,6 +364,13 @@ const NutritionGoalsSection: React.FC<NutritionGoalsSectionProps> = ({
         // produce "removeChild" NotFoundError and an empty root.
         document.body.style.overflow = '';
         console.log('Post-save cleanup: restored body overflow only');
+        // Merge persisted state into local state and notify user.
+        document.body.style.overflow = '';
+        // Notify parent UI of success so it can show a toast.
+        try { onSuccess('Nutrition goals saved successfully!'); } catch (e) { /* non-fatal */ }
+        // Close the modal (consistent with other sections)
+        setIsEditing(false);
+        console.log('Post-save cleanup: restored body overflow and closed editor');
       } catch (cleanupErr) {
         console.warn('Post-save cleanup failed', cleanupErr);
       }
