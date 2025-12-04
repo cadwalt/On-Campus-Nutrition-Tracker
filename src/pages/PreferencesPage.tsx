@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import type { User } from 'firebase/auth';
 // Resolve auth at runtime to avoid bundling firebase in initial chunk
 const resolveAuthClient = async () => {
@@ -14,11 +15,13 @@ import DietaryRestrictionsSection from '../components/profile/DietaryRestriction
 import MealPreferencesSection from '../components/profile/MealPreferencesSection';
 
 const PreferencesPage: React.FC = () => {
+  const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const [showToast, setShowToast] = useState(false);
+  const [openNutritionGoals, setOpenNutritionGoals] = useState(false);
 
   const showToastNotification = (message: string, type: 'success' | 'error') => {
     setToastMessage(message);
@@ -30,6 +33,13 @@ const PreferencesPage: React.FC = () => {
     setShowToast(false);
     setToastMessage(null);
   };
+
+  useEffect(() => {
+    // Check if we need to open nutrition goals modal from location state
+    if ((location.state as any)?.openNutritionGoals) {
+      setOpenNutritionGoals(true);
+    }
+  }, [location]);
 
   useEffect(() => {
     let unsub: (() => void) | null = null;
@@ -86,7 +96,8 @@ const PreferencesPage: React.FC = () => {
         />
 
         <NutritionGoalsSection 
-          user={user} 
+          user={user}
+          initialOpen={openNutritionGoals}
           onSuccess={(message) => showToastNotification(message, 'success')}
           onError={(message) => showToastNotification(message, 'error')}
         />
