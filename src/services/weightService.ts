@@ -14,7 +14,10 @@ const KG_TO_LB = 2.20462;
  */
 function normalizeWeightToLb(data: Record<string, unknown>): Record<string, unknown> {
   if (data.weightKg !== undefined && data.weightLb === undefined) {
-    data.weightLb = Math.round((Number(data.weightKg) * KG_TO_LB) * 10) / 10;
+    const weightKg = Number(data.weightKg);
+    if (!Number.isNaN(weightKg)) {
+      data.weightLb = Math.round((weightKg * KG_TO_LB) * 10) / 10;
+    }
     delete data.weightKg;
   }
   return data;
