@@ -359,11 +359,6 @@ const NutritionGoalsSection: React.FC<NutritionGoalsSectionProps> = ({
       await refreshUserDoc();
 
       try {
-        // Only restore page scrolling. Do NOT remove DOM nodes that React manages —
-        // removing nodes can cause React to attempt to delete the same nodes and
-        // produce "removeChild" NotFoundError and an empty root.
-        document.body.style.overflow = '';
-        console.log('Post-save cleanup: restored body overflow only');
         // Merge persisted state into local state and notify user.
         document.body.style.overflow = '';
         // Notify parent UI of success so it can show a toast.
