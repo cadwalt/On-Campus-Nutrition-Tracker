@@ -22,6 +22,7 @@ export const WeightTracker: React.FC = () => {
 
   const [busy, setBusy] = useState(false);
   const [targetLbs, setTargetLbs] = useState<number | null>(null);
+  const [primaryGoal, setPrimaryGoal] = useState<'lose_weight' | 'gain_weight' | null>(null);
   const [range, setRange] = useState<'week' | 'month' | 'year' | 'all'>('month');
   const [editingEntry, setEditingEntry] = useState<WeightEntry | null>(null);
   const [editWeight, setEditWeight] = useState<string>('');
@@ -38,23 +39,41 @@ export const WeightTracker: React.FC = () => {
         unsubscribe = firebaseAuth.onAuthStateChanged(auth, async (user) => {
           if (!mounted) return;
           if (!user) {
+            console.log('WeightTracker: No user logged in');
             setTargetLbs(null);
+            setPrimaryGoal(null);
             return;
           }
+          console.log('WeightTracker: User logged in:', user.uid);
           try {
             const userDocRef = firestore.doc(db, 'users', user.uid);
             const snap = await firestore.getDoc(userDocRef);
             if (!mounted) return;
+            console.log('WeightTracker: Document exists?', snap.exists());
             if (snap.exists()) {
               const data = snap.data();
+              console.log('WeightTracker: Full document data:', data);
               const goals = data?.nutrition_goals;
+              console.log('WeightTracker: Fetched nutrition_goals:', goals);
               if (goals && typeof goals.target_weight === 'number') {
                 setTargetLbs(goals.target_weight);
+                console.log('WeightTracker: Set targetLbs to', goals.target_weight);
               }
+              if (goals && goals.primary_goal) {
+                const goal = goals.primary_goal;
+                console.log('WeightTracker: Found primary_goal:', goal);
+                if (goal === 'lose_weight' || goal === 'gain_weight') {
+                  setPrimaryGoal(goal);
+                  console.log('WeightTracker: Set primaryGoal to', goal);
+                }
+              } else {
+                console.log('WeightTracker: No primary_goal found in goals:', goals);
+              }
+            } else {
+              console.log('WeightTracker: User document does not exist');
             }
           } catch (err) {
-            // non-fatal: leave target as null
-            // console.error('Failed to load target weight', err);
+            console.error('Failed to load weight tracker preferences:', err);
           }
         });
       } catch (err) {
@@ -111,10 +130,21 @@ export const WeightTracker: React.FC = () => {
       toastTimer.current = window.setTimeout(() => setToast(null), 3000);
       
       // Check if goal was just reached
-      if (targetLbs !== null) {
-        const isWeightLoss = entries.length > 0 && lbs < entries[0].weightLb;
-        const goalReached = Math.abs(targetLbs - lbs) < 0.1 || (isWeightLoss ? lbs <= targetLbs : lbs >= targetLbs);
+      if (targetLbs !== null && primaryGoal !== null) {
+        console.log('WeightTracker: Checking goal - targetLbs:', targetLbs, 'primaryGoal:', primaryGoal, 'lbs:', lbs);
+        let goalReached = false;
+        
+        // Check if most recent entry meets the goal threshold
+        if (primaryGoal === 'lose_weight') {
+          goalReached = lbs <= targetLbs;
+          console.log('WeightTracker: Weight loss goal check - lbs:', lbs, '<= targetLbs:', targetLbs, '? goalReached:', goalReached);
+        } else if (primaryGoal === 'gain_weight') {
+          goalReached = lbs >= targetLbs;
+          console.log('WeightTracker: Weight gain goal check - lbs:', lbs, '>= targetLbs:', targetLbs, '? goalReached:', goalReached);
+        }
+        
         if (goalReached) {
+          console.log('WeightTracker: Goal reached! Setting showCongrats to true');
           // Only show congrats if this entry is the most recent
           const allDates = [...entries.map(e => e.date), formattedDate];
           const latestDate = allDates.reduce((a, b) => a > b ? a : b);
@@ -122,6 +152,8 @@ export const WeightTracker: React.FC = () => {
             setTimeout(() => setShowCongrats(true), 500);
           }
         }
+      } else {
+        console.log('WeightTracker: Goal check skipped - targetLbs:', targetLbs, 'primaryGoal:', primaryGoal);
       }
     } finally {
       setBusy(false);
@@ -138,14 +170,15 @@ export const WeightTracker: React.FC = () => {
   const allSorted = [...entries].sort((a, b) => (a.date < b.date ? -1 : 1));
   
   // For week/month views: use the selected date from the input box as the reference point
-  // For year/all views: use the current date as the reference point
+  // For week/month/year views: use the selected date from the input box as the reference point
+  // For all view: use the current date as the reference point
   // Parse the date string as local time (YYYY-MM-DD format) to avoid UTC timezone issues
   const parseLocalDate = (dateStr: string) => {
     const [year, month, day] = dateStr.split('-').map(Number);
     return new Date(year, month - 1, day);
   };
   
-  const referenceDate = (range === 'week' || range === 'month') ? parseLocalDate(date) : new Date();
+  const referenceDate = (range === 'week' || range === 'month' || range === 'year') ? parseLocalDate(date) : new Date();
   
   let start = new Date();
   let end = new Date(referenceDate);
@@ -184,10 +217,12 @@ export const WeightTracker: React.FC = () => {
   // For chart: aggregate entries by month for year view and by year for all-time view
   const chartEntries = (() => {
     if (range === 'year') {
-      // Aggregate by month for year view
+      // Only include entries from the selected year
+      const selectedYear = new Date(date + 'T00:00:00').getFullYear();
       const byMonth = new Map<string, number[]>();
       filteredEntries.forEach((e) => {
         const d = new Date(e.date);
+        if (d.getFullYear() !== selectedYear) return;
         const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         if (!byMonth.has(monthKey)) byMonth.set(monthKey, []);
         byMonth.get(monthKey)!.push(e.weightLb);
@@ -226,17 +261,19 @@ export const WeightTracker: React.FC = () => {
 
   const tableRows: TableRow[] = (() => {
     if (range === 'year') {
-      // Group by month-year, compute average for each month
+      // Only include entries from the selected year
+      const selectedYear = new Date(date + 'T00:00:00').getFullYear();
       const byMonth = new Map<string, number[]>();
       filteredEntries.forEach((e) => {
         const d = new Date(e.date);
+        if (d.getFullYear() !== selectedYear) return;
         const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         if (!byMonth.has(monthKey)) byMonth.set(monthKey, []);
         byMonth.get(monthKey)!.push(e.weightLb);
       });
-      // Sort by month and create rows
+      // Sort by month descending (most recent first)
       return Array.from(byMonth.entries())
-        .sort((a, b) => a[0].localeCompare(b[0]))
+        .sort((a, b) => b[0].localeCompare(a[0]))
         .map(([monthKey, weights]) => {
           const avg = Math.round((weights.reduce((s, w) => s + w, 0) / weights.length) * 10) / 10;
           const [year, month] = monthKey.split('-');
@@ -257,9 +294,9 @@ export const WeightTracker: React.FC = () => {
         if (!byYear.has(year)) byYear.set(year, []);
         byYear.get(year)!.push(e.weightLb);
       });
-      // Sort by year and create rows
+      // Sort by year descending (most recent first)
       return Array.from(byYear.entries())
-        .sort((a, b) => a[0].localeCompare(b[0]))
+        .sort((a, b) => b[0].localeCompare(a[0]))
         .map(([year, weights]) => {
           const avg = Math.round((weights.reduce((s, w) => s + w, 0) / weights.length) * 10) / 10;
           return {
@@ -270,28 +307,33 @@ export const WeightTracker: React.FC = () => {
           };
         });
     } else {
-      // Detail view: week and month show individual entries
-      return filteredEntries.map((e) => ({
-        label: '',
-        date: e.date,
-        weightLb: e.weightLb,
-        isAggregated: false,
-      }));
+      // Detail view: week and month show individual entries (most recent first)
+      return filteredEntries
+        .slice()
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .map((e) => ({
+          label: '',
+          date: e.date,
+          weightLb: e.weightLb,
+          isAggregated: false,
+        }));
     }
   })();
 
   // compute average weight for the currently selected period (filteredEntries)
-  const averageWeightLb: number | null = filteredEntries.length === 0
-    ? null
+  const averageWeightLb: number = filteredEntries.length === 0
+    ? 0
     : Math.round((filteredEntries.reduce((s, it) => s + it.weightLb, 0) / filteredEntries.length) * 10) / 10;
 
   // convert average to display unit
-  const averageWeightDisplay = averageWeightLb != null
+  const averageWeightDisplay = averageWeightLb !== 0
     ? (unit === 'kg' ? Math.round((averageWeightLb / 2.20462) * 10) / 10 : averageWeightLb)
-    : null;
+    : 0;
 
   const targetMessage = (() => {
-    if (!targetLbs) return null;
+    if (!targetLbs) {
+      return null;
+    }
     if (entries && entries.length > 0) {
       const latest = entries[entries.length - 1];
       const latestLbs = latest ? latest.weightLb : null;
@@ -301,19 +343,25 @@ export const WeightTracker: React.FC = () => {
       const diffDisplay = unit === 'kg' ? Math.round((diff / 2.20462) * 10) / 10 : diff;
       const unitLabel = unit === 'kg' ? 'kg' : 'lbs';
       
-      // Goal is reached if current weight equals target OR has passed it
-      // For weight loss: latestLbs <= targetLbs (weight is at or below target)
-      // For weight gain: latestLbs >= targetLbs (weight is at or above target)
-      // We determine direction by checking all entries: if latest is below first entry, it's weight loss
-      const isWeightLoss = entries.length > 0 && latestLbs < entries[0].weightLb;
-      const goalReached = Math.abs(diff) < 0.1 || (isWeightLoss ? latestLbs <= targetLbs : latestLbs >= targetLbs);
+      // Goal is reached if latest entry meets the threshold based on primaryGoal
+      let goalReached = false;
+      if (primaryGoal === 'lose_weight') {
+        goalReached = latestLbs <= targetLbs;
+      } else if (primaryGoal === 'gain_weight') {
+        goalReached = latestLbs >= targetLbs;
+      }
       
       if (goalReached) {
         return <span style={{ color: '#22c55e', fontWeight: 700 }}>Great Job! Target Reached!</span>;
       }
       
-      if (diff > 0) return `${Math.abs(diffDisplay)} ${unitLabel} to reach target`;
-      return `${Math.abs(diffDisplay)} ${unitLabel} to lose to reach target`;
+      // Show remaining distance based on goal direction
+      if (primaryGoal === 'lose_weight') {
+        return `${Math.abs(diffDisplay)} ${unitLabel} to lose to reach target`;
+      } else if (primaryGoal === 'gain_weight') {
+        return `${Math.abs(diffDisplay)} ${unitLabel} to gain to reach target`;
+      }
+      return `${Math.abs(diffDisplay)} ${unitLabel} to reach target`;
     }
     const targetDisplay = unit === 'kg' ? Math.round((targetLbs / 2.20462) * 10) / 10 : targetLbs;
     const unitLabel = unit === 'kg' ? 'kg' : 'lbs';
@@ -364,13 +412,17 @@ export const WeightTracker: React.FC = () => {
       setEditWeight('');
       setEditDate('');
       setError(null);
-      setToast('Weight updated');
+      setToast('Weight Updated');
       if (toastTimer.current) window.clearTimeout(toastTimer.current);
       toastTimer.current = window.setTimeout(() => setToast(null), 3000);
       // Check if goal was just reached and this is the most recent entry
-      if (targetLbs !== null) {
-        const isWeightLoss = entries.length > 0 && lbs < entries[0].weightLb;
-        const goalReached = Math.abs(targetLbs - lbs) < 0.1 || (isWeightLoss ? lbs <= targetLbs : lbs >= targetLbs);
+      if (targetLbs !== null && primaryGoal !== null) {
+        let goalReached = false;
+        if (primaryGoal === 'lose_weight') {
+          goalReached = lbs <= targetLbs;
+        } else if (primaryGoal === 'gain_weight') {
+          goalReached = lbs >= targetLbs;
+        }
         const allDates = [...entries.map(e => e.date), editDate];
         const latestDate = allDates.reduce((a, b) => a > b ? a : b);
         if (goalReached && editDate === latestDate) {
@@ -438,8 +490,6 @@ export const WeightTracker: React.FC = () => {
           {/* Chart card */}
           {loading ? (
             <div className="card">Loading...</div>
-          ) : entries.length === 0 ? (
-            <div className="card">No entries yet</div>
           ) : (
             <>
               <div className="card">
@@ -477,8 +527,14 @@ export const WeightTracker: React.FC = () => {
                 })()}
 
                 {/* Chart */}
-                {filteredEntries.length === 0 ? (
-                  <div>No entries in this range</div>
+                {entries.length === 0 ? (
+                  <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af' }}>
+                    No entries yet - add your first weight to see the chart
+                  </div>
+                ) : filteredEntries.length === 0 ? (
+                  <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af' }}>
+                    No entries in this range
+                  </div>
                 ) : (
                   <WeightChart entries={chartEntries} height={220} range={range} unit={unit} targetWeight={targetLbs} />
                 )}
@@ -561,47 +617,55 @@ export const WeightTracker: React.FC = () => {
                 {error ? <div role="alert" style={{ color: 'crimson', marginTop: 6 }}>{error}</div> : null}
               </div>
 
-              {/* Data table card */}
-              {filteredEntries.length > 0 && (
-                <div className="card">
-                  <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                    <thead>
-                      <tr>
-                        <th style={{ textAlign: "left", paddingBottom: 8, width: '50%' }}>
-                          {range === 'year' ? 'Month' : range === 'all' ? 'Year' : range === 'month' ? (() => { const d = new Date(date + 'T00:00:00'); return d.toLocaleString('default', { month: 'long', year: 'numeric' }); })() : range === 'week' ? (() => { const startMonth = start.toLocaleString('default', { month: 'short' }); const startDay = start.getDate(); const endMonth = end.toLocaleString('default', { month: 'short' }); const endDay = end.getDate(); const year = end.getFullYear(); return startMonth === endMonth ? `${startMonth} ${startDay} - ${endDay}, ${year}` : `${startMonth} ${startDay} - ${endMonth} ${endDay}, ${year}`; })() : 'Date'}
-                        </th>
-                        <th style={{ textAlign: "left", paddingBottom: 8, width: '50%' }}>
-                          Weight ({unit}){range === 'year' || range === 'all' ? ' (avg)' : ''}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tableRows.map((row, idx) => {
-                        const displayWeight = unit === 'kg' ? Math.round((row.weightLb / 2.20462) * 10) / 10 : row.weightLb;
-                        const isClickable = !row.isAggregated;
-                        const entry = filteredEntries.find((e) => e.date === row.date && e.weightLb === row.weightLb);
-                        return (
-                          <tr
-                            key={idx}
-                            onClick={() => isClickable && entry && handleEditEntry(entry)}
-                            style={{
-                              borderTop: '1px solid rgba(255,255,255,0.1)',
-                              cursor: isClickable ? 'pointer' : 'default',
-                              transition: 'background-color 0.2s',
-                              opacity: row.isAggregated ? 0.7 : 1,
-                            }}
-                            onMouseEnter={(ev) => isClickable && (ev.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)')}
-                            onMouseLeave={(ev) => (ev.currentTarget.style.backgroundColor = 'transparent')}
-                          >
-                            <td style={{ paddingTop: 8, paddingBottom: 8, width: '50%' }}>{row.label || (() => { const d = new Date(row.date + 'T00:00:00'); return d.toLocaleString('default', { weekday: 'short', month: 'short', day: 'numeric' }); })()}</td>
-                            <td style={{ paddingTop: 8, paddingBottom: 8, width: '50%' }}>{displayWeight.toFixed(1)}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+              {/* Data table card - always visible */}
+              <div className="card">
+                {entries.length === 0 ? (
+                  <div style={{ padding: '1rem', color: '#9ca3af', textAlign: 'center' }}>
+                    No weight entries yet - add your first entry above
+                  </div>
+                ) : range === 'year' && tableRows.length === 0 ? (
+                  <div style={{ padding: '1rem', color: '#9ca3af', textAlign: 'center' }}>
+                      No weight entries for this year.
+                    </div>
+                  ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                      <thead>
+                        <tr>
+                          <th style={{ textAlign: "left", paddingBottom: 8, width: '50%' }}>
+                            {range === 'year' ? (() => { const d = new Date(date + 'T00:00:00'); return d.getFullYear(); })() : range === 'all' ? 'Year' : range === 'month' ? (() => { const d = new Date(date + 'T00:00:00'); return d.toLocaleString('default', { month: 'long', year: 'numeric' }); })() : range === 'week' ? (() => { const startMonth = start.toLocaleString('default', { month: 'short' }); const startDay = start.getDate(); const endMonth = end.toLocaleString('default', { month: 'short' }); const endDay = end.getDate(); const year = end.getFullYear(); return startMonth === endMonth ? `${startMonth} ${startDay} - ${endDay}, ${year}` : `${startMonth} ${startDay} - ${endMonth} ${endDay}, ${year}`; })() : 'Date'}
+                          </th>
+                          <th style={{ textAlign: "left", paddingBottom: 8, width: '50%' }}>
+                            Weight ({unit}){range === 'year' || range === 'all' ? ' (avg)' : ''}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {tableRows.map((row, idx) => {
+                          const displayWeight = unit === 'kg' ? Math.round((row.weightLb / 2.20462) * 10) / 10 : row.weightLb;
+                          const isClickable = !row.isAggregated;
+                          const entry = filteredEntries.find((e) => e.date === row.date && e.weightLb === row.weightLb);
+                          return (
+                            <tr
+                              key={idx}
+                              onClick={() => isClickable && entry && handleEditEntry(entry)}
+                              style={{
+                                borderTop: '1px solid rgba(255,255,255,0.1)',
+                                cursor: isClickable ? 'pointer' : 'default',
+                                transition: 'background-color 0.2s',
+                                opacity: row.isAggregated ? 0.7 : 1,
+                              }}
+                              onMouseEnter={(ev) => isClickable && (ev.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)')}
+                              onMouseLeave={(ev) => (ev.currentTarget.style.backgroundColor = 'transparent')}
+                            >
+                              <td style={{ paddingTop: 8, paddingBottom: 8, width: '50%' }}>{row.label || (() => { const d = new Date(row.date + 'T00:00:00'); return d.toLocaleString('default', { weekday: 'short', month: 'short', day: 'numeric' }); })()}</td>
+                              <td style={{ paddingTop: 8, paddingBottom: 8, width: '50%' }}>{displayWeight.toFixed(1)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
-              )}
 
               {/* Edit Modal */}
               {editingEntry && (
@@ -729,9 +793,8 @@ export const WeightTracker: React.FC = () => {
               )}
             </>
           )}
-        </div>
 
-        {/* Congratulations Modal */}
+          {/* Congratulations Modal */}
         {showCongrats && (
           <div style={{
             position: 'fixed',
@@ -836,6 +899,7 @@ export const WeightTracker: React.FC = () => {
             </div>
           </div>
         )}
+        </div>
       </main>
     </div>
   );
