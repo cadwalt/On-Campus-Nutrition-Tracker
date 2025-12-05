@@ -111,12 +111,25 @@ export const WeightTracker: React.FC = () => {
       toastTimer.current = window.setTimeout(() => setToast(null), 3000);
       
       // Check if goal was just reached
+      // Note: entries hasn't been updated yet (React state is async), so we simulate
+      // the updated entries list to correctly determine weight loss direction and latest date
       if (targetLbs !== null) {
-        const isWeightLoss = entries.length > 0 && lbs < entries[0].weightLb;
+        let updatedEntries: WeightEntry[];
+        if (existingEntry) {
+          // Update scenario: replace the existing entry's weight
+          updatedEntries = entries.map(e => 
+            e.id === existingEntry.id ? { ...e, weightLb: lbs } : e
+          );
+        } else {
+          // Add scenario: append a new entry (id is placeholder since we only need date/weight)
+          updatedEntries = [...entries, { id: 'temp', date: formattedDate, weightLb: lbs }];
+        }
+        const sortedEntries = [...updatedEntries].sort((a, b) => (a.date < b.date ? -1 : 1));
+        const isWeightLoss = sortedEntries.length > 0 && lbs < sortedEntries[0].weightLb;
         const goalReached = Math.abs(targetLbs - lbs) < 0.1 || (isWeightLoss ? lbs <= targetLbs : lbs >= targetLbs);
         if (goalReached) {
           // Only show congrats if this entry is the most recent
-          const allDates = [...entries.map(e => e.date), formattedDate];
+          const allDates = sortedEntries.map(e => e.date);
           const latestDate = allDates.reduce((a, b) => a > b ? a : b);
           if (formattedDate === latestDate) {
             setTimeout(() => setShowCongrats(true), 500);
@@ -368,10 +381,15 @@ export const WeightTracker: React.FC = () => {
       if (toastTimer.current) window.clearTimeout(toastTimer.current);
       toastTimer.current = window.setTimeout(() => setToast(null), 3000);
       // Check if goal was just reached and this is the most recent entry
+      // Note: entries hasn't been updated yet (React state is async), so we simulate
+      // the updated entries list by removing the old entry and adding the new one
       if (targetLbs !== null) {
-        const isWeightLoss = entries.length > 0 && lbs < entries[0].weightLb;
+        const updatedEntries = entries.filter(e => e.id !== editingEntry.id);
+        updatedEntries.push({ id: editingEntry.id, date: editDate, weightLb: lbs });
+        const sortedEntries = [...updatedEntries].sort((a, b) => (a.date < b.date ? -1 : 1));
+        const isWeightLoss = sortedEntries.length > 0 && lbs < sortedEntries[0].weightLb;
         const goalReached = Math.abs(targetLbs - lbs) < 0.1 || (isWeightLoss ? lbs <= targetLbs : lbs >= targetLbs);
-        const allDates = [...entries.map(e => e.date), editDate];
+        const allDates = sortedEntries.map(e => e.date);
         const latestDate = allDates.reduce((a, b) => a > b ? a : b);
         if (goalReached && editDate === latestDate) {
           setTimeout(() => setShowCongrats(true), 500);
