@@ -4,6 +4,25 @@ import { getFirestoreClient, getAuthClient } from "../firebase";
 // Firestore collection name
 const COLLECTION = "weight";
 
+// Conversion factor from kg to lb
+const KG_TO_LB = 2.20462;
+
+/**
+ * Normalize weight data by converting weightKg to weightLb if needed.
+ * This handles legacy documents that may have used weightKg.
+ * Modifies the object in place and returns it for convenience.
+ */
+function normalizeWeightToLb(data: Record<string, unknown>): Record<string, unknown> {
+  if (data.weightKg !== undefined && data.weightLb === undefined) {
+    const weightKg = Number(data.weightKg);
+    if (!Number.isNaN(weightKg)) {
+      data.weightLb = Math.round((weightKg * KG_TO_LB) * 10) / 10;
+    }
+    delete data.weightKg;
+  }
+  return data;
+}
+
 async function getOwnerUid(): Promise<string> {
   try {
     const auth = await getAuthClient();
@@ -55,12 +74,7 @@ export async function getWeightEntries(ownerUid?: string): Promise<WeightEntry[]
   const [snapOwner, snapUser] = await Promise.all([getDocs(qOwner), getDocs(qUser)]);
   const map = new Map<string, any>();
   const pushDoc = (d: any) => {
-    const data = d.data();
-    // Normalize older documents that may have weightKg
-    if (data.weightKg !== undefined && data.weightLb === undefined) {
-      data.weightLb = Math.round((data.weightKg * 2.20462) * 10) / 10;
-      delete data.weightKg;
-    }
+    const data = normalizeWeightToLb(d.data());
     if (!map.has(d.id)) map.set(d.id, { id: d.id, ...data });
   };
 
@@ -78,12 +92,7 @@ export async function addWeightEntry(entry: Omit<WeightEntry, "id">): Promise<We
   const owner = await getOwnerUid();
   const col = collection(db, COLLECTION);
   // Persist both `owner` (used by existing queries) and `userID` (explicit field requested)
-  const payload = { ...entry, owner, userID: owner } as any;
-  // If incoming entry uses weightKg (older entries), convert to weightLb for consistency.
-  if ((payload as any).weightKg !== undefined && (payload as any).weightLb === undefined) {
-    payload.weightLb = Math.round(((payload as any).weightKg * 2.20462) * 10) / 10;
-    delete payload.weightKg;
-  }
+  const payload = normalizeWeightToLb({ ...entry, owner, userID: owner } as any);
   const docRef = await addDoc(col, payload);
   return { id: docRef.id, ...entry } as WeightEntry;
 }
@@ -131,11 +140,7 @@ export async function subscribeToWeightEntries(callback: (items: WeightEntry[]) 
   const emit = () => {
     const map = new Map<string, any>();
     const push = (d: any) => {
-      const data = d.data();
-      if (data.weightKg !== undefined && data.weightLb === undefined) {
-        data.weightLb = Math.round((data.weightKg * 2.20462) * 10) / 10;
-        delete data.weightKg;
-      }
+      const data = normalizeWeightToLb(d.data());
       if (!map.has(d.id)) map.set(d.id, { id: d.id, ...data });
     };
     ownerDocs.forEach(push);
@@ -177,11 +182,7 @@ export async function batchAddWeightEntries(entries: Omit<WeightEntry, 'id'>[]) 
   const batch = writeBatch(db);
   for (const entry of entries) {
     const dref = doc(col);
-    const payload: any = { ...entry, owner, userID: owner };
-    if (payload.weightKg !== undefined && payload.weightLb === undefined) {
-      payload.weightLb = Math.round((payload.weightKg * 2.20462) * 10) / 10;
-      delete payload.weightKg;
-    }
+    const payload = normalizeWeightToLb({ ...entry, owner, userID: owner } as any);
     batch.set(dref, payload);
   }
   await batch.commit();
