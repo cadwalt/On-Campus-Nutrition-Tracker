@@ -179,7 +179,6 @@ export const WeightChart: React.FC<Props> = ({ entries, height = 160, width, ran
     if (!el) return;
     try {
       const len = el.getTotalLength();
-      setPathLength(len);
       // Reset to hidden then animate to 0 offset
       el.style.transition = 'none';
       el.style.strokeDasharray = `${len} ${len}`;
