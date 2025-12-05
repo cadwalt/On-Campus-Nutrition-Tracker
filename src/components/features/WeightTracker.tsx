@@ -113,11 +113,11 @@ export const WeightTracker: React.FC = () => {
       // Check if goal was just reached
       if (targetLbs !== null) {
         // Determine weight direction by comparing against the oldest entry (first in sorted list)
-        // For the first entry, infer direction from target: if target < new weight, it's weight loss
+        // For the first entry, infer direction from target: if new weight > target, user is trying to lose weight
         const firstEntryWeight = entries.length > 0 ? entries[0].weightLb : lbs;
         const isWeightLoss = entries.length > 0 
           ? lbs < firstEntryWeight 
-          : lbs > targetLbs; // First entry: infer from target
+          : lbs > targetLbs; // First entry: above target = weight loss goal
         const goalReached = Math.abs(targetLbs - lbs) < 0.1 || (isWeightLoss ? lbs <= targetLbs : lbs >= targetLbs);
         if (goalReached) {
           // Only show congrats if this entry is the most recent
@@ -375,11 +375,11 @@ export const WeightTracker: React.FC = () => {
       // Check if goal was just reached and this is the most recent entry
       if (targetLbs !== null) {
         // Determine weight direction by comparing against the oldest entry (first in sorted list)
-        // For the first entry, infer direction from target: if target < new weight, it's weight loss
+        // For the first entry, infer direction from target: if new weight > target, user is trying to lose weight
         const firstEntryWeight = entries.length > 0 ? entries[0].weightLb : lbs;
         const isWeightLoss = entries.length > 0 
           ? lbs < firstEntryWeight 
-          : lbs > targetLbs; // First entry: infer from target
+          : lbs > targetLbs; // First entry: above target = weight loss goal
         const goalReached = Math.abs(targetLbs - lbs) < 0.1 || (isWeightLoss ? lbs <= targetLbs : lbs >= targetLbs);
         const allDates = [...entries.map(e => e.date), editDate];
         const latestDate = allDates.reduce((a, b) => a > b ? a : b);
