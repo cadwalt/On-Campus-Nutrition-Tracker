@@ -374,14 +374,16 @@ export const WeightTracker: React.FC = () => {
       toastTimer.current = window.setTimeout(() => setToast(null), 3000);
       // Check if goal was just reached and this is the most recent entry
       if (targetLbs !== null) {
+        // Exclude the entry being edited to get the correct oldest entry reference
+        const otherEntries = entries.filter(e => e.id !== editingEntry.id);
         // Determine weight direction by comparing against the oldest entry (first in sorted list)
         // For the first entry, infer direction from target: if new weight > target, user is trying to lose weight
-        const firstEntryWeight = entries.length > 0 ? entries[0].weightLb : lbs;
-        const isWeightLoss = entries.length > 0 
+        const firstEntryWeight = otherEntries.length > 0 ? otherEntries[0].weightLb : lbs;
+        const isWeightLoss = otherEntries.length > 0 
           ? lbs < firstEntryWeight 
           : lbs > targetLbs; // First entry: above target = weight loss goal
         const goalReached = Math.abs(targetLbs - lbs) < 0.1 || (isWeightLoss ? lbs <= targetLbs : lbs >= targetLbs);
-        const allDates = [...entries.map(e => e.date), editDate];
+        const allDates = [...otherEntries.map(e => e.date), editDate];
         const latestDate = allDates.reduce((a, b) => a > b ? a : b);
         if (goalReached && editDate === latestDate) {
           setTimeout(() => setShowCongrats(true), 500);
