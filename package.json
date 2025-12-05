@@ -12,7 +12,6 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "dotenv": "^17.2.3",
     "react-easy-crop": "^4.6.0",
     "express": "^5.1.0",
     "file-type": "^21.1.1",
