@@ -55,7 +55,7 @@ describe('Unit Conversion Logic', () => {
 
   it('handles decimal input correctly', () => {
     expect(kgToLbs(70.5)).toBe(155.4);
-    expect(kgToLbs(80.3)).toBe(177.0); // 80.3 * 2.20462 = 177.011...
+    expect(kgToLbs(80.3)).toBe(177.0); // 80.3 * 2.20462 = 177.011... (rounded to 177.0)
   });
 
   it('round-trip conversion maintains reasonable accuracy', () => {
@@ -305,13 +305,14 @@ describe('Goal Detection Logic', () => {
 // Weight Entry CRUD Operation Tests
 // =====================================================
 
-// Mock data for CRUD tests
+// Mock data for CRUD tests - includes internal fields (owner, userID) 
+// that are stored in Firestore but not in the public WeightEntry type
 interface MockWeightEntry {
   id: string;
   date: string;
   weightLb: number;
-  owner: string;
-  userID: string;
+  owner: string;  // Internal field stored in Firestore for ownership filtering
+  userID: string; // Internal field stored in Firestore for legacy compatibility
 }
 
 // In-memory store for testing CRUD operations
@@ -605,7 +606,7 @@ describe('Average Weight Calculation', () => {
       { weightLb: 151 },
       { weightLb: 152 },
     ];
-    // Average: 453 / 3 = 151
+    // (150 + 151 + 152) / 3 = 151
     expect(calculateAverageWeight(entries)).toBe(151);
   });
 
@@ -614,7 +615,7 @@ describe('Average Weight Calculation', () => {
       { weightLb: 150.5 },
       { weightLb: 151.5 },
     ];
-    // Average: 302 / 2 = 151
+    // (150.5 + 151.5) / 2 = 151
     expect(calculateAverageWeight(entries)).toBe(151);
   });
 });
