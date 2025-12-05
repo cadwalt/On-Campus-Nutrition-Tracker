@@ -78,6 +78,10 @@ const GlobalSidebar: React.FC = () => {
             <span className="nav-icon"><DropletIcon size={20} /></span>
             <span className="nav-text">Water Intake</span>
           </Link>
+          <Link to="/weight" className={`nav-link ${location.pathname === '/weight' ? 'active' : ''}`}>
+            <span className="nav-icon"><ChartIcon size={20} /></span>
+            <span className="nav-text">Weight</span>
+          </Link>
           </nav>
    
         <Link to="/ai-assistant" className={`nav-link nav-link-nova ${location.pathname === '/ai-assistant' ? 'active' : ''}`}>
