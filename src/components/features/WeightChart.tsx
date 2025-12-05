@@ -111,7 +111,6 @@ export const WeightChart: React.FC<Props> = ({ entries, height = 160, width, ran
   
 
   const pathRef = useRef<SVGPathElement | null>(null);
-  const [pathLength, setPathLength] = useState(0);
 
   // Generate X ticks and labels depending on range. Use them to set domainStart/domainEnd so labels span full width.
   const ticks: { x: number; label: string }[] = [];
