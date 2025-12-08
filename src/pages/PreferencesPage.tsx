@@ -13,6 +13,7 @@ import AllergensSection from '../components/profile/AllergensSection';
 import NutritionGoalsSection from '../components/profile/NutritionGoalsSection';
 import DietaryRestrictionsSection from '../components/profile/DietaryRestrictionsSection';
 import MealPreferencesSection from '../components/profile/MealPreferencesSection';
+import FavoriteFoodsSection from '../components/profile/FavoriteFoodsSection';
 
 const PreferencesPage: React.FC = () => {
   const location = useLocation();
@@ -103,6 +104,12 @@ const PreferencesPage: React.FC = () => {
         />
 
         <MealPreferencesSection 
+          user={user} 
+          onSuccess={(message) => showToastNotification(message, 'success')}
+          onError={(message) => showToastNotification(message, 'error')}
+        />
+
+        <FavoriteFoodsSection 
           user={user} 
           onSuccess={(message) => showToastNotification(message, 'success')}
           onError={(message) => showToastNotification(message, 'error')}
