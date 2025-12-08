@@ -2589,8 +2589,10 @@ body::after {
   /* let the meal list grow inside the wrapper and scroll if content overflows */
   flex: 1 1 auto;
   min-height: 0;
-  max-height: none;
-  overflow: auto;
+  max-height: 500px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.5rem;
 }
 
 /* Tabs content wrapper: make the area below the tabs fill available space and scroll */
@@ -2626,6 +2628,7 @@ body::after {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow: visible;
 }
 
 @media (max-width: 720px) {
@@ -2639,12 +2642,14 @@ body::after {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  overflow: visible;
 }
 
 .meal-form .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 1rem;
+  overflow: visible;
 }
 
 .meal-form .form-field {

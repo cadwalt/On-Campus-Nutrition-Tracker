@@ -347,18 +347,6 @@ const YourMealsList: React.FC<YourMealsListProps> = ({
 
   return (
     <div className="meal-list">
-      {filteredMeals.length < meals.length && (
-        <div style={{ 
-          marginBottom: '1rem', 
-          padding: '0.75rem', 
-          background: 'rgba(99, 102, 241, 0.1)', 
-          borderRadius: '6px',
-          fontSize: '0.875rem',
-          color: 'var(--muted, #9aa7bf)'
-        }}>
-          Showing {filteredMeals.length} of {meals.length} meal{meals.length !== 1 ? 's' : ''}
-        </div>
-      )}
       {filteredMeals.map((m) => {
         const isFavorited = favorites.some((f) => f.id === `fav_meal_${m.id}` || (f.name || '').trim().toLowerCase() === (m.name || '').trim().toLowerCase());
         return (
