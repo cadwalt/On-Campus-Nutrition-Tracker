@@ -6770,3 +6770,258 @@ select { min-width: 0; }
   font-size: 0.75rem;
   font-weight: 600;
 }
+
+/* ========================================
+   MOBILE RESPONSIVE DESIGN
+   Desktop: ≥1024px (unchanged)
+   Tablet: 768px - 1023px
+   Mobile: ≤767px
+   ======================================== */
+
+/* Extra small devices (320px - 479px) - Phones */
+@media (max-width: 479px) {
+  :root {
+    /* Reduce blob sizes for smaller screens */
+    --blob1-size: 28;
+    --blob2-size: 22;
+    --blob1-blur: 48px;
+    --blob2-blur: 40px;
+  }
+
+  .app-container {
+    flex-direction: column;
+  }
+
+  .global-sidebar {
+    display: none;
+  }
+
+  .app-layout {
+    margin-left: 0;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .main-content {
+    margin: 0.75rem 0.5rem;
+    padding: 1rem;
+    min-height: calc(100vh - 100px);
+  }
+
+  /* Typography adjustments */
+  h1 {
+    font-size: 1.75rem;
+  }
+
+  h2 {
+    font-size: 1.4rem;
+  }
+
+  h3 {
+    font-size: 1.1rem;
+  }
+
+  /* Form grid to single column */
+  .form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem;
+  }
+
+  /* Water intake grid to single column */
+  .water-intake-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem;
+  }
+
+  /* Cards */
+  .card {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  /* Modals */
+  .modal-content {
+    width: 95vw;
+    max-height: 85vh;
+    padding: 1.25rem;
+  }
+
+  /* Buttons */
+  button {
+    padding: 0.65rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  /* Toast notifications */
+  .toast {
+    bottom: 1rem !important;
+    left: 0.5rem !important;
+    right: 0.5rem !important;
+    width: calc(100% - 1rem) !important;
+    max-width: none !important;
+  }
+
+  /* Weight tracker adjustments */
+  .weight-tracker-grid {
+    gap: 1rem;
+  }
+
+  .weight-tracker-page .card {
+    width: 100%;
+  }
+
+  /* Dashboard grid */
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Small devices (480px - 767px) - Large phones & small tablets */
+@media (min-width: 480px) and (max-width: 767px) {
+  :root {
+    --blob1-size: 32;
+    --blob2-size: 26;
+  }
+
+  .global-sidebar {
+    display: none;
+  }
+
+  .app-layout {
+    margin-left: 0;
+    margin-bottom: 0;
+  }
+
+  .main-content {
+    margin: 1rem;
+    padding: 1.25rem;
+  }
+
+  /* Form grid */
+  .form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem;
+  }
+
+  .water-intake-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1.25rem;
+  }
+
+  .card {
+    padding: 1.25rem;
+  }
+
+  .toast {
+    bottom: 1rem !important;
+    left: 1rem !important;
+    right: 1rem !important;
+  }
+}
+
+/* Medium devices (768px - 1023px) - Tablets */
+@media (min-width: 768px) and (max-width: 1023px) {
+  :root {
+    --blob1-size: 40;
+    --blob2-size: 30;
+  }
+
+  .global-sidebar {
+    width: 180px;
+  }
+
+  .app-layout {
+    margin-left: 180px;
+  }
+
+  .sidebar-content {
+    padding: 1.25rem 0.75rem;
+  }
+
+  .sidebar-brand h1 {
+    font-size: 1.1rem;
+  }
+
+  .nav-link {
+    padding: 0.75rem 0.875rem;
+    font-size: 0.85rem;
+  }
+
+  .nav-text {
+    font-size: 0.85rem;
+  }
+
+  .main-content {
+    margin: 1rem;
+    padding: 1.5rem;
+  }
+
+  /* Keep water intake as 2 columns on tablets */
+  .water-intake-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  /* Form grid can stay 2 columns on tablet */
+  .form-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .field-block.span-2 {
+    grid-column: span 2;
+  }
+}
+
+/* Large devices (1024px and up) - Desktop (unchanged) */
+@media (min-width: 1024px) {
+  /* Desktop styles remain exactly as they were */
+  /* All existing desktop styles continue to work */
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  /* Increase touch target sizes */
+  button,
+  .nav-link,
+  .card {
+    min-height: 44px;
+  }
+
+  .nav-link {
+    padding: 1rem;
+  }
+
+  button {
+    padding: 0.75rem 1.5rem;
+  }
+
+  /* Remove hover effects on touch devices */
+  button:hover {
+    border-color: transparent;
+  }
+
+  .nav-link:hover {
+    background: transparent;
+  }
+}
+
+/* Landscape orientation adjustments for mobile */
+@media (max-width: 767px) and (orientation: landscape) {
+  .main-content {
+    margin: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  .modal-content {
+    max-height: 70vh;
+  }
+
+  .global-sidebar {
+    height: 60px;
+  }
+
+  .app-layout {
+    margin-bottom: 60px;
+  }
+}
