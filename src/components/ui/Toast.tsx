@@ -57,7 +57,10 @@ const Toast: React.FC<ToastProps> = ({
   if (!shouldRender) return null;
 
   const toastElement = (
-    <div className={`toast toast-${type} ${isAnimating ? 'toast-visible' : ''}`}>
+    <div 
+      className={`toast toast-${type} ${isAnimating ? 'toast-visible' : ''}`}
+      style={{ zIndex: 999999 }}
+    >
       <div className="toast-content">
         <span className="toast-message">{message}</span>
       </div>

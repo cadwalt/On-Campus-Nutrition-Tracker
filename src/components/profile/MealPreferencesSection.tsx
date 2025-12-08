@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { User } from 'firebase/auth';
 // Use shared lazy resolver to import Firebase clients/modules at runtime
 import { resolveFirebase } from '../../lib/resolveFirebase';
@@ -48,6 +48,13 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
   const [recentMeals, setRecentMeals] = useState<any[]>([]);
   const [selectedFavMeal, setSelectedFavMeal] = useState<any | null>(null);
   const [favModalOpen, setFavModalOpen] = useState(false);
+  const [favoritesSearch, setFavoritesSearch] = useState('');
+  const filteredFavorites = useMemo(() => {
+    const term = favoritesSearch.trim().toLowerCase();
+    const base = favorites || [];
+    const filtered = term ? base.filter((f) => (f.name || '').toLowerCase().includes(term)) : base;
+    return filtered.slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  }, [favorites, favoritesSearch]);
 
   // Load existing meal preferences from Firestore
   useEffect(() => {
@@ -215,24 +222,25 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
 
     setLoading(true);
     try {
+      const nutrition: any = {};
+      if (newNutrition.calories != null) nutrition.calories = newNutrition.calories;
+      if (newNutrition.protein != null) nutrition.protein = newNutrition.protein;
+      if (newNutrition.carbs != null) nutrition.carbs = newNutrition.carbs;
+      if (newNutrition.fat != null) nutrition.fat = newNutrition.fat;
+      if ((newNutrition as any).sodium != null) nutrition.sodium = (newNutrition as any).sodium;
+      if ((newNutrition as any).sugars != null) nutrition.sugars = (newNutrition as any).sugars;
+      if ((newNutrition as any).calcium != null) nutrition.calcium = (newNutrition as any).calcium;
+      if ((newNutrition as any).iron != null) nutrition.iron = (newNutrition as any).iron;
+      if ((newNutrition as any).fatCategories) nutrition.fatCategories = (newNutrition as any).fatCategories;
+      if ((newNutrition as any).vitamins) nutrition.vitamins = (newNutrition as any).vitamins;
+      if ((newNutrition as any).otherInfo) nutrition.otherInfo = (newNutrition as any).otherInfo;
+
       const fav: FavoriteItem = {
         id: `fav_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
         name,
         source: 'manual',
-        nutrition: {
-          calories: newNutrition.calories,
-          protein: newNutrition.protein,
-          carbs: newNutrition.carbs,
-          fat: newNutrition.fat,
-          sodium: (newNutrition as any).sodium,
-          sugars: (newNutrition as any).sugars,
-          calcium: (newNutrition as any).calcium,
-          iron: (newNutrition as any).iron,
-          fatCategories: (newNutrition as any).fatCategories,
-          vitamins: (newNutrition as any).vitamins,
-          otherInfo: (newNutrition as any).otherInfo,
-        },
-        servingSize: newNutrition.servingSize,
+        nutrition,
+        servingSize: newNutrition.servingSize!,
         created_at: Date.now(),
       };
 
@@ -568,24 +576,24 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
                         const chosen = recentMeals.find(r => r.id === sel);
                         if (!chosen) return;
                         // Build favorite from meal
+                        const nutrition: any = {};
+                        if (chosen.calories != null) nutrition.calories = chosen.calories;
+                        if (chosen.protein != null) nutrition.protein = chosen.protein;
+                        if ((chosen.totalCarbs ?? chosen.carbs) != null) nutrition.carbs = chosen.totalCarbs ?? chosen.carbs;
+                        if ((chosen.totalFat ?? chosen.fat) != null) nutrition.fat = chosen.totalFat ?? chosen.fat;
+                        if (chosen.sodium != null) nutrition.sodium = chosen.sodium;
+                        if (chosen.sugars != null) nutrition.sugars = chosen.sugars;
+                        if (chosen.calcium != null) nutrition.calcium = chosen.calcium;
+                        if (chosen.iron != null) nutrition.iron = chosen.iron;
+                        if (chosen.fatCategories) nutrition.fatCategories = chosen.fatCategories;
+                        if (chosen.vitamins) nutrition.vitamins = chosen.vitamins;
+                        if (chosen.otherInfo) nutrition.otherInfo = chosen.otherInfo;
+
                         const fav: FavoriteItem = {
                           id: `fav_meal_${chosen.id}`,
                           name: chosen.name,
                           source: 'meal',
-                          nutrition: {
-                            calories: chosen.calories,
-                            protein: chosen.protein,
-                            carbs: chosen.totalCarbs ?? chosen.carbs,
-                            fat: chosen.totalFat ?? chosen.fat,
-                            sodium: chosen.sodium,
-                            sugars: chosen.sugars,
-                            calcium: chosen.calcium,
-                            iron: chosen.iron,
-                            fatCategories: chosen.fatCategories,
-                            vitamins: chosen.vitamins,
-                            otherInfo: chosen.otherInfo,
-                            // do not store servingsHad on favorites
-                          },
+                          nutrition,
                           servingSize: chosen.servingSize,
                           created_at: Date.now(),
                         };
@@ -602,72 +610,137 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
                   )}
 
                   {favorites.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      {favorites.map((fav) => (
-                        <div key={fav.id} className="preference-card favorite-item" onClick={() => {
-                          const mealLike = {
-                            id: fav.id,
-                            userId: user?.uid || 'me',
-                            name: fav.name,
-                            calories: fav.nutrition?.calories ?? 0,
-                            servingSize: fav.servingSize || '',
-                            // leave servingsHad undefined so Add-a-Meal prompts user to enter it
-                            totalCarbs: fav.nutrition?.carbs,
-                            totalFat: fav.nutrition?.fat,
-                            protein: fav.nutrition?.protein,
-                            sodium: fav.nutrition?.sodium,
-                            sugars: fav.nutrition?.sugars,
-                            calcium: fav.nutrition?.calcium,
-                            iron: fav.nutrition?.iron,
-                            createdAt: fav.created_at || Date.now(),
-                            otherInfo: ''
-                          };
-                          setSelectedFavMeal(mealLike);
-                          setFavModalOpen(true);
-                        }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', padding: '1rem', background: 'rgba(26, 26, 46, 0.6)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', cursor: 'pointer' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                            <div style={{ fontSize: '1.6rem', width: '3rem', height: '3rem', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(139, 92, 246, 0.08)', borderRadius: '8px', border: '1px solid rgba(139,92,246,0.12)', flexShrink: 0 }}>
-                              {'🍽️'}
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                              <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{fav.name}</span>
-                              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                {fav.servingSize && <small style={{ color: '#94a3b8' }}>{fav.servingSize}</small>}
-                                {fav.nutrition && <small style={{ color: '#94a3b8' }}>{`${fav.nutrition.calories ?? '-'} cal • ${fav.nutrition.protein ?? '-'}g protein • ${fav.nutrition.carbs ?? '-'}g carbs • ${fav.nutrition.fat ?? '-'}g fat`}</small>}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '45vh', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                      <div style={{ position: 'sticky', top: 0, background: 'rgba(26, 26, 46, 0.9)', padding: '0.25rem 0', zIndex: 1 }}>
+                        <input
+                          type="text"
+                          value={favoritesSearch}
+                          onChange={(e) => setFavoritesSearch(e.target.value)}
+                          placeholder="Search favorite meals..."
+                          style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(17, 23, 43, 0.85)', color: '#e2e8f0' }}
+                        />
+                      </div>
+
+                      {filteredFavorites.length > 0 ? (
+                        filteredFavorites.map((fav) => (
+                          <div key={fav.id} className="preference-card favorite-item" onClick={() => {
+                            const mealLike = {
+                              id: fav.id,
+                              userId: user?.uid || 'me',
+                              name: fav.name,
+                              calories: fav.nutrition?.calories ?? 0,
+                              servingSize: fav.servingSize || '',
+                              // leave servingsHad undefined so Add-a-Meal prompts user to enter it
+                              totalCarbs: fav.nutrition?.carbs,
+                              totalFat: fav.nutrition?.fat,
+                              protein: fav.nutrition?.protein,
+                              sodium: fav.nutrition?.sodium,
+                              sugars: fav.nutrition?.sugars,
+                              calcium: fav.nutrition?.calcium,
+                              iron: fav.nutrition?.iron,
+                              createdAt: fav.created_at || Date.now(),
+                              otherInfo: ''
+                            };
+                            setSelectedFavMeal(mealLike);
+                            setFavModalOpen(true);
+                          }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', padding: '1rem', background: 'rgba(26, 26, 46, 0.6)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', cursor: 'pointer' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                              <div style={{ fontSize: '1.6rem', width: '3rem', height: '3rem', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(139, 92, 246, 0.08)', borderRadius: '8px', border: '1px solid rgba(139,92,246,0.12)', flexShrink: 0 }}>
+                                {'🍽️'}
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{fav.name}</span>
+                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                  {fav.servingSize && <small style={{ color: '#94a3b8' }}>{fav.servingSize}</small>}
+                                  {fav.nutrition && <small style={{ color: '#94a3b8' }}>{`${fav.nutrition.calories ?? '-'} cal • ${fav.nutrition.protein ?? '-'}g protein • ${fav.nutrition.carbs ?? '-'}g carbs • ${fav.nutrition.fat ?? '-'}g fat`}</small>}
+                                </div>
                               </div>
                             </div>
+                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                              <button onClick={(e) => { e.stopPropagation(); handleRemoveFavorite(fav); }} className="remove-favorite-button">Remove</button>
+                            </div>
                           </div>
-                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                            <button onClick={(e) => { e.stopPropagation(); handleRemoveFavorite(fav); }} className="remove-favorite-button">Remove</button>
-                          </div>
-                        </div>
-                      ))}
+                        ))
+                      ) : (
+                        <p style={{ margin: 0, color: '#94a3b8', padding: '0.5rem 0.25rem' }}>No favorites match your search.</p>
+                      )}
+
                       <MealDetailsModal
                         isOpen={favModalOpen}
                         onClose={() => setFavModalOpen(false)}
                         meal={selectedFavMeal}
                         onSaveExternal={async (mealId, updates) => {
-                          if (!user || !mealId) throw new Error('User not found');
-                          // Map meal updates to favorite structure
-                          const partial: any = {};
-                          if (updates.name !== undefined) partial.name = updates.name;
-                          if (updates.servingSize !== undefined) partial.servingSize = updates.servingSize;
-                          // Map nutrition fields: calories, protein, totalCarbs -> carbs, totalFat -> fat, sodium, sugars, calcium, iron
-                          partial.nutrition = {};
-                          if (updates.calories !== undefined) partial.nutrition.calories = updates.calories;
-                          if (updates.protein !== undefined) partial.nutrition.protein = updates.protein;
-                          if (updates.totalCarbs !== undefined) partial.nutrition.carbs = updates.totalCarbs;
-                          if (updates.totalFat !== undefined) partial.nutrition.fat = updates.totalFat;
-                          if (updates.sodium !== undefined) partial.nutrition.sodium = updates.sodium;
-                          if (updates.sugars !== undefined) partial.nutrition.sugars = updates.sugars;
-                          if (updates.calcium !== undefined) partial.nutrition.calcium = updates.calcium;
-                          if (updates.iron !== undefined) partial.nutrition.iron = updates.iron;
+                          try {
+                            if (!user || !mealId) throw new Error('User not found');
+                            
+                            // Map meal updates to favorite structure
+                            const partial: any = {};
+                            if (updates.name !== undefined) partial.name = updates.name;
+                            if (updates.servingSize !== undefined) partial.servingSize = updates.servingSize;
+                            
+                            // Map nutrition fields: calories, protein, totalCarbs -> carbs, totalFat -> fat, etc.
+                            partial.nutrition = {};
+                            if (updates.calories !== undefined) partial.nutrition.calories = updates.calories;
+                            if (updates.protein !== undefined) partial.nutrition.protein = updates.protein;
+                            if (updates.totalCarbs !== undefined) partial.nutrition.carbs = updates.totalCarbs;
+                            if (updates.totalFat !== undefined) partial.nutrition.fat = updates.totalFat;
+                            if (updates.sodium !== undefined) partial.nutrition.sodium = updates.sodium;
+                            if (updates.sugars !== undefined) partial.nutrition.sugars = updates.sugars;
+                            if (updates.calcium !== undefined) partial.nutrition.calcium = updates.calcium;
+                            if (updates.iron !== undefined) partial.nutrition.iron = updates.iron;
+                            if (updates.fatCategories !== undefined) partial.nutrition.fatCategories = updates.fatCategories;
+                            if (updates.vitamins !== undefined) partial.nutrition.vitamins = updates.vitamins;
+                            if (updates.otherInfo !== undefined) partial.nutrition.otherInfo = updates.otherInfo;
 
-                          // Persist update to user's favorites
-                          const updated = await updateFavoriteForUser(user.uid, mealId, partial);
-                          // Update local UI state
-                          setFavorites(updated as any);
-                          setFavModalOpen(false);
+                            // Persist update to user's favorites
+                            const updated = await updateFavoriteForUser(user.uid, mealId, partial);
+                            // Update local UI state
+                            setFavorites(updated as any);
+                            
+                            // Also update meals collection if a meal exists with the same name
+                            try {
+                              const { db, firestore } = await resolveFirebase();
+                              const mealsQuery = firestore.query(
+                                firestore.collection(db, 'meals'),
+                                firestore.where('userId', '==', user.uid),
+                                firestore.where('name', '==', selectedFavMeal?.name || '')
+                              );
+                              const mealsSnap = await firestore.getDocs(mealsQuery);
+                              
+                              if (!mealsSnap.empty) {
+                                // Update all matching meals
+                                const mealUpdates: any = {
+                                  name: updates.name,
+                                  servingSize: updates.servingSize,
+                                  calories: updates.calories,
+                                  totalCarbs: updates.totalCarbs,
+                                  totalFat: updates.totalFat,
+                                  protein: updates.protein,
+                                  sodium: updates.sodium,
+                                  sugars: updates.sugars,
+                                  calcium: updates.calcium,
+                                  iron: updates.iron,
+                                  fatCategories: updates.fatCategories,
+                                  vitamins: updates.vitamins,
+                                  otherInfo: updates.otherInfo,
+                                };
+                                
+                                for (const doc of mealsSnap.docs) {
+                                  await firestore.updateDoc(doc.ref, mealUpdates);
+                                }
+                              }
+                            } catch (mealErr) {
+                              // Log but don't fail the favorite update if meal sync fails
+                              console.warn('Could not update meals when favorite changed:', mealErr);
+                            }
+                            
+                            onSuccess('Favorite updated successfully');
+                            setFavModalOpen(false);
+                          } catch (err: any) {
+                            console.error('Failed to update favorite:', err);
+                            onError(err.message || 'Failed to update favorite');
+                            throw err;
+                          }
                         }}
                       />
                     </div>

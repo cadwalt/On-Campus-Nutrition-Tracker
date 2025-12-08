@@ -48,16 +48,22 @@ const MealDetailsModal: React.FC<MealDetailsModalProps> = ({ isOpen, meal, onClo
 
   useEffect(() => {
     if (isOpen && meal) {
+      // Reset toast when opening modal for a new meal
+      setToast({ message: '', type: 'success', visible: false });
+      
       (async () => {
         try {
           const { firebaseAuth } = await resolveFirebase();
           const user = firebaseAuth.getAuth ? firebaseAuth.getAuth().currentUser : null;
-          // Check authorization when opening modal
-          if (!user || !canAccess(user.uid, meal.userId)) {
+          
+          // For external handlers (favorites), skip authorization check
+          // For regular meals, verify user has access
+          if (!onSaveExternal && (!user || !canAccess(user.uid, meal.userId))) {
             showToast('Unauthorized: Cannot access this meal', 'error');
             onClose();
             return;
           }
+          
           setEdit(false);
           setForm({
             name: meal.name || '',
@@ -80,8 +86,11 @@ const MealDetailsModal: React.FC<MealDetailsModalProps> = ({ isOpen, meal, onClo
           onClose();
         }
       })();
+    } else if (!isOpen) {
+      // Reset toast when closing modal
+      setToast({ message: '', type: 'success', visible: false });
     }
-  }, [isOpen, meal]);
+  }, [isOpen, meal, onSaveExternal]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -134,7 +143,8 @@ const MealDetailsModal: React.FC<MealDetailsModalProps> = ({ isOpen, meal, onClo
       return;
     }
 
-    if (!canAccess(user?.uid || '', meal.userId)) {
+    // Skip authorization check for external handlers (favorites)
+    if (!onSaveExternal && !canAccess(user?.uid || '', meal.userId)) {
       showToast('Unauthorized: Cannot modify this meal', 'error');
       setEdit(false);
       return;
@@ -176,17 +186,67 @@ const MealDetailsModal: React.FC<MealDetailsModalProps> = ({ isOpen, meal, onClo
       // If an external save handler is provided (e.g., for favorites), call it instead
       if (typeof onSaveExternal === 'function') {
         await onSaveExternal(meal.id, updates);
-        showToast('Saved', 'success');
+        showToast('Saved successfully', 'success');
         setEdit(false);
       } else {
         const { db, firestore } = await resolveFirebase();
         const ref = firestore.doc(db, 'meals', meal.id!);
         await firestore.updateDoc(ref, updates);
+        
+        // Also update the meal name in user's favorites if it exists
+        try {
+          const userDocRef = firestore.doc(db, 'users', user?.uid || '');
+          const userSnap = await firestore.getDoc(userDocRef);
+          if (userSnap.exists()) {
+            const favorites = userSnap.data().favorites_v2 || [];
+            const mealNameChanged = meal.name && updates.name && meal.name.toLowerCase() !== updates.name.toLowerCase();
+            
+            // Check if any favorite matches this meal's name
+            const favToUpdate = favorites.filter((fav: any) => 
+              fav.name && fav.name.toLowerCase() === meal.name.toLowerCase()
+            );
+            
+            if (favToUpdate.length > 0) {
+              // Update all matching favorites with new meal data
+              const updatedFavorites = favorites.map((fav: any) => {
+                if (fav.name && fav.name.toLowerCase() === meal.name.toLowerCase()) {
+                  return {
+                    ...fav,
+                    name: updates.name || fav.name,
+                    servingSize: updates.servingSize || fav.servingSize,
+                    nutrition: {
+                      ...fav.nutrition,
+                      calories: updates.calories ?? fav.nutrition?.calories,
+                      carbs: updates.totalCarbs ?? fav.nutrition?.carbs,
+                      fat: updates.totalFat ?? fav.nutrition?.fat,
+                      protein: updates.protein ?? fav.nutrition?.protein,
+                      sodium: updates.sodium ?? fav.nutrition?.sodium,
+                      sugars: updates.sugars ?? fav.nutrition?.sugars,
+                      calcium: updates.calcium ?? fav.nutrition?.calcium,
+                      iron: updates.iron ?? fav.nutrition?.iron,
+                      fatCategories: updates.fatCategories ?? fav.nutrition?.fatCategories,
+                      vitamins: updates.vitamins ?? fav.nutrition?.vitamins,
+                      otherInfo: updates.otherInfo ?? fav.nutrition?.otherInfo,
+                    }
+                  };
+                }
+                return fav;
+              });
+              
+              // Update favorites in user document
+              await firestore.updateDoc(userDocRef, { favorites_v2: updatedFavorites });
+            }
+          }
+        } catch (favErr) {
+          // Log but don't fail the save if favorites update fails
+          console.warn('Could not update favorites when meal changed:', favErr);
+        }
+        
         showToast('Meal updated', 'success');
         setEdit(false);
       }
     } catch (e: any) {
-      console.error(e);
+      console.error('Save error:', e);
       showToast(e.message || 'Failed to update meal', 'error');
     } finally {
       setSubmitting(false);
@@ -292,8 +352,8 @@ const MealDetailsModal: React.FC<MealDetailsModalProps> = ({ isOpen, meal, onClo
             <button type="button" className="response-button" onClick={handleEditClick}>Edit</button>
           )}
         </div>
+        <Toast message={toast.message} type={toast.type} isVisible={toast.visible} onClose={closeToast} />
       </div>
-      <Toast message={toast.message} type={toast.type} isVisible={toast.visible} onClose={closeToast} />
     </div>,
     document.body
   );

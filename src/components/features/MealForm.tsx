@@ -1,16 +1,17 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 const resolveFirebase = async () => {
-  const mod: any = await import('../../firebase');
+  const mod: any = await import("../../firebase");
   const db = (mod.getFirestoreClient ? await mod.getFirestoreClient() : mod.db) as any;
-  const firestore = await import('firebase/firestore');
-  const firebaseAuth = await import('firebase/auth');
+  const firestore = await import("firebase/firestore");
+  const firebaseAuth = await import("firebase/auth");
   return { db, firestore, firebaseAuth };
 };
-import type { Meal } from '../../types/meal';
-import Toast from '../ui/Toast';
-import type { FavoriteItem } from '../../types/favorite';
-import { getFavoritesForUser } from '../services/favoritesService';
+import type { Meal } from "../../types/meal";
+import Toast from "../ui/Toast";
+import type { FavoriteItem } from "../../types/favorite";
+import { getFavoritesForUser } from "../services/favoritesService";
 
 interface MealFormProps {
   onMealAdded: (meal: Meal) => void;
@@ -21,53 +22,53 @@ interface MealFormProps {
 
 const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitialMealSet, planningMode = false }) => {
   const [form, setForm] = useState({
-    name: '',
-    calories: '',
-    servingSize: '',
-    servingsHad: '',
-    totalCarbs: '',
-    totalFat: '',
-    protein: '',
-    fatCategories: '',
-    sodium: '',
-    sugars: '',
-    calcium: '',
-    vitamins: '',
-    iron: '',
-    otherInfo: '',
+    name: "",
+    calories: "",
+    servingSize: "",
+    servingsHad: "",
+    totalCarbs: "",
+    totalFat: "",
+    protein: "",
+    fatCategories: "",
+    sodium: "",
+    sugars: "",
+    calcium: "",
+    vitamins: "",
+    iron: "",
+    otherInfo: "",
   });
   const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; visible: boolean }>({
-    message: '',
-    type: 'success',
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error"; visible: boolean }>({
+    message: "",
+    type: "success",
     visible: false,
   });
   const [showOptional, setShowOptional] = useState(false);
-  const [priorMeals, setPriorMeals] = useState<Meal[] | null>(null);
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const [favorites, setFavorites] = useState<FavoriteItem[] | null>(null);
-  const [selectedFavoriteId, setSelectedFavoriteId] = useState<string>('');
+  const [showFavoritesModal, setShowFavoritesModal] = useState(false);
+  const [selectedFavoriteId, setSelectedFavoriteId] = useState<string>("");
+  const [favoritesSearch, setFavoritesSearch] = useState("");
+  const [showNameSuggestions, setShowNameSuggestions] = useState(false);
 
   // Fill form when initialMeal is provided
   useEffect(() => {
     if (initialMeal) {
       setForm({
-        name: initialMeal.name || '',
-        calories: String(initialMeal.calories ?? ''),
-        servingSize: initialMeal.servingSize || '',
-        servingsHad: initialMeal.servingsHad != null ? String(initialMeal.servingsHad) : '',
-        totalCarbs: initialMeal.totalCarbs != null ? String(initialMeal.totalCarbs) : '',
-        totalFat: initialMeal.totalFat != null ? String(initialMeal.totalFat) : '',
-        protein: initialMeal.protein != null ? String(initialMeal.protein) : '',
-        fatCategories: initialMeal.fatCategories || '',
-        sodium: initialMeal.sodium != null ? String(initialMeal.sodium) : '',
-        sugars: initialMeal.sugars != null ? String(initialMeal.sugars) : '',
-        calcium: initialMeal.calcium != null ? String(initialMeal.calcium) : '',
-        vitamins: initialMeal.vitamins || '',
-        iron: initialMeal.iron != null ? String(initialMeal.iron) : '',
-        otherInfo: initialMeal.otherInfo || '',
+        name: initialMeal.name || "",
+        calories: String(initialMeal.calories ?? ""),
+        servingSize: initialMeal.servingSize || "",
+        servingsHad: initialMeal.servingsHad != null ? String(initialMeal.servingsHad) : "",
+        totalCarbs: initialMeal.totalCarbs != null ? String(initialMeal.totalCarbs) : "",
+        totalFat: initialMeal.totalFat != null ? String(initialMeal.totalFat) : "",
+        protein: initialMeal.protein != null ? String(initialMeal.protein) : "",
+        fatCategories: initialMeal.fatCategories || "",
+        sodium: initialMeal.sodium != null ? String(initialMeal.sodium) : "",
+        sugars: initialMeal.sugars != null ? String(initialMeal.sugars) : "",
+        calcium: initialMeal.calcium != null ? String(initialMeal.calcium) : "",
+        vitamins: initialMeal.vitamins || "",
+        iron: initialMeal.iron != null ? String(initialMeal.iron) : "",
+        otherInfo: initialMeal.otherInfo || "",
       });
-      setShowSuggestions(false);
       if (onInitialMealSet) {
         onInitialMealSet();
       }
@@ -80,7 +81,7 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
     return firebaseAuth.getAuth ? firebaseAuth.getAuth().currentUser : null;
   };
 
-  const showToast = (message: string, type: 'success' | 'error') => {
+  const showToast = (message: string, type: "success" | "error") => {
     setToast({ message, type, visible: true });
   };
 
@@ -88,15 +89,34 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
 
   const updateField = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
-    if (field === 'name') setShowSuggestions(true);
+  };
+
+  const resetForm = () => {
+    setForm({
+      name: "",
+      calories: "",
+      servingSize: "",
+      servingsHad: "",
+      totalCarbs: "",
+      totalFat: "",
+      protein: "",
+      fatCategories: "",
+      sodium: "",
+      sugars: "",
+      calcium: "",
+      vitamins: "",
+      iron: "",
+      otherInfo: "",
+    });
+    setShowOptional(false);
   };
 
   const requiredMissing = () => {
     const missing: string[] = [];
-    if (!form.name.trim()) missing.push('Meal name');
-    if (!form.calories.trim()) missing.push('Calories');
-    if (!form.servingSize.trim()) missing.push('Serving size');
-    if (!form.servingsHad.trim()) missing.push('Servings Had');
+    if (!form.name.trim()) missing.push("Meal name");
+    if (!form.calories.trim()) missing.push("Calories");
+    if (!form.servingSize.trim()) missing.push("Serving size");
+    if (!form.servingsHad.trim()) missing.push("Servings Had");
     return missing;
   };
 
@@ -105,35 +125,6 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
     const n = Number(val);
     return isFinite(n) ? n : undefined;
   };
-
-  // Subscribe to this user's prior meals for predictive suggestions
-  useEffect(() => {
-    (async () => {
-      const user = await getCurrentUser();
-      if (!user) {
-        setPriorMeals([]);
-        return;
-      }
-      const { db, firestore } = await resolveFirebase();
-      const qUserMeals = firestore.query(firestore.collection(db, 'meals'), firestore.where('userId', '==', user.uid));
-      const unsub = firestore.onSnapshot(
-        qUserMeals,
-        (snap: any) => {
-          const list: Meal[] = [];
-          snap.forEach((docSnap: any) => {
-            const data = docSnap.data() as Meal;
-            list.push({ ...data, id: docSnap.id });
-          });
-          setPriorMeals(list);
-        },
-        (err: any) => {
-          console.error('Error loading meals for suggestions:', err);
-          setPriorMeals([]);
-        }
-      );
-      return () => unsub();
-    })();
-  }, []);
 
   // Load user's favorites for quick-add
   useEffect(() => {
@@ -146,129 +137,45 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
           return;
         }
         const favs = await getFavoritesForUser(user.uid);
-        if (mounted) setFavorites(favs || []);
+        const sorted = (favs || []).slice().sort((a: FavoriteItem, b: FavoriteItem) => (a.name || "").localeCompare(b.name || ""));
+        if (mounted) setFavorites(sorted);
       } catch (e) {
-        console.error('Failed to load favorites', e);
+        console.error("Failed to load favorites", e);
         if (mounted) setFavorites([]);
       }
     })();
     return () => { mounted = false; };
   }, []);
 
-  const filteredSuggestions = useMemo(() => {
+  const filteredFavorites = useMemo(() => {
+    const term = favoritesSearch.trim().toLowerCase();
+    if (!favorites) return [] as FavoriteItem[];
+    const base = favorites;
+    const filtered = term ? base.filter((f) => (f.name || "").toLowerCase().includes(term)) : base;
+    return filtered.slice().sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  }, [favorites, favoritesSearch]);
+
+  const nameSuggestions = useMemo(() => {
     const term = form.name.trim().toLowerCase();
-    if (!term || term.length < 2 || !priorMeals) return [] as Meal[];
-    // dedupe by lowercase name; keep latest
-    const map = new Map<string, Meal>();
-    for (const m of priorMeals) {
-      map.set(m.name.toLowerCase(), m);
-    }
-    const unique = Array.from(map.values());
-    const toMs = (v: any) =>
-      typeof v === 'number'
-        ? v
-        : v?.seconds
-        ? v.seconds * 1000 + Math.floor((v.nanoseconds || 0) / 1e6)
-        : v instanceof Date
-        ? v.getTime()
-        : 0;
-    return unique
-      .filter((m) => m.name.toLowerCase().includes(term))
-      .sort((a, b) => toMs(b.createdAt) - toMs(a.createdAt))
-      .slice(0, 5);
-  }, [form.name, priorMeals]);
-
-  const applySuggestionToForm = (m: Meal) => {
-    setForm({
-      name: m.name || '',
-      calories: String(m.calories ?? ''),
-      servingSize: m.servingSize || '',
-      servingsHad: m.servingsHad != null ? String(m.servingsHad) : '',
-      totalCarbs: m.totalCarbs != null ? String(m.totalCarbs) : '',
-      totalFat: m.totalFat != null ? String(m.totalFat) : '',
-      protein: m.protein != null ? String(m.protein) : '',
-      fatCategories: m.fatCategories || '',
-      sodium: m.sodium != null ? String(m.sodium) : '',
-      sugars: m.sugars != null ? String(m.sugars) : '',
-      calcium: m.calcium != null ? String(m.calcium) : '',
-      vitamins: m.vitamins || '',
-      iron: m.iron != null ? String(m.iron) : '',
-      otherInfo: m.otherInfo || '',
-    });
-    setShowSuggestions(false);
-  };
-
-  const quickAddSuggestion = async (m: Meal) => {
-    const user = await getCurrentUser();
-    if (!user) {
-      showToast('You must be signed in to save meals', 'error');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const base: Meal = {
-        userId: user.uid,
-        name: m.name,
-        calories: m.calories,
-        servingSize: m.servingSize,
-        createdAt: Date.now(),
-      };
-      const optional: Partial<Meal> = {};
-      // Only include numeric optionals if they are numbers
-      if (typeof m.servingsHad === 'number') optional.servingsHad = m.servingsHad;
-      if (typeof m.totalCarbs === 'number') optional.totalCarbs = m.totalCarbs;
-      if (typeof m.totalFat === 'number') optional.totalFat = m.totalFat;
-      if (typeof m.protein === 'number') optional.protein = m.protein;
-      if (typeof m.sodium === 'number') optional.sodium = m.sodium;
-      if (typeof m.sugars === 'number') optional.sugars = m.sugars;
-      if (typeof m.calcium === 'number') optional.calcium = m.calcium;
-      if (typeof m.iron === 'number') optional.iron = m.iron;
-      // Include string optionals only if non-empty
-      if (m.fatCategories && m.fatCategories.trim()) optional.fatCategories = m.fatCategories.trim();
-      if (m.vitamins && m.vitamins.trim()) optional.vitamins = m.vitamins.trim();
-      if (m.otherInfo && m.otherInfo.trim()) optional.otherInfo = m.otherInfo.trim();
-
-      const meal: Meal = { ...base, ...optional } as Meal;
-      
-      if (planningMode) {
-        // In planning mode, don't save to meals collection, just call callback
-        showToast('Meal prepared for planning!', 'success');
-        onMealAdded(meal);
-      } else {
-        // Normal mode: save to meals collection
-        const { db, firestore } = await resolveFirebase();
-        const ref = await firestore.addDoc(firestore.collection(db, 'meals'), meal);
-        const added: Meal = { ...meal, id: ref.id };
-        onMealAdded(added);
-        showToast('Meal added from suggestion', 'success');
-      }
-      setForm({
-        name: '', calories: '', servingSize: '', servingsHad: '', totalCarbs: '', totalFat: '', protein: '', fatCategories: '', sodium: '', sugars: '', calcium: '', vitamins: '', iron: '', otherInfo: '',
-      });
-    } catch (e: any) {
-      console.error('Quick add failed', e);
-      showToast(e.message || 'Failed to add meal', 'error');
-    } finally {
-      setSubmitting(false);
-      setShowSuggestions(false);
-    }
-  };
+    if (!favorites || !term) return [] as FavoriteItem[];
+    const matches = favorites.filter((f) => (f.name || "").toLowerCase().includes(term));
+    return matches.slice(0, 6).sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  }, [favorites, form.name]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const user = await getCurrentUser();
     if (!user) {
-      showToast('You must be signed in to save meals', 'error');
+      showToast("You must be signed in to save meals", "error");
       return;
     }
     const missing = requiredMissing();
     if (missing.length) {
-      showToast(`Missing required: ${missing.join(', ')}`, 'error');
+      showToast(`Missing required: ${missing.join(", ")}`, "error");
       return;
     }
     setSubmitting(true);
     try {
-      // Build meal object with ONLY defined optional fields (Firestore rejects undefined)
       const mealBase: Meal = {
         userId: user.uid,
         name: form.name.trim(),
@@ -290,7 +197,7 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
 
       Object.entries(numericOptional).forEach(([key, raw]) => {
         const parsed = parseNumber(raw);
-        if (typeof parsed === 'number') {
+        if (typeof parsed === "number") {
           // @ts-expect-error dynamic assignment of optional field
           mealBase[key] = parsed;
         }
@@ -309,207 +216,313 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
         }
       });
 
-        const meal: Meal = mealBase;
-        const { db, firestore } = await resolveFirebase();
-        
-        if (planningMode) {
-          // In planning mode, don't save to meals collection, just call callback
-          showToast('Meal prepared for planning!', 'success');
-          onMealAdded(meal);
-        } else {
-          // Normal mode: save to meals collection
-          const ref = await firestore.addDoc(firestore.collection(db, 'meals'), meal);
-          console.debug('[MealForm] Added meal', { id: ref.id, meal });
-          const added: Meal = { ...meal, id: ref.id };
-          onMealAdded(added);
-          showToast('Meal saved', 'success');
-        }
+      const meal: Meal = mealBase;
+      const { db, firestore } = await resolveFirebase();
+
+      if (planningMode) {
+        showToast("Meal prepared for planning!", "success");
+        onMealAdded(meal);
+      } else {
+        const ref = await firestore.addDoc(firestore.collection(db, "meals"), meal);
+        console.debug("[MealForm] Added meal", { id: ref.id, meal });
+        const added: Meal = { ...meal, id: ref.id };
+        onMealAdded(added);
+        showToast("Meal saved", "success");
+      }
       setForm({
-        name: '', calories: '', servingSize: '', servingsHad: '', totalCarbs: '', totalFat: '', protein: '', fatCategories: '', sodium: '', sugars: '', calcium: '', vitamins: '', iron: '', otherInfo: '',
+        name: "", calories: "", servingSize: "", servingsHad: "", totalCarbs: "", totalFat: "", protein: "", fatCategories: "", sodium: "", sugars: "", calcium: "", vitamins: "", iron: "", otherInfo: "",
       });
     } catch (err: any) {
       console.error(err);
-      showToast(err.message || 'Failed to save meal', 'error');
+      showToast(err.message || "Failed to save meal", "error");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <form className="meal-form" onSubmit={handleSubmit}>
-      {/* Add a Favorite quick-fill */}
-      <div style={{ marginBottom: 12 }}>
-        <h4 style={{ margin: '0 0 6px 0' }}>Add a Favorite</h4>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <select
-            className="favorite-select"
-            value={selectedFavoriteId}
-            onChange={(e) => {
-              const id = e.target.value;
-              setSelectedFavoriteId(id);
-              if (!id) return;
-              const fav = (favorites || []).find((f) => f.id === id);
-              if (!fav) return;
-              // apply favorite to form (populate all available nutritional fields and serving size)
-              setForm((prev) => ({
-                ...prev,
-                name: fav.name || prev.name,
-                calories: fav.nutrition?.calories != null ? String(fav.nutrition.calories) : prev.calories,
-                servingSize: fav.servingSize != null ? fav.servingSize : prev.servingSize,
-                totalCarbs: fav.nutrition?.carbs != null ? String(fav.nutrition.carbs) : prev.totalCarbs,
-                totalFat: fav.nutrition?.fat != null ? String(fav.nutrition.fat) : prev.totalFat,
-                protein: fav.nutrition?.protein != null ? String(fav.nutrition.protein) : prev.protein,
-                sodium: fav.nutrition?.sodium != null ? String(fav.nutrition.sodium) : prev.sodium,
-                sugars: fav.nutrition?.sugars != null ? String(fav.nutrition.sugars) : prev.sugars,
-                calcium: fav.nutrition?.calcium != null ? String(fav.nutrition.calcium) : prev.calcium,
-                iron: fav.nutrition?.iron != null ? String(fav.nutrition.iron) : prev.iron,
-                fatCategories: fav.nutrition?.fatCategories != null ? String(fav.nutrition.fatCategories) : prev.fatCategories,
-                vitamins: fav.nutrition?.vitamins != null ? String(fav.nutrition.vitamins) : prev.vitamins,
-                otherInfo: fav.nutrition?.otherInfo != null ? String(fav.nutrition.otherInfo) : prev.otherInfo,
-              }));
-            }}
-          >
-            <option value="">Select a favorite to prefill the form...</option>
-            {(favorites || []).map((f) => (
-              <option key={f.id} value={f.id}>{f.name}</option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className="favorite-clear-button"
-            onClick={() => setSelectedFavoriteId('')}
-          >Clear</button>
-        </div>
-      </div>
-      {/* Required fields */}
-      <div className="form-grid">
-        <div className="form-field required">
-          <label>Meal Name</label>
-          <div className="autocomplete">
+    <>
+      <form className="meal-form" onSubmit={handleSubmit}>
+        {/* Required fields */}
+        <div className="form-grid" style={{ overflow: "visible" }}>
+          <div className="form-field required" style={{ position: "relative", overflow: "visible" }}>
+            <label>Meal Name</label>
             <input
               value={form.name}
-              onChange={(e) => updateField('name', e.target.value)}
-              onFocus={() => setShowSuggestions(true)}
-              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+              onChange={(e) => {
+                const value = e.target.value;
+                updateField("name", value);
+                setShowNameSuggestions(true);
+              }}
+              onFocus={() => setShowNameSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowNameSuggestions(false), 120)}
               placeholder="e.g. Grilled Chicken Salad"
               required
               aria-required="true"
             />
-            {showSuggestions && filteredSuggestions.length > 0 && (
-              <ul className="autocomplete-list">
-                {filteredSuggestions.map((m) => (
-                  <li key={m.id || m.name} className="autocomplete-item">
-                    <button
-                      type="button"
-                      className="autocomplete-fill"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        applySuggestionToForm(m);
-                      }}
-                      onClick={() => applySuggestionToForm(m)}
-                    >
-                      <div className="auto-name">{m.name}</div>
-                      <div className="auto-meta">{m.calories} cal • {m.servingSize}</div>
-                    </button>
-                    <button
-                      type="button"
-                      className="autocomplete-quick"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        void quickAddSuggestion(m);
-                      }}
-                      onClick={() => void quickAddSuggestion(m)}
-                      disabled={submitting}
-                      title="Add now"
-                    >
+            {showNameSuggestions && nameSuggestions.length > 0 && (
+              <div
+                className="suggestions-panel"
+                style={{
+                  position: "absolute",
+                  zIndex: 20,
+                  top: "100%",
+                  left: 0,
+                  right: 0,
+                  background: "rgba(26, 26, 46, 0.98)",
+                  border: "1px solid rgba(139, 92, 246, 0.2)",
+                  borderRadius: 12,
+                  marginTop: 6,
+                  boxShadow: "0 12px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(139, 92, 246, 0.1)",
+                  maxHeight: 140,
+                  overflowY: "auto",
+                  backdropFilter: "blur(10px)",
+                }}
+              >
+                {nameSuggestions.map((fav) => (
+                  <button
+                    key={fav.id}
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setForm((prev) => ({
+                        ...prev,
+                        name: fav.name || prev.name,
+                        calories: fav.nutrition?.calories != null ? String(fav.nutrition.calories) : prev.calories,
+                        servingSize: fav.servingSize != null ? fav.servingSize : prev.servingSize,
+                        totalCarbs: fav.nutrition?.carbs != null ? String(fav.nutrition.carbs) : prev.totalCarbs,
+                        totalFat: fav.nutrition?.fat != null ? String(fav.nutrition.fat) : prev.totalFat,
+                        protein: fav.nutrition?.protein != null ? String(fav.nutrition.protein) : prev.protein,
+                        sodium: fav.nutrition?.sodium != null ? String(fav.nutrition.sodium) : prev.sodium,
+                        sugars: fav.nutrition?.sugars != null ? String(fav.nutrition.sugars) : prev.sugars,
+                        calcium: fav.nutrition?.calcium != null ? String(fav.nutrition.calcium) : prev.calcium,
+                        iron: fav.nutrition?.iron != null ? String(fav.nutrition.iron) : prev.iron,
+                        fatCategories: fav.nutrition?.fatCategories != null ? String(fav.nutrition.fatCategories) : prev.fatCategories,
+                        vitamins: fav.nutrition?.vitamins != null ? String(fav.nutrition.vitamins) : prev.vitamins,
+                        otherInfo: fav.nutrition?.otherInfo != null ? String(fav.nutrition.otherInfo) : prev.otherInfo,
+                      }));
+                      setShowNameSuggestions(false);
+                    }}
+                    className="suggestion-item"
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      width: "100%",
+                      padding: "10px 14px",
+                      background: "transparent",
+                      color: "#e2e8f0",
+                      border: "none",
+                      borderBottom: "1px solid rgba(139, 92, 246, 0.1)",
+                      textAlign: "left",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "rgba(139, 92, 246, 0.08)";
+                      e.currentTarget.style.borderLeftColor = "rgba(139, 92, 246, 0.6)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "transparent";
+                      e.currentTarget.style.borderLeftColor = "transparent";
+                    }}
+                  >
+                    <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+                      <span style={{ fontWeight: 600, color: "#e2e8f0" }}>{fav.name}</span>
+                      <small style={{ color: "#94a3b8", fontSize: "0.85rem" }}>
+                        {(fav.nutrition?.calories ?? "--") + " cal"}
+                        {fav.servingSize ? ` • ${fav.servingSize}` : ""}
+                      </small>
+                    </div>
+                    <div style={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: "50%",
+                      background: "rgba(139, 92, 246, 0.15)",
+                      border: "1.5px solid rgba(139, 92, 246, 0.4)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 16,
+                      color: "#8b5cf6",
+                      flexShrink: 0
+                    }}>
                       +
-                    </button>
-                  </li>
+                    </div>
+                  </button>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
+          <div className="form-field required">
+            <label>Calories</label>
+            <input required type="number" min={0} value={form.calories} onChange={(e) => updateField("calories", e.target.value)} placeholder="e.g. 450" aria-required="true" />
+          </div>
+          <div className="form-field required">
+            <label>Serving Size</label>
+            <input required value={form.servingSize} onChange={(e) => updateField("servingSize", e.target.value)} placeholder="e.g. 1 bowl" aria-required="true" />
+          </div>
+          <div className="form-field required">
+            <label>Servings Had</label>
+            <input required type="number" min={0} step="0.1" value={form.servingsHad} onChange={(e) => updateField("servingsHad", e.target.value)} placeholder="e.g. 1.5" aria-required="true" />
+          </div>
         </div>
-        <div className="form-field required">
-          <label>Calories</label>
-          <input required type="number" min={0} value={form.calories} onChange={(e) => updateField('calories', e.target.value)} placeholder="e.g. 450" aria-required="true" />
-        </div>
-        <div className="form-field required">
-          <label>Serving Size</label>
-          <input required value={form.servingSize} onChange={(e) => updateField('servingSize', e.target.value)} placeholder="e.g. 1 bowl" aria-required="true" />
-        </div>
-        <div className="form-field required">
-          <label>Servings Had</label>
-          <input required type="number" min={0} step="0.1" value={form.servingsHad} onChange={(e) => updateField('servingsHad', e.target.value)} placeholder="e.g. 1.5" aria-required="true" />
-        </div>
-      </div>
 
-      {/* Toggle for optional fields */}
-      <div className="form-toggle-row">
-        <button
-          type="button"
-          className="form-toggle"
-          aria-expanded={showOptional}
-          aria-controls="optional-meal-fields"
-          onClick={() => setShowOptional((v) => !v)}
-        >
-          <span className={`chev ${showOptional ? 'open' : ''}`}>▾</span>
-          {showOptional ? 'Hide optional nutrition' : 'Show more nutrition values'}
-        </button>
-      </div>
+        {/* Toggle for optional fields */}
+        <div className="form-toggle-row">
+          <button
+            type="button"
+            className="form-toggle"
+            aria-expanded={showOptional}
+            aria-controls="optional-meal-fields"
+            onClick={() => setShowOptional((v) => !v)}
+          >
+            <span className={`chev ${showOptional ? "open" : ""}`}></span>
+            {showOptional ? "Hide optional nutrition" : "Show more nutrition values"}
+          </button>
+        </div>
 
-      {/* Optional fields */}
-      {showOptional && (
-        <div className="form-grid" id="optional-meal-fields">
-          <div className="form-field">
-            <label>Total Carbs (g)</label>
-            <input type="number" min={0} value={form.totalCarbs} onChange={(e) => updateField('totalCarbs', e.target.value)} />
+        {/* Optional fields */}
+        {showOptional && (
+          <div className="form-grid" id="optional-meal-fields">
+            <div className="form-field">
+              <label>Total Carbs (g)</label>
+              <input type="number" min={0} value={form.totalCarbs} onChange={(e) => updateField("totalCarbs", e.target.value)} />
+            </div>
+            <div className="form-field">
+              <label>Total Fat (g)</label>
+              <input type="number" min={0} value={form.totalFat} onChange={(e) => updateField("totalFat", e.target.value)} />
+            </div>
+            <div className="form-field">
+              <label>Protein (g)</label>
+              <input type="number" min={0} value={form.protein} onChange={(e) => updateField("protein", e.target.value)} />
+            </div>
+            <div className="form-field">
+              <label>Fat Categories</label>
+              <input value={form.fatCategories} onChange={(e) => updateField("fatCategories", e.target.value)} placeholder="e.g. Saturated, Unsaturated" />
+            </div>
+            <div className="form-field">
+              <label>Sodium (mg)</label>
+              <input type="number" min={0} value={form.sodium} onChange={(e) => updateField("sodium", e.target.value)} />
+            </div>
+            <div className="form-field">
+              <label>Sugars (g)</label>
+              <input type="number" min={0} value={form.sugars} onChange={(e) => updateField("sugars", e.target.value)} />
+            </div>
+            <div className="form-field">
+              <label>Calcium (mg)</label>
+              <input type="number" min={0} value={form.calcium} onChange={(e) => updateField("calcium", e.target.value)} />
+            </div>
+            <div className="form-field">
+              <label>Vitamins</label>
+              <input value={form.vitamins} onChange={(e) => updateField("vitamins", e.target.value)} placeholder="e.g. A, C, D" />
+            </div>
+            <div className="form-field">
+              <label>Iron (mg)</label>
+              <input type="number" min={0} value={form.iron} onChange={(e) => updateField("iron", e.target.value)} />
+            </div>
+            <div className="form-field span-2">
+              <label>Other Info / Notes</label>
+              <textarea value={form.otherInfo} onChange={(e) => updateField("otherInfo", e.target.value)} rows={3} placeholder="Any additional nutritional notes" />
+            </div>
           </div>
-          <div className="form-field">
-            <label>Total Fat (g)</label>
-            <input type="number" min={0} value={form.totalFat} onChange={(e) => updateField('totalFat', e.target.value)} />
+        )}
+
+        <div className="form-actions" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button
+              type="button"
+              className="response-button favorites-modal-button"
+              onClick={() => setShowFavoritesModal(true)}
+            >
+              Add From Your Favorites?
+            </button>
           </div>
-          <div className="form-field">
-            <label>Protein (g)</label>
-            <input type="number" min={0} value={form.protein} onChange={(e) => updateField('protein', e.target.value)} />
-          </div>
-          <div className="form-field">
-            <label>Fat Categories</label>
-            <input value={form.fatCategories} onChange={(e) => updateField('fatCategories', e.target.value)} placeholder="e.g. Saturated, Unsaturated" />
-          </div>
-          <div className="form-field">
-            <label>Sodium (mg)</label>
-            <input type="number" min={0} value={form.sodium} onChange={(e) => updateField('sodium', e.target.value)} />
-          </div>
-          <div className="form-field">
-            <label>Sugars (g)</label>
-            <input type="number" min={0} value={form.sugars} onChange={(e) => updateField('sugars', e.target.value)} />
-          </div>
-          <div className="form-field">
-            <label>Calcium (mg)</label>
-            <input type="number" min={0} value={form.calcium} onChange={(e) => updateField('calcium', e.target.value)} />
-          </div>
-          <div className="form-field">
-            <label>Vitamins</label>
-            <input value={form.vitamins} onChange={(e) => updateField('vitamins', e.target.value)} placeholder="e.g. A, C, D" />
-          </div>
-          <div className="form-field">
-            <label>Iron (mg)</label>
-            <input type="number" min={0} value={form.iron} onChange={(e) => updateField('iron', e.target.value)} />
-          </div>
-          <div className="form-field span-2">
-            <label>Other Info / Notes</label>
-            <textarea value={form.otherInfo} onChange={(e) => updateField('otherInfo', e.target.value)} rows={3} placeholder="Any additional nutritional notes" />
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button
+              type="button"
+              className="response-button"
+              style={{ background: "#334155" }}
+              onClick={resetForm}
+            >
+              Clear Fields
+            </button>
+            <button type="submit" className="response-button" disabled={submitting}>{submitting ? "Saving" : "Save Meal"}</button>
           </div>
         </div>
+        <Toast message={toast.message} type={toast.type} isVisible={toast.visible} onClose={closeToast} />
+      </form>
+
+      {showFavoritesModal && createPortal(
+        <div className="modal-overlay" style={{ zIndex: 100001 }}>
+          <div className="modal-content meal-modal" style={{ zIndex: 100002, position: "relative" }}>
+            <div className="modal-header-bar">
+              <h2 className="modal-title">Select a Favorite Meal</h2>
+              <button
+                type="button"
+                className="close-button"
+                onClick={() => setShowFavoritesModal(false)}
+                aria-label="Close"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6L6 18"/>
+                  <path d="M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+            <div className="modal-body-scroll" style={{ height: "70vh", maxHeight: "70vh", overflowY: "auto", padding: "1.25rem 1.75rem", display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ marginBottom: 8 }}>
+                <input
+                  type="text"
+                  value={favoritesSearch}
+                  onChange={(e) => setFavoritesSearch(e.target.value)}
+                  placeholder="Search your favorites..."
+                  style={{ width: "100%", padding: "10px 12px", borderRadius: 6, border: "1px solid #2b2b45", background: "#11172b", color: "#e2e8f0" }}
+                />
+              </div>
+              {(filteredFavorites && filteredFavorites.length > 0) ? (
+                <ul className="favorites-list-ul" style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                  {filteredFavorites.map((fav) => (
+                    <li key={fav.id} className="favorites-list-item" style={{ marginBottom: 12 }}>
+                      <button
+                        type="button"
+                        className="favorites-list-button"
+                        style={{ width: "100%", textAlign: "left", padding: "10px 12px", borderRadius: 6, border: "1px solid #eee", background: "#232347", color: "#e2e8f0", cursor: "pointer", fontWeight: 500 }}
+                        onClick={() => {
+                          setForm((prev) => ({
+                            ...prev,
+                            name: fav.name || prev.name,
+                            calories: fav.nutrition?.calories != null ? String(fav.nutrition.calories) : prev.calories,
+                            servingSize: fav.servingSize != null ? fav.servingSize : prev.servingSize,
+                            totalCarbs: fav.nutrition?.carbs != null ? String(fav.nutrition.carbs) : prev.totalCarbs,
+                            totalFat: fav.nutrition?.fat != null ? String(fav.nutrition.fat) : prev.totalFat,
+                            protein: fav.nutrition?.protein != null ? String(fav.nutrition.protein) : prev.protein,
+                            sodium: fav.nutrition?.sodium != null ? String(fav.nutrition.sodium) : prev.sodium,
+                            sugars: fav.nutrition?.sugars != null ? String(fav.nutrition.sugars) : prev.sugars,
+                            calcium: fav.nutrition?.calcium != null ? String(fav.nutrition.calcium) : prev.calcium,
+                            iron: fav.nutrition?.iron != null ? String(fav.nutrition.iron) : prev.iron,
+                            fatCategories: fav.nutrition?.fatCategories != null ? String(fav.nutrition.fatCategories) : prev.fatCategories,
+                            vitamins: fav.nutrition?.vitamins != null ? String(fav.nutrition.vitamins) : prev.vitamins,
+                            otherInfo: fav.nutrition?.otherInfo != null ? String(fav.nutrition.otherInfo) : prev.otherInfo,
+                          }));
+                          setShowFavoritesModal(false);
+                        }}
+                      >
+                        <div className="favorites-list-name" style={{ fontSize: 16 }}>{fav.name}</div>
+                        <div className="favorites-list-meta" style={{ fontSize: 13, color: "#94a3b8" }}>{fav.nutrition?.calories ?? "--"} cal  {fav.servingSize ?? "--"}</div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="favorites-list-empty" style={{ color: "#888", textAlign: "center", marginTop: 24 }}>No favorites found.</div>
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
-      <div className="form-actions">
-        <button type="submit" className="response-button" disabled={submitting}>{submitting ? 'Saving…' : 'Save Meal'}</button>
-      </div>
-      <Toast message={toast.message} type={toast.type} isVisible={toast.visible} onClose={closeToast} />
-    </form>
+    </>
   );
 };
 
