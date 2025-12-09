@@ -7,21 +7,30 @@ import { PROMPT_SUGGESTIONS, type PromptSuggestion } from './promptSuggestions';
 import { buildSystemContext } from './buildSystemContext';
 
 const AiAssistantChatbot: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
+  // ===== State Management =====
+  // Chat state
   const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
   const [loading, setLoading] = useState(false);
-  const [systemContext, setSystemContext] = useState<string | undefined>(undefined);
+  
+  // UI state
   const [selectedCategory, setSelectedCategory] = useState<string | null>('quick-questions');
   const [showSuggestions, setShowSuggestions] = useState(true);
+  
+  // User & permissions state
+  const [user, setUser] = useState<User | null>(null);
+  const [systemContext, setSystemContext] = useState<string | undefined>(undefined);
   const [capabilities, setCapabilities] = useState({
     knowsGoals: true,
     tracksIntake: true,
     personalizedAdvice: true
   });
+  
+  // Refs
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // Get current time of day
+  // ===== Computed Values =====
+  // Get current time of day for personalized context
   const timeOfDay = useMemo(() => {
     const hour = new Date().getHours();
     if (hour >= 5 && hour < 12) return 'morning';
@@ -30,7 +39,8 @@ const AiAssistantChatbot: React.FC = () => {
     return 'night';
   }, []);
 
-  // Track auth state
+  // ===== Effects & Side Effects =====
+  // Track authentication state and update user when auth changes
   useEffect(() => {
     let unsub: (() => void) | null = null;
     (async () => {
@@ -44,7 +54,8 @@ const AiAssistantChatbot: React.FC = () => {
     return () => { if (unsub) unsub(); };
   }, []);
 
-  // Build comprehensive system context
+  // Build comprehensive system context for AI assistant based on user data and capabilities
+  // This context is sent to the API to personalize responses
   useEffect(() => {
     if (!user) {
       setSystemContext(undefined);
@@ -63,7 +74,8 @@ const AiAssistantChatbot: React.FC = () => {
     void loadContext();
   }, [user, timeOfDay, capabilities]);
 
-  // Load capability preferences from localStorage
+  // Load capability preferences from localStorage on mount
+  // Restores user's previous permission settings
   useEffect(() => {
     const saved = localStorage.getItem('nova-capabilities');
     if (saved) {
@@ -80,17 +92,21 @@ const AiAssistantChatbot: React.FC = () => {
     }
   }, []);
 
-  // Save capability preferences to localStorage
+  // Save capability preferences to localStorage whenever they change
+  // Persists user's permission settings across sessions
   useEffect(() => {
     localStorage.setItem('nova-capabilities', JSON.stringify(capabilities));
   }, [capabilities]);
 
-  // Auto-focus input on mount
+  // Auto-focus input field when component mounts for better UX
   useEffect(() => {
     const id = setTimeout(() => inputRef.current?.focus(), 100);
     return () => clearTimeout(id);
   }, []);
 
+  // ===== Event Handlers =====
+  // Send user prompt to API and handle response
+  // Can be called with optional promptText (for suggestions) or uses current prompt state
   const sendPrompt = async (promptText?: string) => {
     const currentPrompt = (promptText || prompt.trim());
     if (!currentPrompt || loading) return;
@@ -134,26 +150,34 @@ const AiAssistantChatbot: React.FC = () => {
     }
   };
 
+  // Handle form submission from input area
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await sendPrompt();
   };
 
+  // Handle clicking on a prompt suggestion button
+  // Sets the category, hides suggestions, and sends the suggestion text as a prompt
   const handleSuggestionClick = (suggestion: PromptSuggestion) => {
     setSelectedCategory(suggestion.category);
     setShowSuggestions(false);
     void sendPrompt(suggestion.text);
   };
 
+  // Handle clicking on category filter buttons
+  // Updates selected category and shows suggestions for that category
   const handleCategoryFilterClick = (category: string | null) => {
     setSelectedCategory(category);
     setShowSuggestions(true);
   };
 
+  // ===== Computed/Derived Values =====
+  // Filter suggestions based on selected category
   const filteredSuggestions = selectedCategory 
     ? PROMPT_SUGGESTIONS.filter(s => s.category === selectedCategory)
     : PROMPT_SUGGESTIONS;
 
+  // Category configuration for filter buttons
   const categories = ['quick-questions', 'meal-planning', 'nutrition-advice', 'goal-support'] as const;
   const categoryLabels: Record<typeof categories[number], string> = {
     'meal-planning': 'Meal Planning',
@@ -162,10 +186,14 @@ const AiAssistantChatbot: React.FC = () => {
     'quick-questions': 'Quick Questions'
   };
 
+  // ===== Render =====
   return (
     <div className="ai-assistant-chatbot">
+      {/* Header: Contains Nova branding, category filters, and permission controls */}
       <div className="ai-chatbot-header">
+        {/* Left side: Icon, title, description, and category filter buttons */}
         <div className="ai-chatbot-header-content">
+          {/* Nova icon/logo */}
           <div className="ai-chatbot-icon">
             <svg 
               width="32" 
@@ -181,12 +209,14 @@ const AiAssistantChatbot: React.FC = () => {
               <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
             </svg>
           </div>
+          {/* Title, badge, and category filter buttons */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
               <h2>Nova</h2>
               <span className="personalized-badge">Personalized</span>
             </div>
             <p>Your personalized nutrition assistant</p>
+            {/* Category filter buttons for suggestion filtering */}
             <div className="category-section">
               <p className="category-label">Filter suggestions:</p>
               <div className="suggestion-categories">
@@ -209,9 +239,11 @@ const AiAssistantChatbot: React.FC = () => {
             </div>
           </div>
         </div>
+        {/* Right side: Permission controls with toggleable capability badges */}
         <div className="ai-chatbot-capabilities">
           <div className="capability-label-wrapper">
             <p className="capability-label">Allow Nova to access:</p>
+            {/* Info tooltip explaining what each permission grants access to */}
             <div className="tooltip-container">
               <InfoIcon size={14} className="info-icon" />
               <div className="tooltip-content">
@@ -228,6 +260,7 @@ const AiAssistantChatbot: React.FC = () => {
               </div>
             </div>
           </div>
+          {/* Toggleable permission badges - users can enable/disable data access */}
           <div className="capability-indicators">
             <button
               className={`capability-badge ${capabilities.knowsGoals ? 'active' : 'inactive'}`}
@@ -254,9 +287,12 @@ const AiAssistantChatbot: React.FC = () => {
         </div>
       </div>
 
+      {/* Main chat area: Messages and prompt suggestions */}
       <div className="ai-chatbot-body">
+        {/* Display chat messages if any exist */}
         {messages.length > 0 && (
           <div className="ai-chatbot-messages">
+            {/* Render each message with appropriate avatar (Nova or User) */}
             {messages.map((m, idx) => (
               <div key={idx} className={`ai-message ai-message-${m.role}`}>
                 <div className="ai-message-avatar">
@@ -267,6 +303,7 @@ const AiAssistantChatbot: React.FC = () => {
                 </div>
               </div>
             ))}
+            {/* Loading indicator shown while waiting for AI response */}
             {loading && (
               <div className="ai-message ai-message-assistant">
                 <div className="ai-message-avatar"><NovaIcon size={20} /></div>
@@ -281,9 +318,10 @@ const AiAssistantChatbot: React.FC = () => {
             )}
           </div>
         )}
+        {/* Show prompt suggestions when no messages exist or when explicitly shown */}
         {(messages.length === 0 || showSuggestions) && (
           <div className="ai-chatbot-welcome">
-            {/* Prompt Suggestions */}
+            {/* Clickable suggestion buttons that send pre-written prompts */}
             <div className="prompt-suggestions">
               {filteredSuggestions.map((suggestion) => {
                 const IconComponent = suggestion.Icon;
@@ -306,8 +344,10 @@ const AiAssistantChatbot: React.FC = () => {
         )}
       </div>
 
+      {/* Input area: Text input and send button */}
       <form className="ai-chatbot-input-area" onSubmit={handleSubmit}>
         <div className="ai-input-wrapper">
+          {/* Text input with keyboard shortcuts: Enter to send, Shift+Enter for new line */}
           <textarea
             className="ai-chatbot-input"
             value={prompt}
@@ -322,6 +362,7 @@ const AiAssistantChatbot: React.FC = () => {
               }
             }}
           />
+          {/* Send button - shows spinner when loading, send icon otherwise */}
           <button 
             type="submit" 
             className="ai-chatbot-send-button"
@@ -337,6 +378,7 @@ const AiAssistantChatbot: React.FC = () => {
             )}
           </button>
         </div>
+        {/* Keyboard shortcut hint shown after first message */}
         {messages.length > 0 && (
           <div className="ai-input-hint">
             Press Enter to send, Shift+Enter for new line
