@@ -299,7 +299,7 @@ const FavoriteFoodsSection: React.FC<FavoriteFoodsSectionProps> = ({
 
           {favorites.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '45vh', overflowY: 'auto', paddingRight: '0.25rem' }}>
-              {favorites.map((fav) => (
+              {favorites.sort((a, b) => a.name.localeCompare(b.name)).map((fav) => (
                 <div key={fav.id} className="preference-card favorite-item" onClick={() => {
                   const mealLike = {
                     id: fav.id,
