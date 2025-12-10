@@ -9,7 +9,12 @@ import SavedResponsesModal from './SavedResponsesModal';
 import SaveResponseModal from './SaveResponseModal';
 import { savedResponsesService } from '../services/savedResponsesService';
 
-const AiAssistantChatbotMobile: React.FC = () => {
+interface AiAssistantChatbotMobileProps {
+  onOpenDisclaimer?: () => void;
+  onDropdownOpenChange?: (isOpen: boolean) => void;
+}
+
+const AiAssistantChatbotMobile: React.FC<AiAssistantChatbotMobileProps> = ({ onOpenDisclaimer, onDropdownOpenChange }) => {
   const [user, setUser] = useState<User | null>(null);
   const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
@@ -175,6 +180,15 @@ const AiAssistantChatbotMobile: React.FC = () => {
     <div className="ai-assistant-chatbot">
       {/* 1. Header Section - Nova Branding */}
       <div className="ai-chatbot-header-centered">
+        <button
+          type="button"
+          className="disclaimer-icon-button"
+          onClick={onOpenDisclaimer}
+          aria-label="Show disclaimer"
+          style={{ alignSelf: 'flex-end' }}
+        >
+          <InfoIcon size={18} />
+        </button>
         <div className="ai-chatbot-icon">
           <svg 
             width="32" 
@@ -285,7 +299,11 @@ const AiAssistantChatbotMobile: React.FC = () => {
         <div className="ai-filter-dropdown-section">
           <button 
             className="ai-filter-dropdown-button"
-            onClick={() => setDropdownOpen(!dropdownOpen)}
+            onClick={() => {
+              const newState = !dropdownOpen;
+              setDropdownOpen(newState);
+              onDropdownOpenChange?.(newState);
+            }}
           >
             <span>Filter suggestions: {selectedCategory ? categoryLabels[selectedCategory as typeof categories[number]] : 'All Suggestions'}</span>
             <span className={`dropdown-arrow ${dropdownOpen ? 'open' : ''}`}>▼</span>
@@ -299,6 +317,7 @@ const AiAssistantChatbotMobile: React.FC = () => {
                   onClick={() => {
                     setSelectedCategory(cat);
                     setDropdownOpen(false);
+                    onDropdownOpenChange?.(false);
                     setShowSuggestions(true);
                   }}
                 >
@@ -310,6 +329,7 @@ const AiAssistantChatbotMobile: React.FC = () => {
                 onClick={() => {
                   setSelectedCategory(null);
                   setDropdownOpen(false);
+                  onDropdownOpenChange?.(false);
                   setShowSuggestions(true);
                 }}
               >

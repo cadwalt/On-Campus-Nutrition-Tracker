@@ -843,7 +843,82 @@ body::after {
   height: calc(100vh - 120px);
   min-height: 800px;
   max-height: 1100px;
-  overflow: hidden;
+  overflow: visible;
+}
+
+/* Disclaimer trigger icon */
+.disclaimer-icon-button {
+  align-self: flex-start;
+  margin-left: auto;
+  margin-bottom: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.5rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.disclaimer-icon-button:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+}
+
+.disclaimer-icon-button:active {
+  transform: translateY(1px);
+}
+
+/* Disclaimer modal */
+.disclaimer-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 15, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 1.5rem;
+}
+
+.disclaimer-modal {
+  width: min(680px, 100%);
+  background: rgba(17, 24, 39, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+}
+
+.disclaimer-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.disclaimer-modal .btn-secondary {
+  padding: 0.75rem 1.25rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.disclaimer-modal .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.disclaimer-modal .btn-secondary:active {
+  transform: translateY(1px);
 }
 
 /* AI Chatbot Header */
@@ -1659,6 +1734,9 @@ body::after {
   padding: 0.5rem 0;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   z-index: 100;
+  max-height: 45vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .dropdown-menu-item {
@@ -1786,8 +1864,28 @@ body::after {
   }
 
   .ai-filter-dropdown-menu {
-    left: 1.5rem;
-    right: 1.5rem;
+    left: 0;
+    right: 0;
+    max-height: 38vh;
+  }
+
+  /* Disable hover/transform effects on mobile */
+  .ai-filter-dropdown-button:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #d1d5db;
+  }
+
+  .capability-badge-centered:hover {
+    transform: none;
+  }
+
+  .capability-badge-centered.inactive:hover {
+    transform: none;
+  }
+
+  .prompt-suggestion-compact:hover:not(:disabled) {
+    transform: none;
   }
 
   .prompt-suggestions-enlarged {
