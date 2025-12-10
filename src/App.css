@@ -1682,6 +1682,8 @@ body::after {
   padding: 1rem 2rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(0, 0, 0, 0.1);
+  overflow: visible;
+  z-index: 50;
 }
 
 .ai-filter-dropdown-button {
@@ -1723,20 +1725,21 @@ body::after {
 .ai-filter-dropdown-menu {
   position: absolute;
   top: calc(100% + 0.5rem);
-  left: 2rem;
-  right: 2rem;
-  background: rgba(15, 23, 42, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  left: 0;
+  right: 0;
+  background: rgba(15, 23, 42, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
   display: flex;
   flex-direction: column;
   gap: 0;
   padding: 0.5rem 0;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  z-index: 100;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(99, 102, 241, 0.1);
+  z-index: 200;
   max-height: 45vh;
   overflow-y: auto;
   overscroll-behavior: contain;
+  backdrop-filter: blur(10px);
 }
 
 .dropdown-menu-item {
@@ -1830,10 +1833,24 @@ body::after {
 
 /* Responsive */
 @media (max-width: 768px) {
+  .ai-assistant-page {
+    overflow: visible;
+  }
+
+  .ai-assistant-content {
+    overflow: visible;
+  }
+
+  .ai-assistant-container {
+    overflow: visible;
+  }
+
   .ai-assistant-chatbot {
     height: calc(100vh - 150px);
     min-height: 600px;
     border-radius: 16px;
+    overflow: visible;
+    max-width: 100vw;
   }
 
   .ai-chatbot-header-centered {
@@ -1856,17 +1873,24 @@ body::after {
 
   .ai-filter-dropdown-section {
     padding: 0.75rem 1.5rem;
+    overflow: visible;
+    width: 100%;
+    z-index: 100;
   }
 
   .ai-filter-dropdown-button {
     padding: 0.75rem 1rem;
     font-size: 0.875rem;
+    width: 100%;
   }
 
   .ai-filter-dropdown-menu {
-    left: 0;
-    right: 0;
-    max-height: 38vh;
+    left: 1.5rem;
+    right: 1.5rem;
+    max-height: min(50vh, 300px);
+    max-width: calc(100vw - 3rem);
+    z-index: 300;
+    margin-bottom: 1rem;
   }
 
   /* Disable hover/transform effects on mobile */
@@ -1895,8 +1919,8 @@ body::after {
   }
 
   .prompt-suggestion-compact {
-    padding: 0.875rem 1rem;
-    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.75rem;
     gap: 0.875rem;
   }
 
@@ -1908,13 +1932,18 @@ body::after {
 
   .tooltip-content {
     right: auto;
-    left: 0;
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px);
     width: calc(100vw - 3rem);
     max-width: 300px;
   }
 
+  .tooltip-container:hover .tooltip-content {
+    transform: translateX(-79%) translateY(0);
+  }
+
   .ai-chatbot-body {
-    padding: 1.5rem;
+    padding: 0rem;
   }
 
   .ai-message-content {
@@ -1922,7 +1951,7 @@ body::after {
   }
 
   .ai-chatbot-input-area {
-    padding: 1.25rem 1.5rem;
+    padding: 1rem 1rem;
   }
 }
 
@@ -4392,6 +4421,10 @@ select { min-width: 0; }
     margin: 0.5rem;
     min-height: calc(100vh - 1rem);
     width: calc(100vw - 200px);
+  }
+
+  .main-content.minimal {
+    overflow: visible;
   }
   
   .dashboard-grid {
@@ -7307,6 +7340,7 @@ select { min-width: 0; }
     max-width: 100vw;
     border-radius: 0;
     box-shadow: none;
+    overflow: visible;
   }
 
   /* Typography adjustments */

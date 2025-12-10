@@ -26,11 +26,13 @@ body {
   /* Mobile optimizations */
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
   touch-action: manipulation;
+  overflow-x: hidden;
 }
 
 #root {
   width: 100%;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 /* Mobile-friendly touch targets (minimum 44x44px for iOS) */
