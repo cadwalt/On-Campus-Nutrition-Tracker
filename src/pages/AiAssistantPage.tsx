@@ -8,11 +8,13 @@ const resolveAuthClient = async () => {
   return { auth, firebaseAuth };
 };
 import AiAssistantChatbot from '../components/features/AiAssistantChatbot';
+import AiAssistantChatbotMobile from '../components/features/AiAssistantChatbotMobile';
 import Disclaimer from '../components/ui/Disclaimer';
 
 const AiAssistantPage: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 767);
 
   useEffect(() => {
     let unsub: (() => void) | null = null;
@@ -29,6 +31,15 @@ const AiAssistantPage: React.FC = () => {
       }
     })();
     return () => { if (unsub) unsub(); };
+  }, []);
+
+  // Handle window resize to switch between mobile and desktop
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 767);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   if (loading) {
@@ -54,7 +65,7 @@ const AiAssistantPage: React.FC = () => {
     <div className="ai-assistant-page">
       <main className="ai-assistant-content">
         <div className="ai-assistant-container">
-          <AiAssistantChatbot />
+          {isMobile ? <AiAssistantChatbotMobile /> : <AiAssistantChatbot />}
           <Disclaimer className="ai-assistant-page-disclaimer" />
         </div>
       </main>

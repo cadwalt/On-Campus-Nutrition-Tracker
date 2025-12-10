@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChartIcon, UtensilsIcon, TargetIcon, DropletIcon, NovaIcon } from './Icons';
+import { ChartIcon, UtensilsIcon, TargetIcon, DropletIcon, NovaIcon, UserIcon } from './Icons';
 import './MobileNavMenu.css';
 
 const MobileNavMenu: React.FC = () => {
@@ -22,6 +22,7 @@ const MobileNavMenu: React.FC = () => {
     { path: '/water-intake', icon: DropletIcon, label: 'Water Intake' },
     { path: '/weight', icon: ChartIcon, label: 'Weight' },
     { path: '/ai-assistant', icon: NovaIcon, label: 'Ask Nova' },
+    { path: '/profile', icon: UserIcon, label: 'Profile' },
   ];
 
   return (
