@@ -11,6 +11,7 @@ const resolveAuthClient = async () => {
 import Toast from '../components/ui/Toast';
 import PersonalInformation from '../components/profile/PersonalInformation';
 import AccountSection from '../components/profile/AccountSection';
+import SavedResponsesSection from '../components/profile/SavedResponsesSection';
 
 const ProfilePage: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -86,6 +87,10 @@ const ProfilePage: React.FC = () => {
 
         <AccountSection 
           onLogout={handleLogout}
+        />
+
+        <SavedResponsesSection 
+          userId={user.uid}
         />
       </main>
       

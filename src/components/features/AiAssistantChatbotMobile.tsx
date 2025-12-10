@@ -1,15 +1,15 @@
-// Enhanced AI Assistant Chatbot Component
+// Mobile-optimized AI Assistant Chatbot Component
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import type { User } from 'firebase/auth';
 import { resolveFirebase } from '../../lib/resolveFirebase';
-import { NovaIcon, UserIcon, InfoIcon, SaveIcon, BookmarkIcon } from '../ui/Icons';
+import { NovaIcon, UserIcon, InfoIcon } from '../ui/Icons';
 import { PROMPT_SUGGESTIONS, type PromptSuggestion } from './promptSuggestions';
 import { buildSystemContext } from './buildSystemContext';
 import SavedResponsesModal from './SavedResponsesModal';
 import SaveResponseModal from './SaveResponseModal';
 import { savedResponsesService } from '../services/savedResponsesService';
 
-const AiAssistantChatbot: React.FC = () => {
+const AiAssistantChatbotMobile: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
@@ -17,6 +17,9 @@ const AiAssistantChatbot: React.FC = () => {
   const [systemContext, setSystemContext] = useState<string | undefined>(undefined);
   const [selectedCategory, setSelectedCategory] = useState<string | null>('quick-questions');
   const [showSuggestions, setShowSuggestions] = useState(true);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
+  const [sectionsCollapsed, setSectionsCollapsed] = useState(false);
   const [capabilities, setCapabilities] = useState({
     knowsGoals: true,
     tracksIntake: true,
@@ -170,54 +173,69 @@ const AiAssistantChatbot: React.FC = () => {
 
   return (
     <div className="ai-assistant-chatbot">
-      <div className="ai-chatbot-header">
-        <div className="ai-chatbot-header-content">
-          <div className="ai-chatbot-icon">
-            <svg 
-              width="32" 
-              height="32" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2" 
-              strokeLinecap="round" 
-              strokeLinejoin="round"
-            >
-              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-              <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
-            </svg>
-          </div>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <h2>Nova</h2>
-              <span className="personalized-badge">Personalized</span>
-            </div>
-            <p>Your personalized nutrition assistant</p>
-            <div className="category-section">
-              <p className="category-label">Filter suggestions:</p>
-              <div className="suggestion-categories">
-                {categories.map(cat => (
-                  <button
-                    key={cat}
-                    className={`category-filter ${selectedCategory === cat ? 'active' : ''}`}
-                    onClick={() => handleCategoryFilterClick(cat)}
-                  >
-                    {categoryLabels[cat]}
-                  </button>
-                ))}
-                <button
-                  className={`category-filter ${selectedCategory === null ? 'active' : ''}`}
-                  onClick={() => handleCategoryFilterClick(null)}
-                >
-                  All Suggestions
-                </button>
-              </div>
-            </div>
-          </div>
+      {/* 1. Header Section - Nova Branding */}
+      <div className="ai-chatbot-header-centered">
+        <div className="ai-chatbot-icon">
+          <svg 
+            width="32" 
+            height="32" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+          >
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
         </div>
-        
-        {/* Allow Nova to Access Section */}
-        <div className="ai-chatbot-capabilities">
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <h2 style={{ margin: 0 }}>Nova</h2>
+            <span className="personalized-badge">Personalized</span>
+          </div>
+          <p style={{ margin: '0.25rem 0 0 0' }}>Your personalized nutrition assistant</p>
+        </div>
+      </div>
+
+      {/* Drag Handle Bar - Always visible */}
+      <div
+        onClick={() => setSectionsCollapsed(!sectionsCollapsed)}
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: '0.75rem',
+          cursor: 'pointer',
+          background: 'rgba(99, 102, 241, 0.08)',
+          borderTop: '1px solid rgba(99, 102, 241, 0.2)',
+          borderBottom: '1px solid rgba(99, 102, 241, 0.2)',
+          transition: 'all 0.3s ease'
+        }}
+        title={sectionsCollapsed ? 'Tap to show options' : 'Tap to hide options'}
+      >
+        {/* Triangle pointing down (sections visible) or up (sections hidden) */}
+        <div
+          style={{
+            width: 0,
+            height: 0,
+            borderLeft: '8px solid transparent',
+            borderRight: '8px solid transparent',
+            borderTop: sectionsCollapsed 
+              ? 'none' 
+              : '8px solid rgba(99, 102, 241, 0.6)',
+            borderBottom: sectionsCollapsed 
+              ? '8px solid rgba(99, 102, 241, 0.6)' 
+              : 'none',
+            transition: 'all 0.3s ease'
+          }}
+        />
+      </div>
+
+      {/* 2. Allow Nova to Access Section - Hidden when input focused */}
+      {!inputFocused && !sectionsCollapsed && (
+        <div className="ai-access-section">
           <div className="capability-label-wrapper">
             <p className="capability-label">Allow Nova to access:</p>
             <div className="tooltip-container">
@@ -236,23 +254,23 @@ const AiAssistantChatbot: React.FC = () => {
               </div>
             </div>
           </div>
-          <div className="capability-indicators">
+          <div className="ai-capability-buttons">
             <button
-              className={`capability-badge ${capabilities.knowsGoals ? 'active' : 'inactive'}`}
+              className={`capability-badge-centered ${capabilities.knowsGoals ? 'active' : 'inactive'}`}
               onClick={() => setCapabilities(prev => ({ ...prev, knowsGoals: !prev.knowsGoals }))}
               title={capabilities.knowsGoals ? 'Click to disable' : 'Click to enable'}
             >
               {capabilities.knowsGoals ? '✓' : '○'} Your Goals
             </button>
             <button
-              className={`capability-badge ${capabilities.tracksIntake ? 'active' : 'inactive'}`}
+              className={`capability-badge-centered ${capabilities.tracksIntake ? 'active' : 'inactive'}`}
               onClick={() => setCapabilities(prev => ({ ...prev, tracksIntake: !prev.tracksIntake }))}
               title={capabilities.tracksIntake ? 'Click to disable' : 'Click to enable'}
             >
               {capabilities.tracksIntake ? '✓' : '○'} Your Daily Intake
             </button>
             <button
-              className={`capability-badge ${capabilities.personalizedAdvice ? 'active' : 'inactive'}`}
+              className={`capability-badge-centered ${capabilities.personalizedAdvice ? 'active' : 'inactive'}`}
               onClick={() => setCapabilities(prev => ({ ...prev, personalizedAdvice: !prev.personalizedAdvice }))}
               title={capabilities.personalizedAdvice ? 'Click to disable' : 'Click to enable'}
             >
@@ -260,7 +278,47 @@ const AiAssistantChatbot: React.FC = () => {
             </button>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* 3. Filter Suggestions Section - Hidden when input focused */}
+      {!inputFocused && !sectionsCollapsed && (
+        <div className="ai-filter-dropdown-section">
+          <button 
+            className="ai-filter-dropdown-button"
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+          >
+            <span>Filter suggestions: {selectedCategory ? categoryLabels[selectedCategory as typeof categories[number]] : 'All Suggestions'}</span>
+            <span className={`dropdown-arrow ${dropdownOpen ? 'open' : ''}`}>▼</span>
+          </button>
+          {dropdownOpen && (
+            <div className="ai-filter-dropdown-menu">
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  className={`dropdown-menu-item ${selectedCategory === cat ? 'active' : ''}`}
+                  onClick={() => {
+                    setSelectedCategory(cat);
+                    setDropdownOpen(false);
+                    setShowSuggestions(true);
+                  }}
+                >
+                  {categoryLabels[cat]}
+                </button>
+              ))}
+              <button
+                className={`dropdown-menu-item ${selectedCategory === null ? 'active' : ''}`}
+                onClick={() => {
+                  setSelectedCategory(null);
+                  setDropdownOpen(false);
+                  setShowSuggestions(true);
+                }}
+              >
+                All Suggestions
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="ai-chatbot-body">
         {messages.length > 0 && (
@@ -327,13 +385,13 @@ const AiAssistantChatbot: React.FC = () => {
         {(messages.length === 0 || showSuggestions) && (
           <div className="ai-chatbot-welcome">
             {/* Prompt Suggestions */}
-            <div className="prompt-suggestions">
+            <div className="prompt-suggestions-enlarged">
               {filteredSuggestions.map((suggestion) => {
                 const IconComponent = suggestion.Icon;
                 return (
                   <button
                     key={suggestion.id}
-                    className="prompt-suggestion"
+                    className="prompt-suggestion-compact"
                     onClick={() => handleSuggestionClick(suggestion)}
                     disabled={loading}
                   >
@@ -358,6 +416,8 @@ const AiAssistantChatbot: React.FC = () => {
             placeholder="Ask Nova anything about nutrition, meal planning, or your goals..."
             disabled={loading}
             ref={inputRef}
+            onFocus={() => setInputFocused(true)}
+            onBlur={() => setInputFocused(false)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -430,5 +490,4 @@ const AiAssistantChatbot: React.FC = () => {
   );
 };
 
-export default AiAssistantChatbot;
-
+export default AiAssistantChatbotMobile;
