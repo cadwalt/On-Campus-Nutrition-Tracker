@@ -1,6 +1,17 @@
+/**
+ * MealForm Component
+ * 
+ * Main form for adding/editing meal entries with nutrition tracking.
+ * Implements security, accessibility, and reliability best practices:
+ * - Input validation & sanitization
+ * - ARIA attributes & keyboard navigation
+ * - Defensive parsing & error handling
+ */
+
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
+// Lazy-load Firebase to avoid bundling auth in initial chunk (Performance & Security)
 const resolveFirebase = async () => {
   const mod: any = await import("../../firebase");
   const db = (mod.getFirestoreClient ? await mod.getFirestoreClient() : mod.db) as any;
@@ -12,6 +23,7 @@ import type { Meal } from "../../types/meal";
 import Toast from "../ui/Toast";
 import type { FavoriteItem } from "../../types/favorite";
 import { getFavoritesForUser } from "../services/favoritesService";
+import { validateMeal, MEAL_CONSTRAINTS, sanitizeMeal, parseNumber } from "../../utils/mealValidation";
 
 interface MealFormProps {
   onMealAdded: (meal: Meal) => void;
@@ -21,6 +33,8 @@ interface MealFormProps {
 }
 
 const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitialMealSet, planningMode = false }) => {
+  // Form state: All fields stored as strings for easier input controls
+  // Numbers are parsed/validated only on submit to avoid blocking user typing
   const [form, setForm] = useState({
     name: "",
     calories: "",
@@ -37,12 +51,21 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
     iron: "",
     otherInfo: "",
   });
+
+  // Prevent double-submission during async operations
   const [submitting, setSubmitting] = useState(false);
+
+  // User-facing notifications for success/error feedback
   const [toast, setToast] = useState<{ message: string; type: "success" | "error"; visible: boolean }>({
     message: "",
     type: "success",
     visible: false,
   });
+
+  // Structured error state tied to ARIA attributes for screen reader announcements
+  const [formError, setFormError] = useState<{ field?: string; message: string } | null>(null);
+
+  // UI state for collapsible sections and modals
   const [showOptional, setShowOptional] = useState(false);
   const [favorites, setFavorites] = useState<FavoriteItem[] | null>(null);
   const [showFavoritesModal, setShowFavoritesModal] = useState(false);
@@ -50,24 +73,26 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
   const [favoritesSearch, setFavoritesSearch] = useState("");
   const [showNameSuggestions, setShowNameSuggestions] = useState(false);
 
-  // Fill form when initialMeal is provided
+  // Defensively populate form from initialMeal with optional chaining and fallbacks
+  // Prevents crashes if database schema changes or data is incomplete
+  // Optional chaining (?.) returns undefined for missing properties instead of throwing
   useEffect(() => {
     if (initialMeal) {
       setForm({
-        name: initialMeal.name || "",
-        calories: String(initialMeal.calories ?? ""),
-        servingSize: initialMeal.servingSize || "",
-        servingsHad: initialMeal.servingsHad != null ? String(initialMeal.servingsHad) : "",
-        totalCarbs: initialMeal.totalCarbs != null ? String(initialMeal.totalCarbs) : "",
-        totalFat: initialMeal.totalFat != null ? String(initialMeal.totalFat) : "",
-        protein: initialMeal.protein != null ? String(initialMeal.protein) : "",
-        fatCategories: initialMeal.fatCategories || "",
-        sodium: initialMeal.sodium != null ? String(initialMeal.sodium) : "",
-        sugars: initialMeal.sugars != null ? String(initialMeal.sugars) : "",
-        calcium: initialMeal.calcium != null ? String(initialMeal.calcium) : "",
-        vitamins: initialMeal.vitamins || "",
-        iron: initialMeal.iron != null ? String(initialMeal.iron) : "",
-        otherInfo: initialMeal.otherInfo || "",
+        name: initialMeal?.name ?? "",
+        calories: initialMeal?.calories != null ? String(initialMeal?.calories) : "",
+        servingSize: initialMeal?.servingSize ?? "",
+        servingsHad: initialMeal?.servingsHad != null ? String(initialMeal?.servingsHad) : "",
+        totalCarbs: initialMeal?.totalCarbs != null ? String(initialMeal?.totalCarbs) : "",
+        totalFat: initialMeal?.totalFat != null ? String(initialMeal?.totalFat) : "",
+        protein: initialMeal?.protein != null ? String(initialMeal?.protein) : "",
+        fatCategories: initialMeal?.fatCategories ?? "",
+        sodium: initialMeal?.sodium != null ? String(initialMeal?.sodium) : "",
+        sugars: initialMeal?.sugars != null ? String(initialMeal?.sugars) : "",
+        calcium: initialMeal?.calcium != null ? String(initialMeal?.calcium) : "",
+        vitamins: initialMeal?.vitamins ?? "",
+        iron: initialMeal?.iron != null ? String(initialMeal?.iron) : "",
+        otherInfo: initialMeal?.otherInfo ?? "",
       });
       if (onInitialMealSet) {
         onInitialMealSet();
@@ -75,20 +100,27 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
     }
   }, [initialMeal, onInitialMealSet]);
 
-  // fetch current user on-demand to avoid bundling auth into initial chunk
+  // Lazy auth fetch avoids bundling Firebase in initial chunk
+  // Reduces initial bundle size and only loads auth when actually needed
   const getCurrentUser = async () => {
     const { firebaseAuth } = await resolveFirebase();
     return firebaseAuth.getAuth ? firebaseAuth.getAuth().currentUser : null;
   };
 
+  // User feedback helpers for success/error messaging
   const showToast = (message: string, type: "success" | "error") => {
     setToast({ message, type, visible: true });
   };
 
   const closeToast = () => setToast((t) => ({ ...t, visible: false }));
 
+  // Clear field-level error when user starts correcting input
+  // Prevents stale error messages and provides immediate feedback
   const updateField = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+    if (formError && formError.field === field) {
+      setFormError(null);
+    }
   };
 
   const resetForm = () => {
@@ -111,6 +143,8 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
     setShowOptional(false);
   };
 
+  // Check for missing required fields before submission
+  // Provides clear feedback about what's missing instead of silent failure
   const requiredMissing = () => {
     const missing: string[] = [];
     if (!form.name.trim()) missing.push("Meal name");
@@ -120,13 +154,9 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
     return missing;
   };
 
-  const parseNumber = (val: string): number | undefined => {
-    if (!val.trim()) return undefined;
-    const n = Number(val);
-    return isFinite(n) ? n : undefined;
-  };
-
-  // Load user's favorites for quick-add
+  // Load favorites with graceful failure handling
+  // Form remains usable even if favorites fail to load (network issue, etc.)
+  // Mounted flag prevents state updates after component unmounts (memory leak prevention)
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -137,10 +167,12 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
           return;
         }
         const favs = await getFavoritesForUser(user.uid);
+        // Sort alphabetically for easier scanning and user experience
         const sorted = (favs || []).slice().sort((a: FavoriteItem, b: FavoriteItem) => (a.name || "").localeCompare(b.name || ""));
         if (mounted) setFavorites(sorted);
       } catch (e) {
         console.error("Failed to load favorites", e);
+        // Fail silently with empty array - form is still usable
         if (mounted) setFavorites([]);
       }
     })();
@@ -162,25 +194,45 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
     return matches.slice(0, 6).sort((a, b) => (a.name || "").localeCompare(b.name || ""));
   }, [favorites, form.name]);
 
+  // Main submission handler with multi-layered validation
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Require authentication before any write operation
     const user = await getCurrentUser();
     if (!user) {
       showToast("You must be signed in to save meals", "error");
       return;
     }
+
+    // Check required fields first (fast validation)
     const missing = requiredMissing();
     if (missing.length) {
       showToast(`Missing required: ${missing.join(", ")}`, "error");
       return;
     }
+
+    // Validate using centralized validation utility (DRY principle)
+    // Ensures consistent validation rules across all components
+    const validationError = validateMeal(form);
+    if (validationError) {
+      setFormError({ message: validationError.message });
+      showToast(validationError.message, "error");
+      return;
+    }
+
+    // Strip angle brackets to reduce XSS risk if data is ever exported or rendered unsafely
+    // React escapes by default, but downstream uses (CSV export, etc.) might not
+    const sanitize = (val: string) => val.replace(/[<>]/g, "").trim();
+
+    // Prevent double-submission during async save
     setSubmitting(true);
     try {
       const mealBase: Meal = {
         userId: user.uid,
-        name: form.name.trim(),
+        name: sanitize(form.name),
         calories: Number(form.calories),
-        servingSize: form.servingSize.trim(),
+        servingSize: sanitize(form.servingSize),
         createdAt: Date.now(),
       };
 
@@ -209,7 +261,7 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
         otherInfo: form.otherInfo,
       };
       Object.entries(stringOptional).forEach(([key, raw]) => {
-        const trimmed = raw.trim();
+        const trimmed = sanitize(raw);
         if (trimmed) {
           // @ts-expect-error dynamic assignment of optional field
           mealBase[key] = trimmed;
@@ -246,9 +298,11 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
         {/* Required fields */}
         <div className="form-grid" style={{ overflow: "visible" }}>
           <div className="form-field required" style={{ position: "relative", overflow: "visible" }}>
-            <label>Meal Name</label>
+            <label htmlFor="meal-name">Meal Name</label>
             <input
+              id="meal-name"
               value={form.name}
+              maxLength={MEAL_CONSTRAINTS.MAX_NAME_LENGTH}
               onChange={(e) => {
                 const value = e.target.value;
                 updateField("name", value);
@@ -259,6 +313,8 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
               placeholder="e.g. Grilled Chicken Salad"
               required
               aria-required="true"
+              aria-invalid={!!formError}
+              aria-describedby={formError ? "meal-form-error" : undefined}
             />
             {showNameSuggestions && nameSuggestions.length > 0 && (
               <div
@@ -355,16 +411,52 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
             )}
           </div>
           <div className="form-field required">
-            <label>Calories</label>
-            <input required type="number" min={0} value={form.calories} onChange={(e) => updateField("calories", e.target.value)} placeholder="e.g. 450" aria-required="true" />
+            <label htmlFor="meal-calories">Calories</label>
+            <input
+              id="meal-calories"
+              required
+              type="number"
+              min={0}
+              max={MEAL_CONSTRAINTS.MAX_CALORIES}
+              value={form.calories}
+              onChange={(e) => updateField("calories", e.target.value)}
+              placeholder="e.g. 450"
+              aria-required="true"
+              inputMode="decimal"
+              aria-invalid={!!formError}
+              aria-describedby={formError ? "meal-form-error" : undefined}
+            />
           </div>
           <div className="form-field required">
-            <label>Serving Size</label>
-            <input required value={form.servingSize} onChange={(e) => updateField("servingSize", e.target.value)} placeholder="e.g. 1 bowl" aria-required="true" />
+            <label htmlFor="meal-serving-size">Serving Size</label>
+            <input
+              id="meal-serving-size"
+              required
+              value={form.servingSize}
+              maxLength={MEAL_CONSTRAINTS.MAX_NAME_LENGTH}
+              onChange={(e) => updateField("servingSize", e.target.value)}
+              placeholder="e.g. 1 bowl"
+              aria-required="true"
+              aria-invalid={!!formError}
+              aria-describedby={formError ? "meal-form-error" : undefined}
+            />
           </div>
           <div className="form-field required">
-            <label>Servings Had</label>
-            <input required type="number" min={0} step="0.1" value={form.servingsHad} onChange={(e) => updateField("servingsHad", e.target.value)} placeholder="e.g. 1.5" aria-required="true" />
+            <label htmlFor="meal-servings">Servings Had</label>
+            <input
+              id="meal-servings"
+              required
+              type="number"
+              min={0}
+              step="0.1"
+              value={form.servingsHad}
+              onChange={(e) => updateField("servingsHad", e.target.value)}
+              placeholder="e.g. 1.5"
+              aria-required="true"
+              inputMode="decimal"
+              aria-invalid={!!formError}
+              aria-describedby={formError ? "meal-form-error" : undefined}
+            />
           </div>
         </div>
 
@@ -384,48 +476,49 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
 
         {/* Optional fields */}
         {showOptional && (
-          <div className="form-grid" id="optional-meal-fields">
+          <fieldset className="form-grid" id="optional-meal-fields" aria-labelledby="optional-nutrition-legend">
+            <legend id="optional-nutrition-legend" style={{ color: "#e2e8f0", fontWeight: 600, marginBottom: 8 }}>Optional nutrition details</legend>
             <div className="form-field">
-              <label>Total Carbs (g)</label>
-              <input type="number" min={0} value={form.totalCarbs} onChange={(e) => updateField("totalCarbs", e.target.value)} />
+              <label htmlFor="meal-carbs">Total Carbs (g)</label>
+              <input id="meal-carbs" type="number" min={0} max={MEAL_CONSTRAINTS.MAX_MACRO} value={form.totalCarbs} onChange={(e) => updateField("totalCarbs", e.target.value)} inputMode="decimal" />
             </div>
             <div className="form-field">
-              <label>Total Fat (g)</label>
-              <input type="number" min={0} value={form.totalFat} onChange={(e) => updateField("totalFat", e.target.value)} />
+              <label htmlFor="meal-fat">Total Fat (g)</label>
+              <input id="meal-fat" type="number" min={0} max={MEAL_CONSTRAINTS.MAX_MACRO} value={form.totalFat} onChange={(e) => updateField("totalFat", e.target.value)} inputMode="decimal" />
             </div>
             <div className="form-field">
-              <label>Protein (g)</label>
-              <input type="number" min={0} value={form.protein} onChange={(e) => updateField("protein", e.target.value)} />
+              <label htmlFor="meal-protein">Protein (g)</label>
+              <input id="meal-protein" type="number" min={0} max={MEAL_CONSTRAINTS.MAX_MACRO} value={form.protein} onChange={(e) => updateField("protein", e.target.value)} inputMode="decimal" />
             </div>
             <div className="form-field">
-              <label>Fat Categories</label>
-              <input value={form.fatCategories} onChange={(e) => updateField("fatCategories", e.target.value)} placeholder="e.g. Saturated, Unsaturated" />
+              <label htmlFor="meal-fatcat">Fat Categories</label>
+              <input id="meal-fatcat" value={form.fatCategories} maxLength={MEAL_CONSTRAINTS.MAX_NAME_LENGTH} onChange={(e) => updateField("fatCategories", e.target.value)} placeholder="e.g. Saturated, Unsaturated" />
             </div>
             <div className="form-field">
-              <label>Sodium (mg)</label>
-              <input type="number" min={0} value={form.sodium} onChange={(e) => updateField("sodium", e.target.value)} />
+              <label htmlFor="meal-sodium">Sodium (mg)</label>
+              <input id="meal-sodium" type="number" min={0} value={form.sodium} onChange={(e) => updateField("sodium", e.target.value)} inputMode="decimal" />
             </div>
             <div className="form-field">
-              <label>Sugars (g)</label>
-              <input type="number" min={0} value={form.sugars} onChange={(e) => updateField("sugars", e.target.value)} />
+              <label htmlFor="meal-sugars">Sugars (g)</label>
+              <input id="meal-sugars" type="number" min={0} value={form.sugars} onChange={(e) => updateField("sugars", e.target.value)} inputMode="decimal" />
             </div>
             <div className="form-field">
-              <label>Calcium (mg)</label>
-              <input type="number" min={0} value={form.calcium} onChange={(e) => updateField("calcium", e.target.value)} />
+              <label htmlFor="meal-calcium">Calcium (mg)</label>
+              <input id="meal-calcium" type="number" min={0} value={form.calcium} onChange={(e) => updateField("calcium", e.target.value)} inputMode="decimal" />
             </div>
             <div className="form-field">
-              <label>Vitamins</label>
-              <input value={form.vitamins} onChange={(e) => updateField("vitamins", e.target.value)} placeholder="e.g. A, C, D" />
+              <label htmlFor="meal-vitamins">Vitamins</label>
+              <input id="meal-vitamins" value={form.vitamins} maxLength={MEAL_CONSTRAINTS.MAX_TEXT_LENGTH} onChange={(e) => updateField("vitamins", e.target.value)} placeholder="e.g. A, C, D" />
             </div>
             <div className="form-field">
-              <label>Iron (mg)</label>
-              <input type="number" min={0} value={form.iron} onChange={(e) => updateField("iron", e.target.value)} />
+              <label htmlFor="meal-iron">Iron (mg)</label>
+              <input id="meal-iron" type="number" min={0} value={form.iron} onChange={(e) => updateField("iron", e.target.value)} inputMode="decimal" />
             </div>
             <div className="form-field span-2">
-              <label>Other Info / Notes</label>
-              <textarea value={form.otherInfo} onChange={(e) => updateField("otherInfo", e.target.value)} rows={3} placeholder="Any additional nutritional notes" />
+              <label htmlFor="meal-notes">Other Info / Notes</label>
+              <textarea id="meal-notes" value={form.otherInfo} maxLength={MEAL_CONSTRAINTS.MAX_TEXT_LENGTH} onChange={(e) => updateField("otherInfo", e.target.value)} rows={3} placeholder="Any additional nutritional notes" />
             </div>
-          </div>
+            </fieldset>
         )}
 
         <div className="form-actions" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
@@ -450,6 +543,11 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
             <button type="submit" className="response-button" disabled={submitting}>{submitting ? "Saving" : "Save Meal"}</button>
           </div>
         </div>
+        {formError && (
+          <div id="meal-form-error" role="alert" style={{ marginTop: 10, color: "#fca5a5", fontSize: "0.9rem" }}>
+            {formError.message}
+          </div>
+        )}
         <Toast message={toast.message} type={toast.type} isVisible={toast.visible} onClose={closeToast} />
       </form>
 
