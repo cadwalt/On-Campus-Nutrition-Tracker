@@ -64,6 +64,19 @@ export const parseNumber = (val: string | number): number | undefined => {
 };
 
 /**
+ * Validate decimal places (e.g., 0.6 for iron)
+ * Allows up to maxDecimalPlaces decimal places
+ * Returns null if valid, error message if invalid
+ */
+export const validateDecimalPlaces = (
+  value: number,
+  maxDecimalPlaces: number = 4
+): boolean => {
+  const decimalPart = value.toString().split('.')[1];
+  return !decimalPart || decimalPart.length <= maxDecimalPlaces;
+};
+
+/**
  * Validate meal data for required fields
  * Returns array of missing field names
  * 
@@ -100,6 +113,7 @@ export const validateStringLength = (
 /**
  * Validate numeric field bounds
  * Ensures values are within realistic and safe ranges
+ * Allows decimal values up to 4 decimal places (e.g., 0.6 for iron)
  * 
  * Input Validation
  * Prevents invalid data in database
@@ -113,6 +127,10 @@ export const validateNumeric = (
   const parsed = parseNumber(value);
   if (parsed === undefined || isNaN(parsed)) {
     return `${fieldName} must be a number.`;
+  }
+  
+  if (!validateDecimalPlaces(parsed, 4)) {
+    return `${fieldName} can have at most 4 decimal places.`;
   }
   
   if (parsed < min) {
