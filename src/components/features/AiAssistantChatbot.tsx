@@ -9,7 +9,11 @@ import SavedResponsesModal from './SavedResponsesModal';
 import SaveResponseModal from './SaveResponseModal';
 import { savedResponsesService } from '../services/savedResponsesService';
 
-const AiAssistantChatbot: React.FC = () => {
+interface AiAssistantChatbotProps {
+  onOpenDisclaimer?: () => void;
+}
+
+const AiAssistantChatbot: React.FC<AiAssistantChatbotProps> = ({ onOpenDisclaimer }) => {
   const [user, setUser] = useState<User | null>(null);
   const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
@@ -171,6 +175,14 @@ const AiAssistantChatbot: React.FC = () => {
   return (
     <div className="ai-assistant-chatbot">
       <div className="ai-chatbot-header">
+        <button
+          type="button"
+          className="disclaimer-icon-button"
+          onClick={onOpenDisclaimer}
+          aria-label="Show disclaimer"
+        >
+          <InfoIcon size={18} />
+        </button>
         <div className="ai-chatbot-header-content">
           <div className="ai-chatbot-icon">
             <svg 
