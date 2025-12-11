@@ -87,6 +87,8 @@ const ProfilePage: React.FC = () => {
 
         <AccountSection 
           onLogout={handleLogout}
+          onSuccess={(message) => showToastNotification(message, 'success')}
+          onError={(message) => showToastNotification(message, 'error')}
         />
 
         <SavedResponsesSection 

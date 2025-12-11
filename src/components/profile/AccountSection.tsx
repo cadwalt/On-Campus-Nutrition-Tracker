@@ -1,10 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
+import ChangePasswordModal from './modals/ChangePasswordModal';
 
 interface AccountSectionProps {
   onLogout: () => void;
+  onSuccess?: (message: string) => void;
+  onError?: (message: string) => void;
 }
 
-const AccountSection: React.FC<AccountSectionProps> = ({ onLogout }) => {
+const AccountSection: React.FC<AccountSectionProps> = ({ onLogout, onSuccess, onError }) => {
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
+
   const handleLogout = async () => {
     try {
       const mod: any = await import('../../firebase');
@@ -24,11 +29,30 @@ const AccountSection: React.FC<AccountSectionProps> = ({ onLogout }) => {
       </div>
       <div className="profile-card">
         <div className="profile-actions">
+          <button 
+            className="change-password-button" 
+            onClick={() => setIsChangePasswordModalOpen(true)}
+            style={{ backgroundColor: 'black', color: 'white' }}
+          >
+            Change Password
+          </button>
           <button className="logout-button" onClick={handleLogout}>
             Sign Out
           </button>
         </div>
       </div>
+
+      <ChangePasswordModal
+        isOpen={isChangePasswordModalOpen}
+        onClose={() => setIsChangePasswordModalOpen(false)}
+        onSuccess={(message) => {
+          onSuccess?.(message);
+          setIsChangePasswordModalOpen(false);
+        }}
+        onError={(message) => {
+          onError?.(message);
+        }}
+      />
     </div>
   );
 };
