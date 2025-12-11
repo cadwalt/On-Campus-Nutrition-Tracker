@@ -20,11 +20,21 @@ const SignUpForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  const isPasswordValid = (pwd: string) => /^(?=.*[a-z]).{6,}$/.test(pwd);
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
     setLoading(true);
+
+    // Use user-friendly error message if password is less than 6 characters long
+    // or does not include a lowercase letter to override the default Firebase error message
+    if (!isPasswordValid(password)) {
+      setError('Password must be at least 6 characters long and include at least 1 lowercase letter.');
+      setLoading(false);
+      return;
+    }
 
     try {
       const { authClient, dbClient, firebaseAuth, firestore } = await resolveFirebase();
@@ -83,8 +93,13 @@ const SignUpForm: React.FC = () => {
               className="auth-input"
               required
             />
+            <small className="input-hint">At least 6 characters with 1 lowercase letter.</small>
           </div>
-          <button type="submit" className="auth-button" disabled={loading}>
+          <button
+            type="submit"
+            className="auth-button"
+            disabled={loading}
+          >
             {loading ? 'Creating Account...' : 'Sign Up'}
           </button>
           {success && <p className="success-message">{success}</p>}
