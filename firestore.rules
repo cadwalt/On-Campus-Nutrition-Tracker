@@ -12,12 +12,49 @@ service cloud.firestore {
       allow create: if request.auth != null;
     }
 
-    // CWE-862: Missing Authorization - Enforce user-scoped access to user documents (goals, preferences)
-    // Only authenticated users can read/write their own user profile and goals
+    // CWE-862: Missing Authorization - Enforce user-scoped access to meals collection
+    // Documents in the 'meals' collection have 'userId' field
+    // Only authenticated users can read/write their own meal entries
+    match /meals/{mealId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    // CWE-862: Missing Authorization - Enforce user-scoped access to water collection
+    // Documents in the 'water' collection have 'userId' field
+    // Only authenticated users can read/write their own water intake logs
+    match /water/{logId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    // CWE-862: Missing Authorization - Enforce user-scoped access to meal plans
+    // Hierarchical structure: /mealPlans/{userId}/dates/{date}/meals/{mealId}
+    // Only authenticated users can access their own meal plans
+    match /mealPlans/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Public read access to restaurant sample data (shared across all users)
+    match /restaurants_sample/{restaurantId} {
+      allow read: if true;
+      allow write: if false; // Only admins can write (via Firebase Console/Admin SDK)
+    }
+
+    match /restaurants_sample/{restaurantId}/items/{itemId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // CWE-862: Missing Authorization - Enforce user-scoped access to user documents (goals, preferences, favorites)
+    // Only authenticated users can read/write their own user profile and preferences
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Allow user to access subcollections under their user document
     match /users/{userId}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }

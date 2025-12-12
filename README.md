@@ -105,15 +105,27 @@ firebase deploy --only firestore:rules
 
 **Security Rules:** The project includes Firestore security rules (`firestore.rules`) that enforce:
 - **CWE-862 (Missing Authorization):** Only authenticated users can read/write their own data
-  - **Weight collection (`/weight/{docId}`):** Users can only access documents where `owner == auth.uid` or `userID == auth.uid` (backward compatibility)
-  - **User collection (`/users/{userId}/...`):** Users can only access their own profile and preferences
-- **User scoping:** Each user's data is isolated by their unique Firebase Auth UID stored in the document
+  - **Weight collection (`/weight/{docId}`):** User-scoped via `owner` or `userID` field
+  - **Meals collection (`/meals/{mealId}`):** User-scoped via `userId` field
+  - **Water collection (`/water/{logId}`):** User-scoped via `userId` field
+  - **Meal Plans (`/mealPlans/{userId}/...`):** User-scoped via document path
+  - **User collection (`/users/{userId}/...`):** User-scoped via document path
+  - **Restaurants (`/restaurants_sample/...`):** Public read-only access (shared data)
+- **User scoping:** Each user's data is isolated by their unique Firebase Auth UID
 - **Default deny:** All unlisted paths are blocked
 
 #### Data Structure
-- **Root-level collection:** `/weight/{docId}` contains weight entries with `owner` and `userID` fields
-- **User collection:** `/users/{userId}` contains user profile, goals, and preferences
-- **Field-based authorization:** Rules check `owner` or `userID` field in each document to verify access
+- **Root-level collections:**
+  - `/weight/{docId}` - Weight entries with `owner`/`userID` fields
+  - `/meals/{mealId}` - Meal entries with `userId` field
+  - `/water/{logId}` - Water intake logs with `userId` field
+  - `/restaurants_sample/{restaurantId}` - Public restaurant data (read-only)
+- **Hierarchical collections:**
+  - `/mealPlans/{userId}/dates/{date}/meals/{mealId}` - User meal plans
+  - `/users/{userId}` - User profiles, goals, preferences, favorites
+- **Field-based vs. path-based authorization:**
+  - Flat collections (weight, meals, water) use field checks (`userId`, `owner`)
+  - Hierarchical collections (mealPlans, users) use path-based authorization
 
 #### Verify Rules Deployment
 ```bash
