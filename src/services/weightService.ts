@@ -1,144 +1,74 @@
 import type { WeightEntry } from "../types/weight";
 import { getFirestoreClient, getAuthClient } from "../firebase";
 
-// Constants - avoid magic numbers
+// Firestore collection name
 const COLLECTION = "weight";
-const KG_TO_LB = 2.20462;
-const AUTH_TIMEOUT_MS = 5000;
-const FALLBACK_OWNER = "local";
 
-/**
- * Single responsibility: Normalize legacy weight data format
- * Converts weightKg to weightLb for backward compatibility
- */
-function normalizeWeightToLb(data: Record<string, unknown>): Record<string, unknown> {
-  if (data.weightKg !== undefined && data.weightLb === undefined) {
-    const weightKg = Number(data.weightKg);
-    if (!Number.isNaN(weightKg)) {
-      data.weightLb = Math.round((weightKg * KG_TO_LB) * 10) / 10;
-    }
-    delete data.weightKg;
-  }
-  return data;
-}
-
-/**
- * Gets the current user's UID
- * Falls back to 'local' if auth is not available
- * Pure function with single responsibility: Get UID or fallback
- */
-function getCurrentUserUidSync(): string | null {
-  try {
-    // Synchronous check first
-    const auth = getAuthClient();
-    if (auth && 'currentUser' in auth) {
-      const auth_sync = auth as any;
-      return auth_sync.currentUser?.uid ?? null;
-    }
-  } catch (e) {
-    // Auth not available yet
-  }
-  return null;
-}
-
-/**
- * Waits for auth state to initialize
- * Single responsibility: Wait for auth initialization
- */
-async function waitForAuthStateInitialization(): Promise<string> {
+async function getOwnerUid(): Promise<string> {
   try {
     const auth = await getAuthClient();
+    const user = auth?.currentUser;
+    if (user && user.uid) return user.uid;
+
+    // If currentUser is not yet set, wait briefly for auth state to initialize.
+    // This avoids falling back to the literal 'local' owner before the SDK
+    // finishes restoring the signed-in user.
     const firebaseAuth = await import('firebase/auth');
     const { onAuthStateChanged } = firebaseAuth as any;
-
     return await new Promise<string>((resolve) => {
       let resolved = false;
+        // safety timeout: don't wait forever
+        const timer = setTimeout(() => {
+          if (!resolved) {
+            resolved = true;
+            console.debug('getOwnerUid: auth state wait timed out, falling back to local');
+            resolve('local');
+          }
+        }, 5000);
 
-      // Safety timeout
-      const timer = setTimeout(() => {
-        if (!resolved) {
-          resolved = true;
-          console.debug('Auth state wait timed out, falling back to local');
-          resolve(FALLBACK_OWNER);
-        }
-      }, AUTH_TIMEOUT_MS);
-
-      const unsub = onAuthStateChanged(auth, (user: any) => {
+      let unsub: any = null;
+      unsub = onAuthStateChanged(auth, (u: any) => {
         if (resolved) return;
         resolved = true;
         clearTimeout(timer);
-        try {
-          unsub?.();
-        } catch (e) {
-          // Unsubscribe error, safe to ignore
-        }
-        resolve(user?.uid ?? FALLBACK_OWNER);
+        try { unsub(); } catch (e) {}
+        resolve(u?.uid ?? 'local');
       });
     });
   } catch (e) {
-    return FALLBACK_OWNER;
+    // If auth isn't initialized or unavailable, fall back to "local"
+    return "local";
   }
 }
 
-/**
- * Gets the owner UID for data access
- * Tries sync first, then async if needed
- */
-async function getOwnerUid(): Promise<string> {
-  const syncUid = getCurrentUserUidSync();
-  if (syncUid) {
-    return syncUid;
-  }
-  return await waitForAuthStateInitialization();
-}
-
-/**
- * Merges results from multiple queries
- * Single responsibility: Merge and deduplicate entries
- */
-function mergeEntries(doc1: any, doc2: any): WeightEntry[] {
-  const map = new Map<string, any>();
-
-  const addDocs = (docs: any[]) => {
-    docs.forEach((d) => {
-      const data = normalizeWeightToLb(d.data());
-      if (!map.has(d.id)) {
-        map.set(d.id, { id: d.id, ...data });
-      }
-    });
-  };
-
-  addDocs(doc1);
-  addDocs(doc2);
-
-  const entries: WeightEntry[] = Array.from(map.values());
-  entries.sort((a, b) => a.date.localeCompare(b.date));
-
-  return entries;
-}
-
-/**
- * Fetches weight entries for a user
- * Single responsibility: Query and return entries
- */
 export async function getWeightEntries(ownerUid?: string): Promise<WeightEntry[]> {
   const db = await getFirestoreClient();
   const firebase = await import('firebase/firestore');
-  const { collection, query, where, getDocs } = firebase as any;
-
+  const { collection, query, where, orderBy, getDocs } = firebase as any;
   const owner = ownerUid ?? await getOwnerUid();
   const col = collection(db, COLLECTION);
-
-  // Query both `owner` and `userID` fields for backward compatibility
+  // Query both `owner` and `userID` to include legacy documents that only used `userID`.
+  // Avoid requiring a composite index by not ordering at the query level.
+  // We'll sort client-side by `date` instead.
   const qOwner = query(col, where('owner', '==', owner));
   const qUser = query(col, where('userID', '==', owner));
-
   const [snapOwner, snapUser] = await Promise.all([getDocs(qOwner), getDocs(qUser)]);
+  const map = new Map<string, any>();
+  const pushDoc = (d: any) => {
+    const data = d.data();
+    // Normalize older documents that may have weightKg
+    if (data.weightKg !== undefined && data.weightLb === undefined) {
+      data.weightLb = Math.round((data.weightKg * 2.20462) * 10) / 10;
+      delete data.weightKg;
+    }
+    if (!map.has(d.id)) map.set(d.id, { id: d.id, ...data });
+  };
 
-  const entries = mergeEntries(snapOwner.docs, snapUser.docs);
-  console.debug(`getWeightEntries: owner=${owner} found=${entries.length}`);
-
-  return entries;
+  snapOwner.docs.forEach(pushDoc);
+  snapUser.docs.forEach(pushDoc);
+  const items: WeightEntry[] = Array.from(map.values()).sort((a: any, b: any) => (a.date < b.date ? -1 : 1));
+  console.debug(`getWeightEntries: owner=${owner} found=${items.length}`);
+  return items;
 }
 
 export async function addWeightEntry(entry: Omit<WeightEntry, "id">): Promise<WeightEntry> {
@@ -148,7 +78,12 @@ export async function addWeightEntry(entry: Omit<WeightEntry, "id">): Promise<We
   const owner = await getOwnerUid();
   const col = collection(db, COLLECTION);
   // Persist both `owner` (used by existing queries) and `userID` (explicit field requested)
-  const payload = normalizeWeightToLb({ ...entry, owner, userID: owner } as any);
+  const payload = { ...entry, owner, userID: owner } as any;
+  // If incoming entry uses weightKg (older entries), convert to weightLb for consistency.
+  if ((payload as any).weightKg !== undefined && (payload as any).weightLb === undefined) {
+    payload.weightLb = Math.round(((payload as any).weightKg * 2.20462) * 10) / 10;
+    delete payload.weightKg;
+  }
   const docRef = await addDoc(col, payload);
   return { id: docRef.id, ...entry } as WeightEntry;
 }
@@ -174,78 +109,59 @@ export async function deleteWeightEntry(id: string): Promise<boolean> {
 }
 
 /**
- * Real-time subscription to weight entries for current owner
- * Subscribes to two queries and merges results
- * Returns an unsubscribe function
+ * Real-time subscription to weight entries for current owner.
+ * callback will be invoked with the latest ordered list whenever data changes.
+ * Returns an unsubscribe function.
  */
-export async function subscribeToWeightEntries(
-  callback: (items: WeightEntry[]) => void,
-  ownerUid?: string
-) {
+export async function subscribeToWeightEntries(callback: (items: WeightEntry[]) => void, ownerUid?: string) {
   const db = await getFirestoreClient();
   const firebase = await import('firebase/firestore');
-  const { collection, query, where, onSnapshot } = firebase as any;
-
+  const { collection, query, where, orderBy, onSnapshot } = firebase as any;
   const owner = ownerUid ?? await getOwnerUid();
   const col = collection(db, COLLECTION);
-
-  // Queries for both fields (backward compatibility)
+  // Listen to both `owner` and `userID` queries and merge results so legacy docs are included
+  // Avoid ordering at the query level to prevent needing composite indexes.
   const qOwner = query(col, where('owner', '==', owner));
   const qUser = query(col, where('userID', '==', owner));
 
-  // Maintains state from both listeners
+  // Keep latest results from each snapshot and emit merged list on any change
   let ownerDocs: any[] = [];
   let userDocs: any[] = [];
 
-  /**
-   * Single responsibility: Merge and emit latest data
-   */
-  const emitMergedEntries = () => {
-    const merged = mergeEntries(ownerDocs, userDocs);
-    console.debug(
-      `subscribeToWeightEntries: owner=${owner} ownerDocs=${ownerDocs.length} userDocs=${userDocs.length} merged=${merged.length}`
-    );
-    callback(merged);
+  const emit = () => {
+    const map = new Map<string, any>();
+    const push = (d: any) => {
+      const data = d.data();
+      if (data.weightKg !== undefined && data.weightLb === undefined) {
+        data.weightLb = Math.round((data.weightKg * 2.20462) * 10) / 10;
+        delete data.weightKg;
+      }
+      if (!map.has(d.id)) map.set(d.id, { id: d.id, ...data });
+    };
+    ownerDocs.forEach(push);
+    userDocs.forEach(push);
+    const items: WeightEntry[] = Array.from(map.values()).sort((a: any, b: any) => (a.date < b.date ? -1 : 1));
+    console.debug(`subscribeToWeightEntries: owner=${owner} ownerDocs=${ownerDocs.length} userDocs=${userDocs.length} merged=${items.length}`);
+    callback(items);
   };
 
-  /**
-   * Handles snapshot errors
-   */
-  const handleError = (error: any, source: string) => {
-    console.error(`subscribeToWeightEntries ${source} error:`, error);
-  };
+  const unsubOwner = onSnapshot(qOwner, (snap: any) => {
+    ownerDocs = snap.docs;
+    emit();
+  }, (err: any) => {
+    console.error('subscribeToWeightEntries owner error', err);
+  });
 
-  // Setup listeners
-  const unsubOwner = onSnapshot(
-    qOwner,
-    (snap: any) => {
-      ownerDocs = snap.docs;
-      emitMergedEntries();
-    },
-    (err: any) => handleError(err, 'owner')
-  );
+  const unsubUser = onSnapshot(qUser, (snap: any) => {
+    userDocs = snap.docs;
+    emit();
+  }, (err: any) => {
+    console.error('subscribeToWeightEntries userID error', err);
+  });
 
-  const unsubUser = onSnapshot(
-    qUser,
-    (snap: any) => {
-      userDocs = snap.docs;
-      emitMergedEntries();
-    },
-    (err: any) => handleError(err, 'userID')
-  );
-
-  // Return unsubscribe function
   return () => {
-    try {
-      unsubOwner();
-    } catch (e) {
-      // Unsubscribe error, safe to ignore
-    }
-    try {
-      unsubUser();
-    } catch (e) {
-      // Unsubscribe error, safe to ignore
-    }
+    try { unsubOwner(); } catch (e) {}
+    try { unsubUser(); } catch (e) {}
   };
 }
 
@@ -261,7 +177,11 @@ export async function batchAddWeightEntries(entries: Omit<WeightEntry, 'id'>[]) 
   const batch = writeBatch(db);
   for (const entry of entries) {
     const dref = doc(col);
-    const payload = normalizeWeightToLb({ ...entry, owner, userID: owner } as any);
+    const payload: any = { ...entry, owner, userID: owner };
+    if (payload.weightKg !== undefined && payload.weightLb === undefined) {
+      payload.weightLb = Math.round((payload.weightKg * 2.20462) * 10) / 10;
+      delete payload.weightKg;
+    }
     batch.set(dref, payload);
   }
   await batch.commit();
