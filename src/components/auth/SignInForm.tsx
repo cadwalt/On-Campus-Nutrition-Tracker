@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 // src/components/SignInForm.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -180,30 +179,31 @@ const SignInForm: React.FC = () => {
 };
 
 export default SignInForm;
-=======
-// src/components/SignInForm.tsx
+
+// src/components/auth/SignInForm.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-// Use dynamic import for the firebase helper to avoid TypeScript export mismatch
 
+// Fun welcome messages when sign-in succeeds
 const welcomeMessages = [
-  "Welcome back!",
-  "Glad to see you!",
-  "Hello again!",
-  "Nice to have you back!",
-  "Welcome back, friend!",
-  "Good to have you here!",
-  "Greetings, Food Warrior!",
-  "Your culinary journey continues!",
-  "Welcome, Big Back!",
-  "Dinner Dinner! Chicken Winner!"
+  'Welcome back!',
+  'Glad to see you!',
+  'Hello again!',
+  'Nice to have you back!',
+  'Welcome back, friend!',
+  'Good to have you here!',
+  'Greetings, Food Warrior!',
+  'Your culinary journey continues!',
+  'Welcome, Big Back!',
+  'Dinner Dinner! Chicken Winner!',
 ];
 
 const SignInForm: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string | null>(null); // <-- Change from userEmail to userName
+  const [info, setInfo] = useState<string | null>(null); // for "reset email sent" message
+  const [userName, setUserName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [fadeOut, setFadeOut] = useState(false);
@@ -215,18 +215,19 @@ const SignInForm: React.FC = () => {
   // an async getter (`getAuthClient`) or a synchronous `auth` instance.
   const resolveAuthClient = async () => {
     const firebaseMod: any = await import('../../firebase');
-    // prefer an async getter if available
-    const getter = firebaseMod.getAuthClient ?? firebaseMod.default?.getAuthClient ?? firebaseMod.default;
+    const getter =
+      firebaseMod.getAuthClient ?? firebaseMod.default?.getAuthClient ?? firebaseMod.default;
     if (typeof getter === 'function') return await getter();
-    // fallback to exported auth instance
     if (firebaseMod.auth) return firebaseMod.auth;
     if (firebaseMod.default && firebaseMod.default.auth) return firebaseMod.default.auth;
     throw new Error('getAuthClient not found on firebase module');
   };
 
+  // Listen for auth state changes to drive the welcome animation + redirect
   useEffect(() => {
     let mounted = true;
     let unsub: (() => void) | null = null;
+
     (async () => {
       try {
         const authClient = await resolveAuthClient();
@@ -238,7 +239,9 @@ const SignInForm: React.FC = () => {
             setShowWelcome(true);
             setFadeOut(false);
             setVisible(false);
-            setWelcomeMsg(welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)]);
+            setWelcomeMsg(
+              welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)],
+            );
             // Fade in
             setTimeout(() => setVisible(true), 50);
             // Fade out after 1.5s
@@ -262,6 +265,7 @@ const SignInForm: React.FC = () => {
         console.error('Failed to initialize auth listener', err);
       }
     })();
+
     return () => {
       mounted = false;
       if (unsub) unsub();
@@ -270,39 +274,65 @@ const SignInForm: React.FC = () => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null); // Clear previous errors
+    setError(null);
+    setInfo(null);
+    setLoading(true);
     try {
       const authClient = await resolveAuthClient();
       const { signInWithEmailAndPassword } = await import('firebase/auth');
       await signInWithEmailAndPassword(authClient, email, password);
-      // User is now logged in, onAuthStateChanged will update the UI
+      // User is now logged in; onAuthStateChanged will handle redirect
       setEmail('');
       setPassword('');
     } catch (firebaseError: any) {
-      // Map common Firebase auth errors to friendlier messages.
       const code: string | undefined = firebaseError?.code || firebaseError?.message;
       if (typeof code === 'string' && code.includes('auth/invalid-api-key')) {
-        setError('Firebase configuration error: missing or invalid API key. Check your VITE_FIREBASE_* env vars in your hosting provider (e.g. Vercel) and rebuild.');
+        setError(
+          'Firebase configuration error: missing or invalid API key. Check your VITE_FIREBASE_* env vars in your hosting provider (e.g. Vercel) and rebuild.',
+        );
       } else {
         setError(firebaseError?.message ?? String(firebaseError));
       }
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null); // Clear previous errors
-    setLoading(true); // Start loading
+    setError(null);
+    setInfo(null);
+    setLoading(true);
     try {
-      // Add your sign-up logic here
-      // For example, createUserWithEmailAndPassword(auth, email, password);
+      // Placeholder: sign-up is handled by a different form on this page,
+      // but we keep this here in case we ever want to reuse this component.
       setEmail('');
       setPassword('');
-      // Navigate to a different page on successful sign-up, if needed
     } catch (firebaseError: any) {
       setError(firebaseError.message);
     } finally {
-      setLoading(false); // Stop loading
+      setLoading(false);
+    }
+  };
+
+  // Handle "Forgot password?" action: send reset email via Firebase
+  const handleForgotPassword = async () => {
+    setError(null);
+    setInfo(null);
+
+    if (!email) {
+      setError("Please enter your email above, then click 'Forgot password?' again.");
+      return;
+    }
+
+    try {
+      const authClient = await resolveAuthClient();
+      const { sendPasswordResetEmail } = await import('firebase/auth');
+      await sendPasswordResetEmail(authClient, email);
+      setInfo(`Password reset email sent to ${email}. Please check your inbox.`);
+    } catch (firebaseError: any) {
+      const message = firebaseError?.message ?? String(firebaseError);
+      setError(message);
     }
   };
 
@@ -310,7 +340,11 @@ const SignInForm: React.FC = () => {
     <div className="auth-form-centered">
       <div className="auth-form">
         {showWelcome ? (
-          <div className={`user-welcome${visible ? ' visible' : ''}${fadeOut ? ' fade-out' : ''}`}>
+          <div
+            className={`user-welcome${visible ? ' visible' : ''}${
+              fadeOut ? ' fade-out' : ''
+            }`}
+          >
             <h3>{welcomeMsg}</h3>
           </div>
         ) : (
@@ -339,11 +373,39 @@ const SignInForm: React.FC = () => {
                   required
                 />
               </div>
-              <button type="submit" className="auth-button">
-                Sign In
+
+              <button
+                type="submit"
+                className="auth-button"
+                disabled={loading}
+              >
+                {loading ? 'Signing in…' : 'Sign In'}
               </button>
-              {error && <p className="error-message">{error}</p>}
+
+              {/* Forgot password link + messages */}
+              <div className="auth-secondary-actions">
+                <button
+                  type="button"
+                  className="auth-link"
+                  onClick={handleForgotPassword}
+                  disabled={loading}
+                >
+                  Forgot password?
+                </button>
+              </div>
+
+              {error && (
+                <p className="error-message" role="alert">
+                  {error}
+                </p>
+              )}
+              {info && (
+                <p className="info-message" role="status">
+                  {info}
+                </p>
+              )}
             </form>
+
             <div className="auth-switch">
               <span>New user?</span>
               <button
@@ -362,4 +424,3 @@ const SignInForm: React.FC = () => {
 };
 
 export default SignInForm;
->>>>>>> 3449604f23503c51d893151942e46f034bb45a8d

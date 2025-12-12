@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -130,7 +129,10 @@ const Toast: React.FC<ToastProps> = ({
   if (!shouldRender) return null;
 
   const toastElement = (
-    <div className={`toast toast-${type} ${isAnimating ? 'toast-visible' : ''}`}>
+    <div 
+      className={`toast toast-${type} ${isAnimating ? 'toast-visible' : ''}`}
+      style={{ zIndex: 999999 }}
+    >
       <div className="toast-content">
         <span className="toast-message">{message}</span>
       </div>
@@ -142,4 +144,3 @@ const Toast: React.FC<ToastProps> = ({
 };
 
 export default Toast;
->>>>>>> 3449604f23503c51d893151942e46f034bb45a8d

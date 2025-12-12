@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { User } from 'firebase/auth';
@@ -119,6 +118,7 @@ const resolveAuthClient = async () => {
 import Toast from '../components/ui/Toast';
 import PersonalInformation from '../components/profile/PersonalInformation';
 import AccountSection from '../components/profile/AccountSection';
+import SavedResponsesSection from '../components/profile/SavedResponsesSection';
 
 const ProfilePage: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -194,6 +194,12 @@ const ProfilePage: React.FC = () => {
 
         <AccountSection 
           onLogout={handleLogout}
+          onSuccess={(message) => showToastNotification(message, 'success')}
+          onError={(message) => showToastNotification(message, 'error')}
+        />
+
+        <SavedResponsesSection 
+          userId={user.uid}
         />
       </main>
       
@@ -211,5 +217,3 @@ const ProfilePage: React.FC = () => {
 };
 
 export default ProfilePage;
-
->>>>>>> 3449604f23503c51d893151942e46f034bb45a8d

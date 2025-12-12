@@ -1,64 +1,41 @@
-// Enhanced AI Assistant Chatbot Component
-// ============================================================================
-// This component provides a personalized nutrition assistant chatbot interface
-// with features for asking questions, saving responses, and managing capabilities.
-
-// IMPORTS
+// Mobile-optimized AI Assistant Chatbot Component
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import type { User } from 'firebase/auth';
 import { resolveFirebase } from '../../lib/resolveFirebase';
-import { NovaIcon, UserIcon, InfoIcon, SaveIcon, BookmarkIcon } from '../ui/Icons';
+import { NovaIcon, UserIcon, InfoIcon } from '../ui/Icons';
 import { PROMPT_SUGGESTIONS, type PromptSuggestion } from './promptSuggestions';
 import { buildSystemContext } from './buildSystemContext';
 import SavedResponsesModal from './SavedResponsesModal';
 import SaveResponseModal from './SaveResponseModal';
 import { savedResponsesService } from '../services/savedResponsesService';
 
-// TYPES & INTERFACES
-interface AiAssistantChatbotProps {
+interface AiAssistantChatbotMobileProps {
   onOpenDisclaimer?: () => void;
+  onDropdownOpenChange?: (isOpen: boolean) => void;
 }
 
-// COMPONENT DEFINITION
-const AiAssistantChatbot: React.FC<AiAssistantChatbotProps> = ({ onOpenDisclaimer }) => {
-  // STATE MANAGEMENT
-  
-  // Authentication state
+const AiAssistantChatbotMobile: React.FC<AiAssistantChatbotMobileProps> = ({ onOpenDisclaimer, onDropdownOpenChange }) => {
   const [user, setUser] = useState<User | null>(null);
-  
-  // Chat input and messages
-  const [prompt, setPrompt] = useState(''); // Current user input
+  const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
-  const [loading, setLoading] = useState(false); // Loading state for API calls
-  
-  // System context for AI personalization
+  const [loading, setLoading] = useState(false);
   const [systemContext, setSystemContext] = useState<string | undefined>(undefined);
-  
-  // UI state for suggestions and filtering
   const [selectedCategory, setSelectedCategory] = useState<string | null>('quick-questions');
   const [showSuggestions, setShowSuggestions] = useState(true);
-  
-  // User preferences for what data Nova can access
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
+  const [sectionsCollapsed, setSectionsCollapsed] = useState(false);
   const [capabilities, setCapabilities] = useState({
-    knowsGoals: true,           // Access to nutrition goals and targets
-    tracksIntake: true,          // Access to daily intake data
-    personalizedAdvice: true    // Access to allergies, restrictions, preferences
+    knowsGoals: true,
+    tracksIntake: true,
+    personalizedAdvice: true
   });
-  
-  // Modal state
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showSavedResponsesModal, setShowSavedResponsesModal] = useState(false);
   const [lastMessage, setLastMessage] = useState<{ prompt: string; response: string } | null>(null);
-  
-  // Refs
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // COMPUTED VALUES
-  
-  /**
-   * Determines the current time of day for contextual AI responses
-   * Used to personalize greetings and suggestions based on time
-   */
+  // Get current time of day
   const timeOfDay = useMemo(() => {
     const hour = new Date().getHours();
     if (hour >= 5 && hour < 12) return 'morning';
@@ -67,12 +44,7 @@ const AiAssistantChatbot: React.FC<AiAssistantChatbotProps> = ({ onOpenDisclaime
     return 'night';
   }, []);
 
-  // EFFECTS (LIFECYCLE HOOKS)
-  
-  /**
-   * Effect: Initialize Firebase auth state listener
-   * Subscribes to authentication state changes and updates user state
-   */
+  // Track auth state
   useEffect(() => {
     let unsub: (() => void) | null = null;
     (async () => {
@@ -86,11 +58,7 @@ const AiAssistantChatbot: React.FC<AiAssistantChatbotProps> = ({ onOpenDisclaime
     return () => { if (unsub) unsub(); };
   }, []);
 
-  /**
-   * Effect: Build comprehensive system context for AI personalization
-   * Rebuilds context when user, time of day, or capabilities change
-   * This context is sent to the AI to provide personalized responses
-   */
+  // Build comprehensive system context
   useEffect(() => {
     if (!user) {
       setSystemContext(undefined);
@@ -109,10 +77,7 @@ const AiAssistantChatbot: React.FC<AiAssistantChatbotProps> = ({ onOpenDisclaime
     void loadContext();
   }, [user, timeOfDay, capabilities]);
 
-  /**
-   * Effect: Load capability preferences from localStorage on mount
-   * Restores user's previous permission settings for Nova's data access
-   */
+  // Load capability preferences from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('nova-capabilities');
     if (saved) {
@@ -129,72 +94,40 @@ const AiAssistantChatbot: React.FC<AiAssistantChatbotProps> = ({ onOpenDisclaime
     }
   }, []);
 
-  /**
-   * Effect: Persist capability preferences to localStorage
-   * Saves user's permission settings whenever they change
-   */
+  // Save capability preferences to localStorage
   useEffect(() => {
     localStorage.setItem('nova-capabilities', JSON.stringify(capabilities));
   }, [capabilities]);
 
-  /**
-   * Effect: Auto-focus input field on component mount
-   * Improves UX by allowing immediate typing
-   */
+  // Auto-focus input on mount
   useEffect(() => {
     const id = setTimeout(() => inputRef.current?.focus(), 100);
     return () => clearTimeout(id);
   }, []);
 
-  // EVENT HANDLERS
-  
-  /**
-   * Sends a prompt to the AI assistant API
-   * @param promptText - Optional prompt text (if not provided, uses current prompt state)
-   * 
-   * Handles:
-   * - User authorization via Bearer token (CWE 862 mitigation)
-   * - Error handling with user-friendly messages
-   * - Loading states and message updates
-   */
   const sendPrompt = async (promptText?: string) => {
     const currentPrompt = (promptText || prompt.trim());
     if (!currentPrompt || loading) return;
     
-    // Clear input and add user message to chat
     setPrompt('');
     setMessages((prev) => [...prev, { role: 'user', content: currentPrompt }]);
     setLoading(true);
 
     try {
-      // Build headers with user authorization (CWE 862 mitigation)
-      // Authorization header includes user ID for server-side verification
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (user?.uid) {
-        headers['Authorization'] = `Bearer ${user.uid}`;
-      }
-
-      // Send request to chat API with prompt and personalized system context
       const response = await fetch('/api/chat', {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           prompt: currentPrompt, 
           systemContext: systemContext
         })
       });
 
-      // Handle error responses
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        // Handle authentication errors specifically
-        if (response.status === 401) {
-          throw new Error(errorData.error || 'Authentication required. Please sign in again.');
-        }
         throw new Error(errorData.error || `Server error: ${response.status}`);
       }
 
-      // Parse and validate response
       const data = await response.json();
       const result = data.content;
 
@@ -202,10 +135,8 @@ const AiAssistantChatbot: React.FC<AiAssistantChatbotProps> = ({ onOpenDisclaime
         throw new Error('No response content received');
       }
 
-      // Add assistant response to messages
       setMessages((prev) => [...prev, { role: 'assistant', content: result }]);
     } catch (error: any) {
-      // Provide user-friendly error messages
       const errorMessage = error.message?.includes('Failed to fetch') 
         ? 'Unable to connect to the server. Please check your connection and try again.'
         : error.message || 'Sorry, I encountered an error. Please try again.';
@@ -213,50 +144,30 @@ const AiAssistantChatbot: React.FC<AiAssistantChatbotProps> = ({ onOpenDisclaime
       setMessages((prev) => [...prev, { role: 'assistant', content: errorMessage }]);
     } finally {
       setLoading(false);
-      inputRef.current?.focus(); // Refocus input for next message
+      inputRef.current?.focus();
     }
   };
 
-  /**
-   * Handles form submission from the input area
-   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await sendPrompt();
   };
 
-  /**
-   * Handles clicking on a prompt suggestion
-   * Sets the category filter and sends the suggestion as a prompt
-   */
   const handleSuggestionClick = (suggestion: PromptSuggestion) => {
     setSelectedCategory(suggestion.category);
     setShowSuggestions(false);
     void sendPrompt(suggestion.text);
   };
 
-  /**
-   * Handles clicking on a category filter button
-   * Updates the selected category and shows suggestions
-   */
   const handleCategoryFilterClick = (category: string | null) => {
     setSelectedCategory(category);
     setShowSuggestions(true);
   };
 
-  // DERIVED VALUES
-  
-  /**
-   * Filters prompt suggestions based on selected category
-   * Returns all suggestions if no category is selected
-   */
   const filteredSuggestions = selectedCategory 
     ? PROMPT_SUGGESTIONS.filter(s => s.category === selectedCategory)
     : PROMPT_SUGGESTIONS;
 
-  /**
-   * Category definitions and their display labels
-   */
   const categories = ['quick-questions', 'meal-planning', 'nutrition-advice', 'goal-support'] as const;
   const categoryLabels: Record<typeof categories[number], string> = {
     'meal-planning': 'Meal Planning',
@@ -265,80 +176,80 @@ const AiAssistantChatbot: React.FC<AiAssistantChatbotProps> = ({ onOpenDisclaime
     'quick-questions': 'Quick Questions'
   };
 
-  // RENDER
   return (
     <div className="ai-assistant-chatbot">
-      {/* 
-          HEADER SECTION
-          Contains: Title, disclaimer button, category filters, and capability toggles
-      */}
-      <div className="ai-chatbot-header">
-        {/* Disclaimer Button */}
+      {/* 1. Header Section - Nova Branding */}
+      <div className="ai-chatbot-header-centered">
         <button
           type="button"
           className="disclaimer-icon-button"
           onClick={onOpenDisclaimer}
           aria-label="Show disclaimer"
+          style={{ alignSelf: 'flex-end' }}
         >
           <InfoIcon size={18} />
         </button>
-        
-        {/* Header Content: Title and Category Filters */}
-        <div className="ai-chatbot-header-content">
-          {/* Nova Icon */}
-          <div className="ai-chatbot-icon">
-            <svg 
-              width="32" 
-              height="32" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2" 
-              strokeLinecap="round" 
-              strokeLinejoin="round"
-            >
-              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-              <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
-            </svg>
-          </div>
-          
-          {/* Title and Description */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <h2>Nova</h2>
-              <span className="personalized-badge">Personalized</span>
-            </div>
-            <p>Your personalized nutrition assistant</p>
-            
-            {/* Category Filter Buttons */}
-            <div className="category-section">
-              <p className="category-label">Filter suggestions:</p>
-              <div className="suggestion-categories">
-                {categories.map(cat => (
-                  <button
-                    key={cat}
-                    className={`category-filter ${selectedCategory === cat ? 'active' : ''}`}
-                    onClick={() => handleCategoryFilterClick(cat)}
-                  >
-                    {categoryLabels[cat]}
-                  </button>
-                ))}
-                <button
-                  className={`category-filter ${selectedCategory === null ? 'active' : ''}`}
-                  onClick={() => handleCategoryFilterClick(null)}
-                >
-                  All Suggestions
-                </button>
-              </div>
-            </div>
-          </div>
+        <div className="ai-chatbot-icon">
+          <svg 
+            width="32" 
+            height="32" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+          >
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
         </div>
-        
-        {/*
-            CAPABILITY PERMISSIONS SECTION
-            Allows users to control what data Nova can access for personalization
-        */}
-        <div className="ai-chatbot-capabilities">
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <h2 style={{ margin: 0 }}>Nova</h2>
+            <span className="personalized-badge">Personalized</span>
+          </div>
+          <p style={{ margin: '0.25rem 0 0 0' }}>Your personalized nutrition assistant</p>
+        </div>
+      </div>
+
+      {/* Drag Handle Bar - Always visible */}
+      <div
+        onClick={() => setSectionsCollapsed(!sectionsCollapsed)}
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: '0.75rem',
+          cursor: 'pointer',
+          background: 'rgba(99, 102, 241, 0.08)',
+          borderTop: '1px solid rgba(99, 102, 241, 0.2)',
+          borderBottom: '1px solid rgba(99, 102, 241, 0.2)',
+          transition: 'all 0.3s ease'
+        }}
+        title={sectionsCollapsed ? 'Tap to show options' : 'Tap to hide options'}
+      >
+        {/* Triangle pointing down (sections visible) or up (sections hidden) */}
+        <div
+          style={{
+            width: 0,
+            height: 0,
+            borderLeft: '8px solid transparent',
+            borderRight: '8px solid transparent',
+            borderTop: sectionsCollapsed 
+              ? 'none' 
+              : '8px solid rgba(99, 102, 241, 0.6)',
+            borderBottom: sectionsCollapsed 
+              ? '8px solid rgba(99, 102, 241, 0.6)' 
+              : 'none',
+            transition: 'all 0.3s ease'
+          }}
+        />
+      </div>
+
+      {/* 2. Allow Nova to Access Section - Hidden when input focused */}
+      {!inputFocused && !sectionsCollapsed && (
+        <div className="ai-access-section">
           <div className="capability-label-wrapper">
             <p className="capability-label">Allow Nova to access:</p>
             <div className="tooltip-container">
@@ -357,23 +268,23 @@ const AiAssistantChatbot: React.FC<AiAssistantChatbotProps> = ({ onOpenDisclaime
               </div>
             </div>
           </div>
-          <div className="capability-indicators">
+          <div className="ai-capability-buttons">
             <button
-              className={`capability-badge ${capabilities.knowsGoals ? 'active' : 'inactive'}`}
+              className={`capability-badge-centered ${capabilities.knowsGoals ? 'active' : 'inactive'}`}
               onClick={() => setCapabilities(prev => ({ ...prev, knowsGoals: !prev.knowsGoals }))}
               title={capabilities.knowsGoals ? 'Click to disable' : 'Click to enable'}
             >
               {capabilities.knowsGoals ? '✓' : '○'} Your Goals
             </button>
             <button
-              className={`capability-badge ${capabilities.tracksIntake ? 'active' : 'inactive'}`}
+              className={`capability-badge-centered ${capabilities.tracksIntake ? 'active' : 'inactive'}`}
               onClick={() => setCapabilities(prev => ({ ...prev, tracksIntake: !prev.tracksIntake }))}
               title={capabilities.tracksIntake ? 'Click to disable' : 'Click to enable'}
             >
               {capabilities.tracksIntake ? '✓' : '○'} Your Daily Intake
             </button>
             <button
-              className={`capability-badge ${capabilities.personalizedAdvice ? 'active' : 'inactive'}`}
+              className={`capability-badge-centered ${capabilities.personalizedAdvice ? 'active' : 'inactive'}`}
               onClick={() => setCapabilities(prev => ({ ...prev, personalizedAdvice: !prev.personalizedAdvice }))}
               title={capabilities.personalizedAdvice ? 'Click to disable' : 'Click to enable'}
             >
@@ -381,34 +292,68 @@ const AiAssistantChatbot: React.FC<AiAssistantChatbotProps> = ({ onOpenDisclaime
             </button>
           </div>
         </div>
-      </div>
+      )}
 
-      {/*
-          CHAT BODY SECTION
-          Contains: Message history, loading indicator, and prompt suggestions
-      */}
+      {/* 3. Filter Suggestions Section - Hidden when input focused */}
+      {!inputFocused && !sectionsCollapsed && (
+        <div className="ai-filter-dropdown-section">
+          <button 
+            className="ai-filter-dropdown-button"
+            onClick={() => {
+              const newState = !dropdownOpen;
+              setDropdownOpen(newState);
+              onDropdownOpenChange?.(newState);
+            }}
+          >
+            <span>Filter suggestions: {selectedCategory ? categoryLabels[selectedCategory as typeof categories[number]] : 'All Suggestions'}</span>
+            <span className={`dropdown-arrow ${dropdownOpen ? 'open' : ''}`}>▼</span>
+          </button>
+          {dropdownOpen && (
+            <div className="ai-filter-dropdown-menu">
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  className={`dropdown-menu-item ${selectedCategory === cat ? 'active' : ''}`}
+                  onClick={() => {
+                    setSelectedCategory(cat);
+                    setDropdownOpen(false);
+                    onDropdownOpenChange?.(false);
+                    setShowSuggestions(true);
+                  }}
+                >
+                  {categoryLabels[cat]}
+                </button>
+              ))}
+              <button
+                className={`dropdown-menu-item ${selectedCategory === null ? 'active' : ''}`}
+                onClick={() => {
+                  setSelectedCategory(null);
+                  setDropdownOpen(false);
+                  onDropdownOpenChange?.(false);
+                  setShowSuggestions(true);
+                }}
+              >
+                All Suggestions
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="ai-chatbot-body">
-        {/* Message History */}
         {messages.length > 0 && (
           <div className="ai-chatbot-messages">
             {messages.map((m, idx) => {
               const isAssistantMessage = m.role === 'assistant';
               const previousMessage = idx > 0 ? messages[idx - 1] : null;
-              // Show save button only for assistant messages that follow a user message
               const canSave = isAssistantMessage && previousMessage && previousMessage.role === 'user' && user;
-              
               return (
                 <div key={idx} className={`ai-message ai-message-${m.role}`} style={{ position: 'relative' }}>
-                  {/* Message Avatar */}
                   <div className="ai-message-avatar">
                     {m.role === 'assistant' ? <NovaIcon size={20} /> : <UserIcon size={20} />}
                   </div>
-                  
-                  {/* Message Content */}
                   <div className="ai-message-content">
                     <div className="ai-message-text">{m.content}</div>
-                    
-                    {/* Save Response Button (only shown for assistant responses) */}
                     {canSave && (
                       <button
                         onClick={() => {
@@ -443,8 +388,6 @@ const AiAssistantChatbot: React.FC<AiAssistantChatbotProps> = ({ onOpenDisclaime
                 </div>
               );
             })}
-            
-            {/* Loading Indicator */}
             {loading && (
               <div className="ai-message ai-message-assistant">
                 <div className="ai-message-avatar"><NovaIcon size={20} /></div>
@@ -459,17 +402,16 @@ const AiAssistantChatbot: React.FC<AiAssistantChatbotProps> = ({ onOpenDisclaime
             )}
           </div>
         )}
-        
-        {/* Prompt Suggestions (shown when no messages or when explicitly enabled) */}
         {(messages.length === 0 || showSuggestions) && (
           <div className="ai-chatbot-welcome">
-            <div className="prompt-suggestions">
+            {/* Prompt Suggestions */}
+            <div className="prompt-suggestions-enlarged">
               {filteredSuggestions.map((suggestion) => {
                 const IconComponent = suggestion.Icon;
                 return (
                   <button
                     key={suggestion.id}
-                    className="prompt-suggestion"
+                    className="prompt-suggestion-compact"
                     onClick={() => handleSuggestionClick(suggestion)}
                     disabled={loading}
                   >
@@ -485,13 +427,8 @@ const AiAssistantChatbot: React.FC<AiAssistantChatbotProps> = ({ onOpenDisclaime
         )}
       </div>
 
-      {/*
-          INPUT AREA
-          Contains: Text input, send button, saved responses button, and keyboard hints
-      */}
       <form className="ai-chatbot-input-area" onSubmit={handleSubmit}>
         <div className="ai-input-wrapper">
-          {/* Text Input */}
           <textarea
             className="ai-chatbot-input"
             value={prompt}
@@ -499,16 +436,15 @@ const AiAssistantChatbot: React.FC<AiAssistantChatbotProps> = ({ onOpenDisclaime
             placeholder="Ask Nova anything about nutrition, meal planning, or your goals..."
             disabled={loading}
             ref={inputRef}
+            onFocus={() => setInputFocused(true)}
+            onBlur={() => setInputFocused(false)}
             onKeyDown={(e) => {
-              // Enter sends message, Shift+Enter creates new line
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 void sendPrompt();
               }
             }}
           />
-          
-          {/* Send Button */}
           <button 
             type="submit" 
             className="ai-chatbot-send-button"
@@ -523,8 +459,6 @@ const AiAssistantChatbot: React.FC<AiAssistantChatbotProps> = ({ onOpenDisclaime
                 </svg>
             )}
           </button>
-          
-          {/* Saved Responses Button (only shown when user is logged in) */}
           {user && (
             <button
               type="button"
@@ -548,8 +482,6 @@ const AiAssistantChatbot: React.FC<AiAssistantChatbotProps> = ({ onOpenDisclaime
             </button>
           )}
         </div>
-        
-        {/* Keyboard Shortcut Hint */}
         {messages.length > 0 && (
           <div className="ai-input-hint">
             Press Enter to send, Shift+Enter for new line
@@ -557,11 +489,6 @@ const AiAssistantChatbot: React.FC<AiAssistantChatbotProps> = ({ onOpenDisclaime
         )}
       </form>
 
-      {/*
-          MODALS
-          Save Response Modal: Allows users to save AI responses for later
-          Saved Responses Modal: Displays all previously saved responses
-      */}
       {user && lastMessage && (
         <SaveResponseModal
           isOpen={showSaveModal}
@@ -583,5 +510,4 @@ const AiAssistantChatbot: React.FC<AiAssistantChatbotProps> = ({ onOpenDisclaime
   );
 };
 
-export default AiAssistantChatbot;
-
+export default AiAssistantChatbotMobile;

@@ -283,16 +283,29 @@ const YourMealsList: React.FC<YourMealsListProps> = ({
     }
 
     try {
+      // Build nutrition object with only defined values (Firebase rejects undefined)
+      const nutrition: any = {
+        calories: meal.calories,
+      };
+      
+      // Add optional nutrition fields only if they exist
+      if (meal.protein !== undefined) nutrition.protein = meal.protein;
+      if (meal.totalCarbs !== undefined) nutrition.carbs = meal.totalCarbs;
+      if (meal.totalFat !== undefined) nutrition.fat = meal.totalFat;
+      if (meal.sodium !== undefined) nutrition.sodium = meal.sodium;
+      if (meal.sugars !== undefined) nutrition.sugars = meal.sugars;
+      if (meal.calcium !== undefined) nutrition.calcium = meal.calcium;
+      if (meal.iron !== undefined) nutrition.iron = meal.iron;
+      if (meal.fatCategories !== undefined) nutrition.fatCategories = meal.fatCategories;
+      if (meal.vitamins !== undefined) nutrition.vitamins = meal.vitamins;
+      if (meal.otherInfo !== undefined) nutrition.otherInfo = meal.otherInfo;
+
       const fav: FavoriteItem = {
         id: `fav_meal_${meal.id}`,
         name: meal.name,
+        servingSize: meal.servingSize, // Include serving size
         source: 'meal',
-        nutrition: {
-          calories: meal.calories,
-          protein: meal.protein,
-          carbs: meal.totalCarbs,
-          fat: meal.totalFat,
-        },
+        nutrition,
         created_at: Date.now(),
       };
 
@@ -347,18 +360,6 @@ const YourMealsList: React.FC<YourMealsListProps> = ({
 
   return (
     <div className="meal-list">
-      {filteredMeals.length < meals.length && (
-        <div style={{ 
-          marginBottom: '1rem', 
-          padding: '0.75rem', 
-          background: 'rgba(99, 102, 241, 0.1)', 
-          borderRadius: '6px',
-          fontSize: '0.875rem',
-          color: 'var(--muted, #9aa7bf)'
-        }}>
-          Showing {filteredMeals.length} of {meals.length} meal{meals.length !== 1 ? 's' : ''}
-        </div>
-      )}
       {filteredMeals.map((m) => {
         const isFavorited = favorites.some((f) => f.id === `fav_meal_${m.id}` || (f.name || '').trim().toLowerCase() === (m.name || '').trim().toLowerCase());
         return (

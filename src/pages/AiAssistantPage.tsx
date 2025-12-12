@@ -8,11 +8,15 @@ const resolveAuthClient = async () => {
   return { auth, firebaseAuth };
 };
 import AiAssistantChatbot from '../components/features/AiAssistantChatbot';
+import AiAssistantChatbotMobile from '../components/features/AiAssistantChatbotMobile';
 import Disclaimer from '../components/ui/Disclaimer';
 
 const AiAssistantPage: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 767);
+  const [showDisclaimerModal, setShowDisclaimerModal] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
     let unsub: (() => void) | null = null;
@@ -29,6 +33,30 @@ const AiAssistantPage: React.FC = () => {
       }
     })();
     return () => { if (unsub) unsub(); };
+  }, []);
+
+  // Show disclaimer on first visit to the page (per browser) and allow reopening
+  useEffect(() => {
+    const seen = localStorage.getItem('novaDisclaimerSeen');
+    setShowDisclaimerModal(!seen);
+  }, []);
+
+  const handleDismissDisclaimer = () => {
+    setShowDisclaimerModal(false);
+    localStorage.setItem('novaDisclaimerSeen', '1');
+  };
+
+  const handleOpenDisclaimer = () => {
+    setShowDisclaimerModal(true);
+  };
+
+  // Handle window resize to switch between mobile and desktop
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 767);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   if (loading) {
@@ -52,10 +80,24 @@ const AiAssistantPage: React.FC = () => {
 
   return (
     <div className="ai-assistant-page">
+      {showDisclaimerModal && (
+        <div className="disclaimer-modal-overlay" role="dialog" aria-modal="true">
+          <div className="disclaimer-modal">
+            <Disclaimer />
+            <div className="disclaimer-modal-actions">
+              <button className="btn-secondary" onClick={handleDismissDisclaimer}>I Understand</button>
+            </div>
+          </div>
+        </div>
+      )}
       <main className="ai-assistant-content">
-        <div className="ai-assistant-container">
-          <AiAssistantChatbot />
-          <Disclaimer className="ai-assistant-page-disclaimer" />
+        <div className="ai-assistant-container" style={isMobile && dropdownOpen ? { maxHeight: 'none', overflowY: 'auto' } : {}}>
+          {isMobile ? (
+            <AiAssistantChatbotMobile onOpenDisclaimer={handleOpenDisclaimer} onDropdownOpenChange={setDropdownOpen} />
+          ) : (
+            <AiAssistantChatbot onOpenDisclaimer={handleOpenDisclaimer} />
+          )}
+          {/* Inline disclaimer removed; now shown in modal and via header icon */}
         </div>
       </main>
     </div>

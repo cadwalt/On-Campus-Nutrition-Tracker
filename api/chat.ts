@@ -1,7 +1,19 @@
 // This is our backend file: api/chat.ts
 // This code runs on Vercel's server, NOT in the user's browser.
 
+import { verifyAuth } from './auth';
+
 export default async function handler(request: Request) {
+  // Authorization check (CWE 862 mitigation)
+  try {
+    verifyAuth(request);
+  } catch (authError) {
+    return new Response(
+      JSON.stringify({ error: authError instanceof Error ? authError.message : 'Authentication required' }), 
+      { status: 401, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
   // 1. Get the user's prompt and context from the frontend
   const { prompt, systemContext } = await request.json();
 
@@ -13,7 +25,7 @@ export default async function handler(request: Request) {
   }
 
   // 3. Build the message list for OpenAI
-  const messages = [];
+  const messages: Array<{ role: string; content: string }> = [];
   if (systemContext) {
     messages.push({ role: 'system', content: systemContext });
   }

@@ -19,54 +19,75 @@ import {
 import { getTodayAsString, parseLocalDate } from '../../utils/dateUtils';
 import { filterEntriesByRange } from '../../utils/weightAggregation';
 
+// Main Weight Tracker component
 export const WeightTracker: React.FC = () => {
   const navigate = useNavigate();
   // CWE-862: Missing Authorization - Weight entries CRUD is scoped to authenticated user via useWeightEntries hook
   const { entries, loading, add, remove, update } = useWeightEntries();
   const [date, setDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [weight, setWeight] = useState<string>(""); // weight value entered by user
-  const [unit, setUnit] = useState<'lb' | 'kg'>('lb');
-  const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
-  const toastTimer = useRef<number | null>(null);
+  const [unit, setUnit] = useState<'lb' | 'kg'>('lb'); // weight unit
+  const [error, setError] = useState<string | null>(null); // error message for input validation
+  const [toast, setToast] = useState<string | null>(null); // toast message for feedback
+  const toastTimer = useRef<number | null>(null); // timer for toast auto-hide
 
-  const [busy, setBusy] = useState(false);
-  const [targetLbs, setTargetLbs] = useState<number | null>(null);
-  const [range, setRange] = useState<'week' | 'month' | 'year' | 'all'>('month');
-  const [editingEntry, setEditingEntry] = useState<WeightEntry | null>(null);
-  const [editWeight, setEditWeight] = useState<string>('');
-  const [editDate, setEditDate] = useState<string>('');
-  const [showCongrats, setShowCongrats] = useState(false);
+  const [busy, setBusy] = useState(false); // busy state for async operations
+  const [targetLbs, setTargetLbs] = useState<number | null>(null); // user's target weight in lbs
+  const [primaryGoal, setPrimaryGoal] = useState<'lose_weight' | 'gain_weight' | null>(null); // user's primary goal
+  const [range, setRange] = useState<'week' | 'month' | 'year' | 'all'>('month'); // selected range for display
+  const [editingEntry, setEditingEntry] = useState<WeightEntry | null>(null); // entry being edited
+  const [editWeight, setEditWeight] = useState<string>(''); // weight value in edit modal
+  const [editDate, setEditDate] = useState<string>(''); // date value in edit modal
+  const [showCongrats, setShowCongrats] = useState(false); // show congrats modal on goal achievement
 
   useEffect(() => {
+    // Subscribe to auth changes so we can pull goal prefs (target weight + goal direction)
     let mounted = true;
     let unsubscribe: (() => void) | undefined;
-    (async () => {
-      try {
+    (async () => { // eslint-disable-line @typescript-eslint/no-misused-promises
+      try { // get auth client
         const { auth, firebaseAuth, db, firestore } = await resolveFirebase();
         // CWE-862: Missing Authorization - Verify user is authenticated before accessing data
         unsubscribe = firebaseAuth.onAuthStateChanged(auth, async (user) => {
+          // if component unmounted, abort
           if (!mounted) return;
           if (!user) {
             // CWE-862: Missing Authorization - Clear data when user logs out
             setTargetLbs(null);
+            setPrimaryGoal(null);
             return;
           }
+          console.log('WeightTracker: User logged in:', user.uid); // fetch user prefs
           try {
             // CWE-862: Missing Authorization - Scope data access to authenticated user's UID
             const userDocRef = firestore.doc(db, 'users', user.uid);
             const snap = await firestore.getDoc(userDocRef);
             if (!mounted) return;
+            console.log('WeightTracker: Document exists?', snap.exists());
             if (snap.exists()) {
               const data = snap.data();
+              console.log('WeightTracker: Full document data:', data);
               const goals = data?.nutrition_goals;
+              console.log('WeightTracker: Fetched nutrition_goals:', goals);
               if (goals && typeof goals.target_weight === 'number') {
                 setTargetLbs(goals.target_weight);
+                console.log('WeightTracker: Set targetLbs to', goals.target_weight);
               }
+              if (goals && goals.primary_goal) {
+                const goal = goals.primary_goal;
+                console.log('WeightTracker: Found primary_goal:', goal);
+                if (goal === 'lose_weight' || goal === 'gain_weight') {
+                  setPrimaryGoal(goal);
+                  console.log('WeightTracker: Set primaryGoal to', goal);
+                }
+              } else {
+                console.log('WeightTracker: No primary_goal found in goals:', goals);
+              }
+            } else {
+              console.log('WeightTracker: User document does not exist');
             }
           } catch (err) {
-            // non-fatal: leave target as null
-            // console.error('Failed to load target weight', err);
+            console.error('Failed to load weight tracker preferences:', err);
           }
         });
       } catch (err) {
@@ -114,12 +135,15 @@ export const WeightTracker: React.FC = () => {
         if (isLatestEntry(formattedDate, entries)) {
           setTimeout(() => setShowCongrats(true), 500);
         }
+      } else { // log missing target/goal
+        console.log('WeightTracker: Goal check skipped - targetLbs:', targetLbs, 'primaryGoal:', primaryGoal);
       }
     } finally {
       setBusy(false);
     }
   };
 
+  // Cleanup toast timer on unmount
   useEffect(() => {
     return () => {
       if (toastTimer.current) window.clearTimeout(toastTimer.current);
@@ -145,6 +169,7 @@ export const WeightTracker: React.FC = () => {
   const targetMessage = generateTargetMessage(targetLbs, latestEntry, entries, unit);
   const rangeLabelText = getRangeLabel(range, referenceDate, date);
 
+  // Handlers for editing entries
   const handleEditEntry = (entry: WeightEntry) => {
     setEditingEntry(entry);
     setEditWeight(entry.weightLb.toString());
@@ -166,15 +191,15 @@ export const WeightTracker: React.FC = () => {
     const { weightLb: lbs, date: processedDate } = processed;
 
     setBusy(true);
-    try {
+    try { // remove old entry and add new one (to handle date changes)
       await remove(editingEntry.id);
       await add({ date: processedDate, weightLb: lbs });
       setEditingEntry(null);
       setEditWeight('');
       setEditDate('');
       setError(null);
-      setToast('Weight updated');
-      if (toastTimer.current) window.clearTimeout(toastTimer.current);
+      setToast('Weight Updated');
+      if (toastTimer.current) window.clearTimeout(toastTimer.current); // reset toast timer
       toastTimer.current = window.setTimeout(() => setToast(null), 3000);
 
       // Check if goal was reached
@@ -188,6 +213,7 @@ export const WeightTracker: React.FC = () => {
     }
   };
 
+  // Cancel editing
   const handleCancelEdit = () => {
     setEditingEntry(null);
     setEditWeight('');
@@ -195,10 +221,12 @@ export const WeightTracker: React.FC = () => {
     setError(null);
   };
 
+  // Delete the currently editing entry
   const handleDeleteEdit = async () => {
     if (!editingEntry) return;
     setBusy(true);
     try {
+      // delete entry
       await remove(editingEntry.id);
       handleCancelEdit();
       setToast('Weight Deleted');
@@ -209,7 +237,7 @@ export const WeightTracker: React.FC = () => {
     }
   };
 
-  return (
+  return ( /* render main UI */
     <div className="page weight-tracker-page">
       <main className="dashboard-content">
         {/* Toast notification */}
@@ -244,8 +272,6 @@ export const WeightTracker: React.FC = () => {
           {/* Chart card */}
           {loading ? (
             <div className="card">Loading...</div>
-          ) : entries.length === 0 ? (
-            <div className="card">No entries yet</div>
           ) : (
             <>
               <div className="card">
@@ -283,8 +309,14 @@ export const WeightTracker: React.FC = () => {
                 })()}
 
                 {/* Chart */}
-                {filteredEntries.length === 0 ? (
-                  <div>No entries in this range</div>
+                {entries.length === 0 ? (
+                  <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af' }}>
+                    No entries yet - add your first weight to see the chart
+                  </div>
+                ) : filteredEntries.length === 0 ? (
+                  <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af' }}>
+                    No entries in this range
+                  </div>
                 ) : (
                   <WeightChart entries={chartEntries} height={220} range={range} unit={unit} targetWeight={targetLbs} />
                 )}
@@ -410,7 +442,6 @@ export const WeightTracker: React.FC = () => {
                     </tbody>
                   </table>
                 </div>
-              )}
 
               {/* Edit Modal */}
               {editingEntry && (
@@ -540,9 +571,8 @@ export const WeightTracker: React.FC = () => {
               )}
             </>
           )}
-        </div>
 
-        {/* Congratulations Modal */}
+          {/* Congratulations Modal */}
         {showCongrats && (
           <div style={{
             position: 'fixed',
@@ -647,6 +677,7 @@ export const WeightTracker: React.FC = () => {
             </div>
           </div>
         )}
+        </div>
       </main>
     </div>
   );

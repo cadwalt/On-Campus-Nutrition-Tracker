@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
 import type { User } from 'firebase/auth';
 // Use shared lazy resolver to import Firebase clients/modules at runtime
@@ -699,16 +698,13 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
 
 export default MealPreferencesSection;
 =======
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { User } from 'firebase/auth';
 // Use shared lazy resolver to import Firebase clients/modules at runtime
 import { resolveFirebase } from '../../lib/resolveFirebase';
 import type { CookingSkill, NutritionGoals } from '../../types/nutrition';
-import type { FavoriteItem } from '../../types/favorite';
-import { getFavoritesForUser, addFavoriteForUser, removeFavoriteForUser, updateFavoriteForUser } from '../services/favoritesService';
 import { COOKING_SKILLS } from '../../constants/nutrition';
 import MealPreferencesModal from './modals/MealPreferencesModal';
-import MealDetailsModal from '../features/modals/MealDetailsModal';
 import { Tooltip } from '../ui';
 
 interface MealPreferencesSectionProps {
@@ -728,27 +724,6 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
-  const [newFavorite, setNewFavorite] = useState<string>('');
-  const [newNutrition, setNewNutrition] = useState<{
-    calories?: number;
-    protein?: number;
-    carbs?: number;
-    fat?: number;
-    servingSize?: string;
-    fatCategories?: string;
-    sodium?: number;
-    sugars?: number;
-    calcium?: number;
-    iron?: number;
-    vitamins?: string;
-    otherInfo?: string;
-  }>({});
-  const [showFavOptional, setShowFavOptional] = useState(false);
-  const [expandedFavorites, setExpandedFavorites] = useState<Record<string, boolean>>({});
-  const [recentMeals, setRecentMeals] = useState<any[]>([]);
-  const [selectedFavMeal, setSelectedFavMeal] = useState<any | null>(null);
-  const [favModalOpen, setFavModalOpen] = useState(false);
 
   // Load existing meal preferences from Firestore
   useEffect(() => {
@@ -765,24 +740,7 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
             setCookingSkill(goals?.preferences?.cooking_skill || null);
             setMealFrequency(goals?.preferences?.meal_frequency || 3);
             // Load structured favorites if present, otherwise fallback to legacy array
-            const favsV2 = data.favorites_v2 || null;
-            if (Array.isArray(favsV2)) {
-              setFavorites(favsV2 as FavoriteItem[]);
-            } else {
-              const legacy = data.favorites || [];
-              setFavorites(Array.isArray(legacy) ? legacy.map((n: string, i: number) => ({ id: `legacy_${i}_${n.replace(/\s+/g, '_')}`, name: n, source: 'manual', created_at: Date.now() })) : []);
-            }
 
-            // Load recent meals for quick add-from-history
-            try {
-              const mealsRef = firestore.query(firestore.collection(db, 'meals'), firestore.where('userId', '==', user.uid), firestore.orderBy('createdAt', 'desc'), firestore.limit(20));
-              const snap = await firestore.getDocs(mealsRef);
-              const recent: any[] = [];
-              snap.forEach((d: any) => recent.push({ id: d.id, ...(d.data() || {}) }));
-              setRecentMeals(recent);
-            } catch (e) {
-              // ignore
-            }
           }
         } catch (error) {
           console.error('Error loading meal preferences:', error);
@@ -893,75 +851,6 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
     setIsEditing(false);
     console.groupEnd();
   }
-
-  // Favorite meals handlers
-  const normalize = (s: string) => s.trim().toLowerCase();
-
-  const handleAddFavorite = async () => {
-    if (!user) return;
-    const name = newFavorite.trim();
-    if (!name) return;
-
-    // Prevent duplicate by normalized name
-    if (favorites.some(f => normalize(f.name) === normalize(name))) {
-      onError('This meal is already in your favorites');
-      return;
-    }
-
-    // Validate required fields for favorite
-    if (!newNutrition.servingSize || newNutrition.calories == null) {
-      onError('Please provide a serving size and calories for the favorite');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const fav: FavoriteItem = {
-        id: `fav_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
-        name,
-        source: 'manual',
-        nutrition: {
-          calories: newNutrition.calories,
-          protein: newNutrition.protein,
-          carbs: newNutrition.carbs,
-          fat: newNutrition.fat,
-          sodium: (newNutrition as any).sodium,
-          sugars: (newNutrition as any).sugars,
-          calcium: (newNutrition as any).calcium,
-          iron: (newNutrition as any).iron,
-          fatCategories: (newNutrition as any).fatCategories,
-          vitamins: (newNutrition as any).vitamins,
-          otherInfo: (newNutrition as any).otherInfo,
-        },
-        servingSize: newNutrition.servingSize,
-        created_at: Date.now(),
-      };
-
-      const updated = await addFavoriteForUser(user.uid, fav);
-      setFavorites(updated as FavoriteItem[]);
-      setNewFavorite('');
-      setNewNutrition({});
-      onSuccess('Added to favorites');
-    } catch (err: any) {
-      onError(err.message || 'Failed to add favorite');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRemoveFavorite = async (fav: FavoriteItem) => {
-    if (!user) return;
-    setLoading(true);
-    try {
-      const updated = await removeFavoriteForUser(user.uid, fav.id);
-      setFavorites(updated as FavoriteItem[]);
-      onSuccess('Removed favorite');
-    } catch (err: any) {
-      onError(err.message || 'Failed to remove favorite');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Cancel editing and reset to original state
   const handleCancelEdit = () => {
@@ -1155,227 +1044,6 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
                     </div>
                   )}
                 </div>
-                {/* Favorite Meals Section */}
-                <div className="favorites-section" style={{ marginTop: '1rem' }}>
-                  <h3 style={{ margin: '0 0 0.5rem 0', color: '#e2e8f0' }}>Add Your Favorite Meals</h3>
-                  <div className="meal-form" style={{ marginBottom: '0.5rem' }}>
-                    <div className="form-grid">
-                      <div className="form-field required">
-                        <label>Favorite meal name</label>
-                        <input
-                          required
-                          aria-required="true"
-                          type="text"
-                          value={newFavorite}
-                          onChange={(e) => setNewFavorite(e.target.value)}
-                          placeholder="e.g. Caesar Salad"
-                          disabled={loading}
-                        />
-                      </div>
-                      <div className="form-field required">
-                        <label>Serving Size</label>
-                        <input
-                          required
-                          aria-required="true"
-                          type="text"
-                          placeholder="e.g. 1 bowl"
-                          value={newNutrition.servingSize ?? ''}
-                          onChange={(e) => setNewNutrition(prev => ({ ...prev, servingSize: e.target.value || undefined }))}
-                        />
-                      </div>
-                      <div className="form-field required">
-                        <label>Calories</label>
-                        <input required type="number" placeholder="cal" value={newNutrition.calories ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, calories: e.target.value ? Number(e.target.value) : undefined }))} aria-required="true" />
-                      </div>
-                      {/* other nutrition fields moved to optional section */}
-                    </div>
-
-                    <div className="form-toggle-row">
-                      <button
-                        type="button"
-                        className="form-toggle"
-                        aria-expanded={showFavOptional}
-                        aria-controls="favorite-optional-fields"
-                        onClick={() => setShowFavOptional((v) => !v)}
-                      >
-                        <span className={`chev ${showFavOptional ? 'open' : ''}`}>▾</span>
-                        {showFavOptional ? 'Hide optional nutrition' : 'Show more nutrition values'}
-                      </button>
-                    </div>
-
-                    {showFavOptional && (
-                      <div className="form-grid" id="favorite-optional-fields" style={{ marginTop: 4 }}>
-                        <div className="form-field">
-                          <label>Protein (g)</label>
-                          <input type="number" placeholder="protein" value={(newNutrition as any).protein ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, protein: e.target.value ? Number(e.target.value) : undefined }))} />
-                        </div>
-                        <div className="form-field">
-                          <label>Total Carbs (g)</label>
-                          <input type="number" placeholder="carbs" value={(newNutrition as any).carbs ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, carbs: e.target.value ? Number(e.target.value) : undefined }))} />
-                        </div>
-                        <div className="form-field">
-                          <label>Total Fat (g)</label>
-                          <input type="number" placeholder="fat" value={(newNutrition as any).fat ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, fat: e.target.value ? Number(e.target.value) : undefined }))} />
-                        </div>
-                        <div className="form-field">
-                          <label>Sodium (mg)</label>
-                          <input type="number" placeholder="sodium" value={(newNutrition as any).sodium ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, sodium: e.target.value ? Number(e.target.value) : undefined }))} />
-                        </div>
-                        <div className="form-field">
-                          <label>Sugars (g)</label>
-                          <input type="number" placeholder="sugars" value={(newNutrition as any).sugars ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, sugars: e.target.value ? Number(e.target.value) : undefined }))} />
-                        </div>
-                        <div className="form-field">
-                          <label>Calcium (mg)</label>
-                          <input type="number" placeholder="calcium" value={(newNutrition as any).calcium ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, calcium: e.target.value ? Number(e.target.value) : undefined }))} />
-                        </div>
-                        <div className="form-field">
-                          <label>Iron (mg)</label>
-                          <input type="number" placeholder="iron" value={(newNutrition as any).iron ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, iron: e.target.value ? Number(e.target.value) : undefined }))} />
-                        </div>
-                        <div className="form-field">
-                          <label>Fat Categories</label>
-                          <input type="text" placeholder="e.g. saturated, unsaturated" value={(newNutrition as any).fatCategories ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, fatCategories: e.target.value || undefined }))} />
-                        </div>
-                        <div className="form-field">
-                          <label>Vitamins</label>
-                          <input type="text" placeholder="e.g. Vit A, C" value={(newNutrition as any).vitamins ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, vitamins: e.target.value || undefined }))} />
-                        </div>
-                        <div className="form-field">
-                          <label>Other Info</label>
-                          <input type="text" placeholder="Notes" value={(newNutrition as any).otherInfo ?? ''} onChange={(e) => setNewNutrition(prev => ({ ...prev, otherInfo: e.target.value || undefined }))} />
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="form-actions" style={{ marginTop: 6 }}>
-                      <button className="response-button small" type="button" onClick={() => { setNewFavorite(''); setNewNutrition({}); setShowFavOptional(false); }} style={{ marginRight: 8 }}>Clear</button>
-                      <button className="response-button small" onClick={handleAddFavorite} disabled={loading || !newFavorite.trim() || !newNutrition.servingSize || newNutrition.calories == null}>Add</button>
-                    </div>
-                  </div>
-
-                  {/* Quick-add from recent meals */}
-                  {recentMeals.length > 0 && (
-                    <div style={{ marginBottom: '0.75rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                      <select style={{ flex: 1, padding: '0.5rem', borderRadius: 6 }} id="recentMealSelect">
-                        <option value="">Add from your recent meals...</option>
-                        {recentMeals.map((m) => (
-                          <option key={m.id} value={m.id}>{`${m.name} — ${m.servingSize || ''} • ${Math.round(m.calories || 0)} cal`}</option>
-                        ))}
-                      </select>
-                      <button className="response-button small" onClick={async () => {
-                        const sel = (document.getElementById('recentMealSelect') as HTMLSelectElement).value;
-                        if (!sel) return;
-                        const chosen = recentMeals.find(r => r.id === sel);
-                        if (!chosen) return;
-                        // Build favorite from meal
-                        const fav: FavoriteItem = {
-                          id: `fav_meal_${chosen.id}`,
-                          name: chosen.name,
-                          source: 'meal',
-                          nutrition: {
-                            calories: chosen.calories,
-                            protein: chosen.protein,
-                            carbs: chosen.totalCarbs ?? chosen.carbs,
-                            fat: chosen.totalFat ?? chosen.fat,
-                            sodium: chosen.sodium,
-                            sugars: chosen.sugars,
-                            calcium: chosen.calcium,
-                            iron: chosen.iron,
-                            fatCategories: chosen.fatCategories,
-                            vitamins: chosen.vitamins,
-                            otherInfo: chosen.otherInfo,
-                            // do not store servingsHad on favorites
-                          },
-                          servingSize: chosen.servingSize,
-                          created_at: Date.now(),
-                        };
-                        try {
-                          setLoading(true);
-                          const updated = await addFavoriteForUser(user!.uid, fav);
-                          setFavorites(updated as FavoriteItem[]);
-                          onSuccess('Added meal to favorites');
-                        } catch (err: any) {
-                          onError(err.message || 'Failed to add favorite');
-                        } finally { setLoading(false); }
-                      }}>Add</button>
-                    </div>
-                  )}
-
-                  {favorites.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      {favorites.map((fav) => (
-                        <div key={fav.id} className="preference-card favorite-item" onClick={() => {
-                          const mealLike = {
-                            id: fav.id,
-                            userId: user?.uid || 'me',
-                            name: fav.name,
-                            calories: fav.nutrition?.calories ?? 0,
-                            servingSize: fav.servingSize || '',
-                            // leave servingsHad undefined so Add-a-Meal prompts user to enter it
-                            totalCarbs: fav.nutrition?.carbs,
-                            totalFat: fav.nutrition?.fat,
-                            protein: fav.nutrition?.protein,
-                            sodium: fav.nutrition?.sodium,
-                            sugars: fav.nutrition?.sugars,
-                            calcium: fav.nutrition?.calcium,
-                            iron: fav.nutrition?.iron,
-                            createdAt: fav.created_at || Date.now(),
-                            otherInfo: ''
-                          };
-                          setSelectedFavMeal(mealLike);
-                          setFavModalOpen(true);
-                        }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', padding: '1rem', background: 'rgba(26, 26, 46, 0.6)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', cursor: 'pointer' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                            <div style={{ fontSize: '1.6rem', width: '3rem', height: '3rem', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(139, 92, 246, 0.08)', borderRadius: '8px', border: '1px solid rgba(139,92,246,0.12)', flexShrink: 0 }}>
-                              {'🍽️'}
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                              <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{fav.name}</span>
-                              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                {fav.servingSize && <small style={{ color: '#94a3b8' }}>{fav.servingSize}</small>}
-                                {fav.nutrition && <small style={{ color: '#94a3b8' }}>{`${fav.nutrition.calories ?? '-'} cal • ${fav.nutrition.protein ?? '-'}g protein • ${fav.nutrition.carbs ?? '-'}g carbs • ${fav.nutrition.fat ?? '-'}g fat`}</small>}
-                              </div>
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                            <button onClick={(e) => { e.stopPropagation(); handleRemoveFavorite(fav); }} className="remove-favorite-button">Remove</button>
-                          </div>
-                        </div>
-                      ))}
-                      <MealDetailsModal
-                        isOpen={favModalOpen}
-                        onClose={() => setFavModalOpen(false)}
-                        meal={selectedFavMeal}
-                        onSaveExternal={async (mealId, updates) => {
-                          if (!user || !mealId) throw new Error('User not found');
-                          // Map meal updates to favorite structure
-                          const partial: any = {};
-                          if (updates.name !== undefined) partial.name = updates.name;
-                          if (updates.servingSize !== undefined) partial.servingSize = updates.servingSize;
-                          // Map nutrition fields: calories, protein, totalCarbs -> carbs, totalFat -> fat, sodium, sugars, calcium, iron
-                          partial.nutrition = {};
-                          if (updates.calories !== undefined) partial.nutrition.calories = updates.calories;
-                          if (updates.protein !== undefined) partial.nutrition.protein = updates.protein;
-                          if (updates.totalCarbs !== undefined) partial.nutrition.carbs = updates.totalCarbs;
-                          if (updates.totalFat !== undefined) partial.nutrition.fat = updates.totalFat;
-                          if (updates.sodium !== undefined) partial.nutrition.sodium = updates.sodium;
-                          if (updates.sugars !== undefined) partial.nutrition.sugars = updates.sugars;
-                          if (updates.calcium !== undefined) partial.nutrition.calcium = updates.calcium;
-                          if (updates.iron !== undefined) partial.nutrition.iron = updates.iron;
-
-                          // Persist update to user's favorites
-                          const updated = await updateFavoriteForUser(user.uid, mealId, partial);
-                          // Update local UI state
-                          setFavorites(updated as any);
-                          setFavModalOpen(false);
-                        }}
-                      />
-                    </div>
-                  ) : (
-                    <p style={{ margin: 0, color: '#94a3b8' }}>No favorite meals yet. Add one above.</p>
-                  )}
-                </div>
               </div>
             ) : (
               <div 
@@ -1398,4 +1066,3 @@ const MealPreferencesSection: React.FC<MealPreferencesSectionProps> = ({
 };
 
 export default MealPreferencesSection;
->>>>>>> 3449604f23503c51d893151942e46f034bb45a8d

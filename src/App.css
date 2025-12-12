@@ -22,6 +22,11 @@
   --center-glow-opacity: 0.06;
 }
 
+html {
+  overflow-x: hidden;
+  width: 100%;
+}
+
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
@@ -41,6 +46,9 @@ body {
   min-height: 100vh;
   display: flex;
   background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
 }
 
 /* Decorative blurred gradient blobs behind the UI */
@@ -129,6 +137,35 @@ body::after {
   z-index: 0;
 }
 
+/* Global scrollbar styling for desktop */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 5px;
+  border: 2px solid rgba(255, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) rgba(255, 255, 255, 0.05);
+}
+
 /* Header with Tooltip */
 .header-with-tooltip,
 .section-header-with-tooltip {
@@ -182,16 +219,15 @@ body::after {
   gap: 2rem;
   width: 100%;
   max-width: 1200px;
-  margin-left: auto;
-  margin-right: auto;
-  padding: 0;
+  margin: 0 auto;
+  padding: 0 1rem;
   box-sizing: border-box;
 }
 
 .weight-tracker-page .card {
   padding: 1.5rem;
-  width: 97.5%;
-  box-sizing: border-box;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* Responsive adjustments for weight tracker */
@@ -807,7 +843,82 @@ body::after {
   height: calc(100vh - 120px);
   min-height: 800px;
   max-height: 1100px;
-  overflow: hidden;
+  overflow: visible;
+}
+
+/* Disclaimer trigger icon */
+.disclaimer-icon-button {
+  align-self: flex-start;
+  margin-left: auto;
+  margin-bottom: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.5rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.disclaimer-icon-button:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+}
+
+.disclaimer-icon-button:active {
+  transform: translateY(1px);
+}
+
+/* Disclaimer modal */
+.disclaimer-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 15, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 1.5rem;
+}
+
+.disclaimer-modal {
+  width: min(680px, 100%);
+  background: rgba(17, 24, 39, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+}
+
+.disclaimer-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.disclaimer-modal .btn-secondary {
+  padding: 0.75rem 1.25rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.disclaimer-modal .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.disclaimer-modal .btn-secondary:active {
+  transform: translateY(1px);
 }
 
 /* AI Chatbot Header */
@@ -815,17 +926,17 @@ body::after {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 1.75rem 2rem;
+  padding: 1rem 1.5rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(99, 102, 241, 0.15) 50%, rgba(139, 92, 246, 0.15) 100%);
   flex-shrink: 0;
-  gap: 2rem;
-  flex-wrap: wrap;
+  gap: 1rem;
+  flex-wrap: nowrap;
 }
 
 .ai-chatbot-header-content {
   display: flex;
-  gap: 1.25rem;
+  gap: 0.75rem;
   align-items: flex-start;
   flex: 1;
   position: relative;
@@ -899,18 +1010,19 @@ body::after {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  padding: 0.5rem 0.75rem;
+  padding: 0.375rem 0.625rem;
   background: rgba(239, 68, 68, 0.15);
-  border: 1.5px solid rgba(239, 68, 68, 0.4);
+  border: 1px solid rgba(239, 68, 68, 0.3);
   color: #fca5a5;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 500;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
   font-family: inherit;
   outline: none;
-  width: 100%;
+  min-width: fit-content;
+  white-space: nowrap;
   text-align: left;
   position: relative;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -971,10 +1083,11 @@ body::after {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 0.625rem;
-  min-width: 200px;
-  padding-left: 1.5rem;
+  gap: 0.375rem;
+  min-width: auto;
+  padding-left: 0.75rem;
   border-left: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
 }
 
 .capability-label-wrapper {
@@ -1258,18 +1371,28 @@ body::after {
   flex-shrink: 0;
 }
 
+/* Filter Suggestions Section */
+.ai-filter-suggestions {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 0.875rem;
+  background: rgba(0, 0, 0, 0.2);
+}
+
 /* Category Filters */
 .category-section {
-  margin-top: auto;
-  padding-top: 1.5rem;
+  margin-top: 0;
+  padding-top: 0;
   width: 100%;
 }
 
 .category-label {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   color: rgba(255, 255, 255, 0.6);
   font-weight: 600;
-  margin: 0 0 0.625rem 0;
+  margin: 0 0 0.375rem 0;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -1378,7 +1501,7 @@ body::after {
 
 .ai-chatbot-input {
   flex: 1;
-  height: 48px;
+  height: 88px;
   padding: 0.875rem 1.25rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
@@ -1389,7 +1512,9 @@ body::after {
   resize: none;
   transition: all 0.2s ease;
   line-height: 1.5;
-  overflow-y: auto;
+  overflow-y: scroll;
+  overflow-y: overlay;
+  max-height: 200px;
 }
 
 .ai-chatbot-input:focus {
@@ -1421,6 +1546,7 @@ body::after {
   cursor: pointer;
   transition: background 0.2s ease;
   flex-shrink: 0;
+  align-self: flex-end;
 }
 
 .ai-chatbot-send-button:hover:not(:disabled) {
@@ -1462,52 +1588,362 @@ body::after {
   text-align: center;
 }
 
+/* Centered Header Section */
+.ai-chatbot-header-centered {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 2rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(99, 102, 241, 0.15) 50%, rgba(139, 92, 246, 0.15) 100%);
+  gap: 1rem;
+  text-align: center;
+}
+
+/* Access Section */
+.ai-access-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+  gap: 1.25rem;
+}
+
+.ai-capability-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 400px;
+}
+
+.capability-badge-centered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  outline: none;
+  white-space: normal;
+  word-wrap: break-word;
+  text-align: center;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  width: 100%;
+}
+
+.capability-badge-centered:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.6);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.capability-badge-centered:active {
+  transform: translateY(0);
+}
+
+.capability-badge-centered.active {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.2);
+}
+
+.capability-badge-centered.inactive {
+  background: rgba(100, 116, 139, 0.1);
+  border-color: rgba(100, 116, 139, 0.3);
+  color: #64748b;
+  opacity: 0.7;
+}
+
+.capability-badge-centered.inactive:hover {
+  background: rgba(100, 116, 139, 0.18);
+  border-color: rgba(100, 116, 139, 0.5);
+  opacity: 1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(100, 116, 139, 0.2);
+}
+
+/* Dropdown Filter Section */
+.ai-filter-dropdown-section {
+  position: relative;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.1);
+  overflow: visible;
+  z-index: 50;
+}
+
+.ai-filter-dropdown-button {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.875rem 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #d1d5db;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  outline: none;
+}
+
+.ai-filter-dropdown-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+}
+
+.dropdown-arrow {
+  display: inline-flex;
+  font-size: 0.75rem;
+  transition: transform 0.2s ease;
+  margin-left: 0.5rem;
+  flex-shrink: 0;
+}
+
+.dropdown-arrow.open {
+  transform: rotate(180deg);
+}
+
+.ai-filter-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  right: 0;
+  background: rgba(15, 23, 42, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0.5rem 0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(99, 102, 241, 0.1);
+  z-index: 200;
+  max-height: 45vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  backdrop-filter: blur(10px);
+}
+
+.dropdown-menu-item {
+  padding: 0.75rem 1.25rem;
+  background: none;
+  border: none;
+  color: #d1d5db;
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  outline: none;
+}
+
+.dropdown-menu-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+}
+
+.dropdown-menu-item.active {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
+
+/* Enlarged Suggestions Grid */
+.prompt-suggestions-enlarged {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
+  gap: 0.675rem;
+  padding: 0.9rem 2rem;
+  width: 100%;
+}
+
+.prompt-suggestion-compact {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0.85rem 1.125rem;
+  background: rgba(31, 41, 55, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #d1d5db;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  outline: none;
+  gap: 1rem;
+  text-align: left;
+}
+
+.prompt-suggestion-compact:hover:not(:disabled) {
+  background: rgba(31, 41, 55, 0.9);
+  border-color: rgba(99, 102, 241, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+.prompt-suggestion-compact:active:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.prompt-suggestion-compact:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.prompt-suggestion-compact .suggestion-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: rgba(99, 102, 241, 0.2);
+  color: #6366f1;
+  flex-shrink: 0;
+  min-width: 32px;
+}
+
+.prompt-suggestion-compact .suggestion-text {
+  line-height: 1.4;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
+  .ai-assistant-page {
+    overflow: visible;
+  }
+
+  .ai-assistant-content {
+    overflow: visible;
+  }
+
+  .ai-assistant-container {
+    overflow: visible;
+  }
+
   .ai-assistant-chatbot {
     height: calc(100vh - 150px);
     min-height: 600px;
     border-radius: 16px;
+    overflow: visible;
+    max-width: 100vw;
   }
 
-  .ai-chatbot-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1.5rem;
+  .ai-chatbot-header-centered {
+    padding: 1.5rem 1.5rem 1rem;
+  }
+
+  .ai-access-section {
     padding: 1.25rem 1.5rem;
+    gap: 1rem;
   }
 
-  .ai-chatbot-capabilities {
+  .ai-capability-buttons {
+    max-width: 100%;
+  }
+
+  .capability-badge-centered {
+    padding: 0.625rem 1rem;
+    font-size: 0.8125rem;
+  }
+
+  .ai-filter-dropdown-section {
+    padding: 0.75rem 1.5rem;
+    overflow: visible;
     width: 100%;
-    align-items: flex-start;
-    padding-left: 0;
-    border-left: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    padding-top: 1.5rem;
+    z-index: 100;
+  }
+
+  .ai-filter-dropdown-button {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    width: 100%;
+  }
+
+  .ai-filter-dropdown-menu {
+    left: 1.5rem;
+    right: 1.5rem;
+    max-height: min(50vh, 300px);
+    max-width: calc(100vw - 3rem);
+    z-index: 300;
+    margin-bottom: 1rem;
+  }
+
+  /* Disable hover/transform effects on mobile */
+  .ai-filter-dropdown-button:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #d1d5db;
+  }
+
+  .capability-badge-centered:hover {
+    transform: none;
+  }
+
+  .capability-badge-centered.inactive:hover {
+    transform: none;
+  }
+
+  .prompt-suggestion-compact:hover:not(:disabled) {
+    transform: none;
+  }
+
+  .prompt-suggestions-enlarged {
+    grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
+    gap: 0.625rem;
+    padding: 0.875rem 1.5rem;
+  }
+
+  .prompt-suggestion-compact {
+    padding: 0.5rem 1rem;
+    font-size: 0.75rem;
+    gap: 0.875rem;
+  }
+
+  .prompt-suggestion-compact .suggestion-icon {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
   }
 
   .tooltip-content {
     right: auto;
-    left: 0;
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px);
     width: calc(100vw - 3rem);
     max-width: 300px;
   }
 
-  .suggestion-categories {
-    justify-content: center;
-  }
-
-  .capability-label {
-    text-align: left;
-  }
-
-  .prompt-suggestions {
-    grid-template-columns: 1fr;
-    padding: 0;
+  .tooltip-container:hover .tooltip-content {
+    transform: translateX(-79%) translateY(0);
   }
 
   .ai-chatbot-body {
-    padding: 1.5rem;
+    padding: 0rem;
   }
 
   .ai-message-content {
@@ -1515,7 +1951,7 @@ body::after {
   }
 
   .ai-chatbot-input-area {
-    padding: 1.25rem 1.5rem;
+    padding: 1rem 1rem;
   }
 }
 
@@ -2063,6 +2499,18 @@ body::after {
   flex: 1;
   margin-left: 200px;
   min-height: 100vh;
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* Hide scrollbar on tabs */
+.app-layout > * > div:first-child::-webkit-scrollbar {
+  display: none;
+}
+
+.app-layout > * > div:first-child {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* When sidebar is hidden (auth routes), remove the left offset so main centers */
@@ -2152,14 +2600,24 @@ body::after {
 
 @media (max-width: 480px) {
   .toast {
-    left: calc(50% + 80px) !important;
-    transform: translateX(-50%) translateY(120%);
-    min-width: 280px;
-    max-width: 380px;
+    left: 1rem !important;
+    right: 1rem !important;
+    transform: translateY(120%);
+    min-width: unset;
+    max-width: unset;
+    bottom: 1rem !important;
   }
   
   .toast-visible {
-    transform: translateX(-50%) translateY(0) !important;
+    transform: translateY(0) !important;
+  }
+  
+  .toast-content {
+    padding: 0.875rem 1.25rem;
+  }
+  
+  .toast-message {
+    font-size: 0.8125rem;
   }
 }
 
@@ -2169,12 +2627,14 @@ body::after {
   backdrop-filter: blur(20px);
   border-radius: 24px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-  margin: 1rem;
+  margin: 1rem auto;
   overflow: hidden;
+  overflow-x: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
   min-height: calc(100vh - 2rem);
-  width: 100%;
-  max-width: none;
+  width: calc(100% - 2rem);
+  max-width: 1600px;
+  padding-top: 0;
 }
 
 /* Global minimal mode (applied to non-auth pages on request) */
@@ -2310,6 +2770,110 @@ body::after {
   color: #e2e8f0;
   font-size: 1.25rem;
   font-weight: 600;
+}
+
+/* Micronutrient Snapshot Card */
+.micronutrient-card {
+  margin-bottom: 2rem;
+}
+
+.micronutrient-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.micronutrient-card h3 {
+  margin: 0;
+  color: #e2e8f0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.micronutrient-card__subtitle {
+  margin: 0.25rem 0 0;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.micronutrient-card__badge {
+  padding: 0.35rem 0.85rem;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 12px;
+  color: #34d399;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.micronutrient-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.micronutrient-tile {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 0.9rem;
+}
+
+.micronutrient-tile__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.micronutrient-label {
+  color: #e2e8f0;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.micronutrient-amount {
+  color: #cbd5e1;
+  font-size: 0.9rem;
+  margin-top: 0.15rem;
+}
+
+.micronutrient-percent {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.micronutrient-progress-track {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.micronutrient-progress {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.3s ease;
+}
+
+.micronutrient-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+  gap: 0.25rem;
+}
+
+.micronutrient-target {
+  font-weight: 600;
+}
+
+.micronutrient-hint {
+  color: #cbd5e1;
 }
 
 /* Input styling */
@@ -2589,8 +3153,10 @@ body::after {
   /* let the meal list grow inside the wrapper and scroll if content overflows */
   flex: 1 1 auto;
   min-height: 0;
-  max-height: none;
-  overflow: auto;
+  max-height: 500px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.5rem;
 }
 
 /* Tabs content wrapper: make the area below the tabs fill available space and scroll */
@@ -2626,6 +3192,7 @@ body::after {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow: visible;
 }
 
 @media (max-width: 720px) {
@@ -2639,12 +3206,14 @@ body::after {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  overflow: visible;
 }
 
 .meal-form .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 1rem;
+  overflow: visible;
 }
 
 .meal-form .form-field {
@@ -2951,14 +3520,24 @@ body::after {
 
 /* Thin custom scrollbar for meal list */
 .meal-list::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
 }
 .meal-list::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 5px;
 }
 .meal-list::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.05);
-  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 5px;
+  border: 2px solid rgba(255, 255, 255, 0.05);
+}
+
+.meal-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.meal-list::-webkit-scrollbar-thumb:active {
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .response-container h2 {
@@ -3056,6 +3635,8 @@ body::after {
   flex: 1;
   padding: 2rem 1rem;
   width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -3367,6 +3948,7 @@ body::after {
   gap: 1.5rem;
   height: 100%;
   width: 100%;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 0 1rem;
   box-sizing: border-box;
@@ -3943,6 +4525,10 @@ select { min-width: 0; }
     margin: 0.5rem;
     min-height: calc(100vh - 1rem);
     width: calc(100vw - 200px);
+  }
+
+  .main-content.minimal {
+    overflow: visible;
   }
   
   .dashboard-grid {
@@ -4864,6 +5450,30 @@ select { min-width: 0; }
   gap: 1.25rem;
 }
 
+/* Custom scrollbar for modal body */
+.modal-body-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.modal-body-scroll::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 5px;
+}
+
+.modal-body-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 5px;
+  border: 2px solid rgba(255, 255, 255, 0.05);
+}
+
+.modal-body-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.modal-body-scroll::-webkit-scrollbar-thumb:active {
+  background: rgba(255, 255, 255, 0.5);
+}
+
 .meal-fields-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill,minmax(200px,1fr));
@@ -5597,6 +6207,9 @@ select { min-width: 0; }
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .water-add-section-label {
@@ -5663,6 +6276,9 @@ select { min-width: 0; }
   display: flex;
   gap: 0.75rem;
   align-items: stretch;
+  flex-wrap: wrap;
+  width: 100%;
+  max-width: 100%;
 }
 
 .water-custom-input-wrapper {
@@ -5727,17 +6343,20 @@ select { min-width: 0; }
 }
 
 .water-add-btn-primary {
-  padding: 0.875rem 2rem;
+  padding: 0.625rem 1rem;
   background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
   border: none;
   border-radius: 12px;
   color: white;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  white-space: nowrap;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  min-width: 50px;
 }
 
 .water-add-btn-primary:hover:not(:disabled) {
@@ -5764,7 +6383,7 @@ select { min-width: 0; }
 }
 
 .water-add {
-  padding: 0.625rem 0.75rem;
+  padding: 0.5rem 0.75rem;
   background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
   border: none;
   border-radius: 10px;
@@ -5772,6 +6391,10 @@ select { min-width: 0; }
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+  font-size: 0.8125rem;
+  white-space: normal;
+  word-wrap: break-word;
+  min-width: fit-content;
 }
 
 .water-add:hover:not(:disabled) {
@@ -6090,8 +6713,11 @@ select { min-width: 0; }
 /* Saved Water Bottles */
 .water-bottles-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   gap: 0.75rem;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .water-bottle-btn {
@@ -6179,7 +6805,10 @@ select { min-width: 0; }
 
 .water-bottle-form-actions {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .water-bottle-form-actions .water-add {
@@ -6413,6 +7042,9 @@ select { min-width: 0; }
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  min-width: 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .water-suggestion-message {
@@ -6420,6 +7052,9 @@ select { min-width: 0; }
   color: #e2e8f0;
   font-size: 0.9375rem;
   line-height: 1.5;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .water-suggestion-action {
@@ -6474,6 +7109,9 @@ select { min-width: 0; }
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  min-width: 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .water-entry-amount {
@@ -6764,4 +7402,775 @@ select { min-width: 0; }
   color: #4ade80;
   font-size: 0.75rem;
   font-weight: 600;
+}
+
+/* ========================================
+   MOBILE RESPONSIVE DESIGN
+   Desktop: ≥1024px (unchanged)
+   Tablet: 768px - 1023px
+   Mobile: ≤767px
+   ======================================== */
+
+/* Extra small devices (320px - 479px) - Phones */
+@media (max-width: 479px) {
+  :root {
+    /* Reduce blob sizes for smaller screens */
+    --blob1-size: 28;
+    --blob2-size: 22;
+    --blob1-blur: 48px;
+    --blob2-blur: 40px;
+  }
+
+  .app-container {
+    flex-direction: column;
+  }
+
+  .global-sidebar {
+    display: none;
+  }
+
+  .app-layout {
+    margin-left: 0;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .main-content {
+    margin: 0;
+    padding: 1rem;
+    padding-top: 4.5rem;
+    min-height: calc(100vh - 60px);
+    width: 100vw;
+    max-width: 100vw;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  /* Typography adjustments */
+  h1 {
+    font-size: 1.75rem;
+  }
+
+  h2 {
+    font-size: 1.4rem;
+  }
+
+  h3 {
+    font-size: 1.1rem;
+  }
+
+  /* Form grid to single column */
+  .form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem;
+  }
+
+  /* Water intake grid to single column */
+  .water-intake-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem;
+  }
+
+  /* Cards */
+  .card {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Tabs - Make mobile-friendly */
+  .meal-tracker-page > div > div:first-child {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -1rem;
+    padding: 0 1rem;
+  }
+
+  /* Tab buttons should wrap and shrink on mobile */
+  button[style*="padding: 0.75rem 1.5rem"] {
+    padding: 0.65rem 0.75rem !important;
+    font-size: 0.8rem !important;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* Modals */
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-start;
+    justify-content: center;
+  }
+
+  .modal-content,
+  .modal-content.meal-modal {
+    width: 100vw;
+    max-width: 100vw;
+    min-height: calc(100vh - 1rem);
+    max-height: calc(100vh - 0.5rem);
+    padding: 1.25rem;
+    border-radius: 0;
+    margin: 0;
+  }
+
+  /* Buttons */
+  button {
+    padding: 0.65rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  /* Fix filter controls overflow */
+  div[style*="flexWrap: 'wrap'"] {
+    flex-wrap: wrap !important;
+  }
+
+  /* Make select and button groups stack on mobile */
+  div[style*="display: 'flex'"][style*="gap"] {
+    flex-wrap: wrap;
+  }
+
+  select,
+  input[type="text"],
+  input[type="date"],
+  input[type="number"] {
+    min-width: 0;
+    max-width: 100%;
+    font-size: 0.875rem;
+  }
+
+  /* Toast notifications */
+  .toast {
+    bottom: 1rem !important;
+    left: 0.5rem !important;
+    right: 0.5rem !important;
+    width: calc(100% - 1rem) !important;
+    max-width: none !important;
+  }
+
+  /* Meal form actions - stack buttons on mobile */
+  .form-actions {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .form-actions > div {
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+
+  .form-actions button {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .favorites-modal-button {
+    font-size: 0.8rem !important;
+    padding: 0.75rem !important;
+  }
+
+  /* Meal planning calendar and cards */
+  .weekly-calendar,
+  .daily-planner {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+
+  /* Calendar container */
+  .weekly-calendar > div,
+  .daily-planner > div {
+    padding: 0.75rem !important;
+  }
+
+  /* Calendar grid - reduce size */
+  .weekly-calendar [style*="display: grid"] {
+    gap: 0.25rem !important;
+    grid-template-columns: repeat(7, 1fr) !important;
+  }
+
+  /* Calendar day cells */
+  .weekly-calendar button {
+    padding: 0.5rem 0.25rem !important;
+    font-size: 0.75rem !important;
+    min-width: 0 !important;
+  }
+
+  /* Calendar header text */
+  .weekly-calendar h3 {
+    font-size: 0.9rem !important;
+  }
+
+  /* Nutrition projection */
+  .nutrition-projection,
+  div[style*="Projected Nutrition"] {
+    padding: 1rem !important;
+  }
+
+  .nutrition-projection h3,
+  div[style*="Projected Nutrition"] h3 {
+    font-size: 0.9rem !important;
+  }
+
+  /* Meal list entries - stack layout on mobile */
+  .meal-item {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
+  }
+
+  .meal-left {
+    width: 100% !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.25rem !important;
+  }
+
+  .meal-time {
+    min-width: auto !important;
+    font-size: 0.75rem !important;
+  }
+
+  .meal-name {
+    width: 100% !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+  }
+
+  .meal-subtext {
+    font-size: 0.7rem !important;
+  }
+
+  .meal-right {
+    width: 100% !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.5rem !important;
+  }
+
+  .meal-calories {
+    align-self: flex-start !important;
+  }
+
+  /* Meal action buttons - wrap and shrink */
+  .meal-right > div:last-child {
+    width: 100% !important;
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+  }
+
+  .meal-right button {
+    flex: 1 1 auto !important;
+    min-width: calc(50% - 0.25rem) !important;
+    padding: 0.5rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  /* Daily planner - mobile responsive layout */
+  .nutrition-projection-container {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Make meal planning buttons stack */
+  .meal-planning-actions {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+
+  .meal-planning-actions button {
+    width: 100% !important;
+  }
+
+  /* Water intake card mobile fixes */
+  .water-intake-page .card {
+    padding: 1.25rem !important;
+  }
+
+  .water-suggestion-item {
+    padding: 0.75rem !important;
+    gap: 0.75rem !important;
+  }
+
+  .water-suggestion-icon {
+    width: 2rem !important;
+    height: 2rem !important;
+    font-size: 1.25rem !important;
+  }
+
+  .water-suggestion-message {
+    font-size: 0.875rem !important;
+  }
+
+  /* Water button mobile fixes */
+  .water-add-btn-primary {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.75rem !important;
+    min-width: auto !important;
+    flex-shrink: 0 !important;
+  }
+
+  .water-custom-input-container {
+    flex-wrap: wrap !important;
+  }
+
+  .water-custom-input-wrapper {
+    flex-basis: 100% !important;
+    width: 100% !important;
+  }
+
+  .water-quick-buttons {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem !important;
+  }
+
+  .water-btn {
+    padding: 0.6rem 0.5rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  .water-bottles-grid {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)) !important;
+    gap: 0.5rem !important;
+  }
+
+  .water-bottle-btn {
+    min-height: 100px !important;
+    padding: 0.5rem !important;
+    gap: 0.25rem !important;
+  }
+
+  .water-bottle-name {
+    font-size: 0.8125rem !important;
+  }
+
+  .water-entry-item {
+    padding: 0.75rem !important;
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+  }
+
+  .water-entry-amount {
+    font-size: 0.875rem !important;
+  }
+
+  .water-entry-meta {
+    font-size: 0.75rem !important;
+    flex-wrap: wrap !important;
+    width: 100% !important;
+  }
+
+  .water-entry-actions {
+    width: 100% !important;
+    gap: 0.25rem !important;
+  }
+
+  .water-entry-actions button {
+    padding: 0.4rem 0.6rem !important;
+    font-size: 0.7rem !important;
+  }
+
+  /* Weight tracker adjustments */
+  .weight-tracker-grid {
+    gap: 1rem;
+  }
+
+  .weight-tracker-page .card {
+    width: 100%;
+  }
+
+  /* Dashboard grid */
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Small devices (480px - 767px) - Large phones & small tablets */
+@media (min-width: 480px) and (max-width: 767px) {
+  :root {
+    --blob1-size: 32;
+    --blob2-size: 26;
+  }
+
+  .global-sidebar {
+    display: none;
+  }
+
+  .app-layout {
+    margin-left: 0;
+    margin-bottom: 0;
+  }
+
+  .main-content {
+    margin: 0;
+    padding: 1.25rem;
+    padding-top: 4.5rem;
+    width: 100vw;
+    max-width: 100vw;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* Form grid */
+  .form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem;
+  }
+
+  .water-intake-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1.25rem;
+  }
+
+  /* Water intake page mobile fixes */
+  .water-intake-page .card {
+    overflow: hidden !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+
+  /* Water quick buttons - stack on mobile */
+  .water-quick-buttons {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem !important;
+  }
+
+  .water-btn {
+    padding: 0.75rem 0.5rem !important;
+    font-size: 0.8125rem !important;
+    white-space: normal !important;
+  }
+
+  /* Water button mobile fixes for large phones */
+  .water-add-btn-primary {
+    padding: 0.625rem 0.875rem !important;
+    font-size: 0.8125rem !important;
+    min-width: auto !important;
+  }
+
+  /* Water custom input - full width on mobile */
+  .water-custom-input-container {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .water-custom-input-wrapper {
+    width: 100% !important;
+  }
+
+  .water-quick-buttons {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .water-bottles-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
+    gap: 0.75rem !important;
+  }
+
+  .water-bottle-btn {
+    min-height: 110px !important;
+    padding: 0.75rem !important;
+  }
+
+  .water-bottle-name {
+    font-size: 0.875rem !important;
+  }
+
+  /* Water bottle manager - fix overflow */
+  .water-bottle-item {
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+  }
+
+  .water-bottle-buttons {
+    flex-wrap: wrap !important;
+    gap: 0.25rem !important;
+  }
+
+  .water-bottle-buttons button {
+    flex: 1 1 auto !important;
+    min-width: calc(50% - 0.25rem) !important;
+    font-size: 0.75rem !important;
+    padding: 0.5rem !important;
+  }
+
+  /* Water entries - improve text wrapping */
+  .water-entry-item {
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+  }
+
+  .water-entry-text {
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    max-width: 100% !important;
+  }
+
+  /* Smart suggestions - fix card overflow */
+  .water-intake-page .smart-suggestions-container {
+    overflow-x: hidden !important;
+    max-width: 100% !important;
+  }
+
+  .water-intake-page .suggestion-item {
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+
+  /* Water card mobile optimizations for large phones */
+  .water-intake-page .card {
+    padding: 1.5rem !important;
+  }
+
+  .water-suggestion-item {
+    padding: 0.875rem !important;
+    gap: 0.75rem !important;
+  }
+
+  .water-suggestion-message {
+    font-size: 0.9rem !important;
+  }
+
+  .water-entry-item {
+    padding: 0.875rem !important;
+  }
+
+  .water-entry-actions button {
+    padding: 0.45rem 0.7rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  .card {
+    padding: 1.25rem;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Tabs - Make mobile-friendly */
+  .meal-tracker-page > div > div:first-child {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  button[style*="padding: 0.75rem 1.5rem"] {
+    padding: 0.75rem 1rem !important;
+    font-size: 0.875rem !important;
+  }
+
+  /* Meal form actions - stack buttons */
+  .form-actions {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .form-actions > div {
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+
+  .form-actions button {
+    width: 100% !important;
+  }
+
+  /* Meal planning overflow fixes */
+  .weekly-calendar,
+  .daily-planner {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+
+  .weekly-calendar > div,
+  .daily-planner > div {
+    padding: 1rem !important;
+  }
+
+  .weekly-calendar button {
+    padding: 0.6rem 0.3rem !important;
+    font-size: 0.8rem !important;
+  }
+
+  /* Meal list entries - stack on large phones too */
+  .meal-item {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+
+  .meal-left {
+    width: 100% !important;
+    flex-direction: column !important;
+  }
+
+  .meal-name {
+    width: 100% !important;
+    white-space: normal !important;
+  }
+
+  .meal-right {
+    width: 100% !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+
+  .meal-right > div:last-child {
+    flex-wrap: wrap !important;
+  }
+
+  .meal-right button {
+    flex: 1 1 auto !important;
+    min-width: calc(33% - 0.35rem) !important;
+  }
+
+  /* Daily planner - mobile responsive layout for large phones */
+  .nutrition-projection-container {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  select,
+  input {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* Modals */
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-start;
+    justify-content: center;
+  }
+
+  .modal-content,
+  .modal-content.meal-modal {
+    width: 100vw;
+    max-width: 100vw;
+    min-height: calc(100vh - 1rem);
+    max-height: calc(100vh - 0.5rem);
+    padding: 1.5rem;
+    border-radius: 0;
+    margin: 0;
+  }
+
+  .toast {
+    bottom: 1rem !important;
+    left: 1rem !important;
+    right: 1rem !important;
+  }
+}
+
+/* Medium devices (768px - 1023px) - Tablets */
+@media (min-width: 768px) and (max-width: 1023px) {
+  :root {
+    --blob1-size: 40;
+    --blob2-size: 30;
+  }
+
+  .global-sidebar {
+    width: 180px;
+  }
+
+  .app-layout {
+    margin-left: 180px;
+  }
+
+  .sidebar-content {
+    padding: 1.25rem 0.75rem;
+  }
+
+  .sidebar-brand h1 {
+    font-size: 1.1rem;
+  }
+
+  .nav-link {
+    padding: 0.75rem 0.875rem;
+    font-size: 0.85rem;
+  }
+
+  .nav-text {
+    font-size: 0.85rem;
+  }
+
+  .main-content {
+    margin: 1rem;
+    padding: 1.5rem;
+  }
+
+  /* Keep water intake as 2 columns on tablets */
+  .water-intake-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  /* Form grid can stay 2 columns on tablet */
+  .form-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .field-block.span-2 {
+    grid-column: span 2;
+  }
+}
+
+/* Large devices (1024px and up) - Desktop (unchanged) */
+@media (min-width: 1024px) {
+  /* Desktop - convert flex column to grid with nutrition projection sidebar */
+  .daily-planner-layout {
+    display: grid !important;
+    grid-template-columns: 1fr 350px !important;
+    gap: 1.5rem !important;
+    align-items: start !important;
+  }
+
+  .nutrition-projection-container {
+    position: sticky !important;
+    top: 1.5rem !important;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  /* Increase touch target sizes */
+  button,
+  .nav-link,
+  .card {
+    min-height: 44px;
+  }
+
+  .nav-link {
+    padding: 1rem;
+  }
+
+  button {
+    padding: 0.75rem 1.5rem;
+  }
+
+  /* Remove hover effects on touch devices */
+  button:hover {
+    border-color: transparent;
+  }
+
+  .nav-link:hover {
+    background: transparent;
+  }
+}
+
+/* Landscape orientation adjustments for mobile */
+@media (max-width: 767px) and (orientation: landscape) {
+  .main-content {
+    margin: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  .modal-content {
+    max-height: 70vh;
+  }
+
+  .global-sidebar {
+    height: 60px;
+  }
+
+  .app-layout {
+    margin-bottom: 60px;
+  }
 }

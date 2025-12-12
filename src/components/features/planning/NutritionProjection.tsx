@@ -32,7 +32,7 @@ const NutritionProjection: React.FC<NutritionProjectionProps> = ({
 
   const getProgressPercent = (current: number, target: number): number => {
     if (target === 0) return 0;
-    return Math.min(100, Math.max(0, (current / target) * 100));
+    return Math.max(0, (current / target) * 100);
   };
 
   const ProgressBar: React.FC<{ label: string; current: number; target: number; unit: string; color: string }> = ({
@@ -43,6 +43,7 @@ const NutritionProjection: React.FC<NutritionProjectionProps> = ({
     color,
   }) => {
     const percent = getProgressPercent(current, target);
+    const displayPercent = Math.min(100, percent); // Cap bar width at 100% but show actual percent
     const bgColor = getProgressColor(current, target);
 
     return (
@@ -67,10 +68,10 @@ const NutritionProjection: React.FC<NutritionProjectionProps> = ({
           overflow: 'hidden'
         }}>
           <div style={{
-            width: `${percent}%`,
+            width: `${displayPercent}%`,
             height: '100%',
             background: bgColor,
-            borderRight: percent < 100 ? `2px solid ${color}` : 'none',
+            borderRight: displayPercent < 100 ? `2px solid ${color}` : 'none',
             transition: 'width 0.3s ease'
           }} />
         </div>
