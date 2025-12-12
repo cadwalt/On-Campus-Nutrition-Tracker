@@ -4,17 +4,27 @@ import type { WeightEntry } from "../../types/weight";
 import WeightChart from './WeightChart';
 import { resolveFirebase } from '../../lib/resolveFirebase';
 import { useNavigate } from 'react-router-dom';
-
-function formatDateInput(d: string) {
-  // ensure YYYY-MM-DD
-  return d;
-}
+import {
+  processWeightInput,
+  findExistingEntry,
+  getDisplayWeight,
+  calculateAverageForPeriod,
+  prepareChartData,
+  prepareTableData,
+  hasReachedGoal,
+  generateTargetMessage,
+  isLatestEntry,
+  getRangeLabel,
+} from '../../utils/weightTrackerLogic';
+import { getTodayAsString, parseLocalDate } from '../../utils/dateUtils';
+import { filterEntriesByRange } from '../../utils/weightAggregation';
 
 // Main Weight Tracker component
 export const WeightTracker: React.FC = () => {
-  const navigate = useNavigate(); // for navigation on goal achievement
-  const { entries, loading, add, remove, update } = useWeightEntries(); // custom hook to manage weight entries
-  const [date, setDate] = useState<string>(() => new Date().toISOString().slice(0, 10)); // default to today
+  const navigate = useNavigate();
+  // CWE-862: Missing Authorization - Weight entries CRUD is scoped to authenticated user via useWeightEntries hook
+  const { entries, loading, add, remove, update } = useWeightEntries();
+  const [date, setDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [weight, setWeight] = useState<string>(""); // weight value entered by user
   const [unit, setUnit] = useState<'lb' | 'kg'>('lb'); // weight unit
   const [error, setError] = useState<string | null>(null); // error message for input validation
@@ -37,19 +47,19 @@ export const WeightTracker: React.FC = () => {
     (async () => { // eslint-disable-line @typescript-eslint/no-misused-promises
       try { // get auth client
         const { auth, firebaseAuth, db, firestore } = await resolveFirebase();
-        // Wait for auth state to be ready before fetching target weight
+        // CWE-862: Missing Authorization - Verify user is authenticated before accessing data
         unsubscribe = firebaseAuth.onAuthStateChanged(auth, async (user) => {
           // if component unmounted, abort
           if (!mounted) return;
-          if (!user) { // no user logged in
-            console.log('WeightTracker: No user logged in'); // reset target/goal
+          if (!user) {
+            // CWE-862: Missing Authorization - Clear data when user logs out
             setTargetLbs(null);
             setPrimaryGoal(null);
             return;
           }
           console.log('WeightTracker: User logged in:', user.uid); // fetch user prefs
           try {
-            // Fetch the user's nutrition goals (target + primary goal) from Firestore
+            // CWE-862: Missing Authorization - Scope data access to authenticated user's UID
             const userDocRef = firestore.doc(db, 'users', user.uid);
             const snap = await firestore.getDoc(userDocRef);
             if (!mounted) return;
@@ -91,72 +101,39 @@ export const WeightTracker: React.FC = () => {
     };
   }, []);
   const onAdd = async () => {
-    // Add/update a weight entry for the selected date (one per date)
-    const val = parseFloat(weight);
-    if (isNaN(val)) {
-      setError(unit === 'kg' ? 'Enter a valid weight in kg' : 'Enter a valid weight in lbs');
+    // Validate and process weight input (handles CWE-20 validation)
+    let processed: ReturnType<typeof processWeightInput>;
+    try {
+      processed = processWeightInput(weight, unit, date);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Invalid input');
       return;
     }
-    // Prevent future dates
-    const todayStr = new Date().toISOString().split('T')[0];
-    if (date > todayStr) {
-      setError('Cannot enter weight for a future date');
-      return;
-    }
-    // enforce allowed input range in the entered unit
-    const maxAllowed = unit === 'kg' ? 700 : 1500;
-    if (val < 1 || val > maxAllowed) {
-      setError(`Enter a weight between 1 and ${maxAllowed} ${unit === 'kg' ? 'kg' : 'lbs'}`);
-      return;
-    }
-    // convert (if kg) and round to 1 decimal place
-    const lbsRaw = unit === 'kg' ? val * 2.20462 : val;
-    const lbs = Math.round(lbsRaw * 10) / 10;
-    const formattedDate = formatDateInput(date);
-    
+
+    const { weightLb: lbs, date: formattedDate } = processed;
+
     setBusy(true);
     try {
-      // Check if an entry already exists for this date
-      const existingEntry = entries.find((e) => e.date === formattedDate);
-      
+      // CWE-862: Check if entry exists for this date
+      const existingEntry = findExistingEntry(entries, formattedDate);
+
       if (existingEntry) {
-        // Update existing entry
         await update(existingEntry.id, { weightLb: lbs });
         setToast('Weight Updated');
       } else {
-        // Add new entry
         await add({ date: formattedDate, weightLb: lbs });
         setToast('Weight Saved');
       }
-      
-      // Clear input fields and error if successful
+
       setWeight("");
       setError(null);
       if (toastTimer.current) window.clearTimeout(toastTimer.current);
       toastTimer.current = window.setTimeout(() => setToast(null), 3000);
-      
-      // Check if goal was just reached based on the current entry and user goal direction
-      if (targetLbs !== null && primaryGoal !== null) {
-        console.log('WeightTracker: Checking goal - targetLbs:', targetLbs, 'primaryGoal:', primaryGoal, 'lbs:', lbs);
-        let goalReached = false;
-        
-        // Check if most recent entry meets the goal threshold
-        if (primaryGoal === 'lose_weight') {
-          goalReached = lbs <= targetLbs;
-          console.log('WeightTracker: Weight loss goal check - lbs:', lbs, '<= targetLbs:', targetLbs, '? goalReached:', goalReached);
-        } else if (primaryGoal === 'gain_weight') {
-          goalReached = lbs >= targetLbs;
-          console.log('WeightTracker: Weight gain goal check - lbs:', lbs, '>= targetLbs:', targetLbs, '? goalReached:', goalReached);
-        }
-        
-        if (goalReached) {
-          console.log('WeightTracker: Goal reached! Setting showCongrats to true');
-          // Only show congrats if this entry is the most recent
-          const allDates = [...entries.map(e => e.date), formattedDate];
-          const latestDate = allDates.reduce((a, b) => a > b ? a : b);
-          if (formattedDate === latestDate) {
-            setTimeout(() => setShowCongrats(true), 500);
-          }
+
+      // Check if goal was reached
+      if (targetLbs !== null && hasReachedGoal(lbs, targetLbs, entries)) {
+        if (isLatestEntry(formattedDate, entries)) {
+          setTimeout(() => setShowCongrats(true), 500);
         }
       } else { // log missing target/goal
         console.log('WeightTracker: Goal check skipped - targetLbs:', targetLbs, 'primaryGoal:', primaryGoal);
@@ -173,215 +150,24 @@ export const WeightTracker: React.FC = () => {
     };
   }, []);
 
-  // Prepare sorted and filtered entries according to selected range
-  const allSorted = [...entries].sort((a, b) => (a.date < b.date ? -1 : 1));
-  
-  // For week/month views: use the selected date from the input box as the reference point
-  // For week/month/year views: use the selected date from the input box as the reference point
-  // For all view: use the current date as the reference point
-  // Parse the date string as local time (YYYY-MM-DD format) to avoid UTC timezone issues
-  const parseLocalDate = (dateStr: string) => {
-    const [year, month, day] = dateStr.split('-').map(Number);
-    return new Date(year, month - 1, day);
-  };
-  
-  // Determine the reference date based on range
-  const referenceDate = (range === 'week' || range === 'month' || range === 'year') ? parseLocalDate(date) : new Date();
-  
-  // Determine start and end dates for filtering based on range
-  let start = new Date();
-  let end = new Date(referenceDate);
-  
-  if (range === 'week') {
-    // Get Sunday of the week containing the selected date
-    start = new Date(referenceDate);
-    const day = start.getDay();
-    start.setDate(start.getDate() - day); // Sunday is day 0
-    // Get Saturday of the same week
-    end = new Date(start);
-    end.setDate(end.getDate() + 6);
-  } else if (range === 'month') {
-    // start and end of the month containing the selected date
-    start = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
-    end = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0);
-  } else if (range === 'year') {
-    // start of the year containing the selected date
-    start = new Date(referenceDate);
-    start.setFullYear(referenceDate.getFullYear() - 1);
-  }
-  
-  const filteredEntries = range === 'all' 
-    ? allSorted 
-    : allSorted.filter((e) => {
-        // Normalize comparison: compare date strings directly (YYYY-MM-DD format)
-        // to avoid timezone issues
-        if (range === 'week' || range === 'month') {
-          const startStr = start.toISOString().split('T')[0];
-          const endStr = end.toISOString().split('T')[0];
-          return e.date >= startStr && e.date <= endStr;
-        }
-        // For year/other views, use the start comparison
-        const startStr = start.toISOString().split('T')[0];
-        return e.date >= startStr;
-      });
+  // Prepare data for chart and table using business logic utilities
+  const referenceDate = (range === 'week' || range === 'month') 
+    ? parseLocalDate(date) 
+    : new Date();
 
-  // For chart: aggregate entries by month for year view and by year for all-time view
-  const chartEntries = (() => {
-    if (range === 'year') {
-      // Only include entries from the selected year
-      const selectedYear = new Date(date + 'T00:00:00').getFullYear();
-      const byMonth = new Map<string, number[]>();
-      filteredEntries.forEach((e) => {
-        const d = new Date(e.date);
-        if (d.getFullYear() !== selectedYear) return;
-        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        if (!byMonth.has(monthKey)) byMonth.set(monthKey, []);
-        byMonth.get(monthKey)!.push(e.weightLb);
-      });
-      // Compute average weight for each month
-      return Array.from(byMonth.entries()).map(([monthKey, weights]) => {
-        const avg = weights.reduce((s, w) => s + w, 0) / weights.length;
-        const [year, month] = monthKey.split('-');
-        const firstDayOfMonth = new Date(parseInt(year), parseInt(month) - 1, 1).toISOString().split('T')[0];
-        return { id: monthKey, date: firstDayOfMonth, weightLb: avg };
-      });
-    } else if (range === 'all') {
-      // Aggregate by year for all-time view
-      const byYear = new Map<string, number[]>();
-      filteredEntries.forEach((e) => {
-        const d = new Date(e.date);
-        const year = d.getFullYear().toString();
-        if (!byYear.has(year)) byYear.set(year, []);
-        byYear.get(year)!.push(e.weightLb);
-      });
-      // Compute average weight for each year
-      return Array.from(byYear.entries()).map(([year, weights]) => {
-        const avg = weights.reduce((s, w) => s + w, 0) / weights.length;
-        const firstDayOfYear = new Date(parseInt(year), 0, 1).toISOString().split('T')[0];
-        return { id: year, date: firstDayOfYear, weightLb: avg };
-      });
-    }
-    return filteredEntries;
-  })();
+  const filteredEntries = filterEntriesByRange(entries, range, referenceDate);
+  const chartEntries = prepareChartData(entries, range, referenceDate);
+  const tableData = prepareTableData(entries, range, referenceDate);
 
-  // For year view: aggregate by month; for all-time view: aggregate by year
-  type TableRow = {
-    label: string; // month/year label for aggregated views, or empty for detail views
-    date: string; // original date for detail views, ISO month/year for aggregated
-    weightLb: number;
-    isAggregated: boolean; // true if this is a monthly/yearly average
-  };
+  // Calculate statistics
+  const averageWeightLb = calculateAverageForPeriod(filteredEntries);
+  const averageWeightDisplay = averageWeightLb != null
+    ? getDisplayWeight(averageWeightLb, unit)
+    : null;
 
-  // Prepare table rows based on selected range
-  const tableRows: TableRow[] = (() => {
-    if (range === 'year') {
-      // Only include entries from the selected year
-      const selectedYear = new Date(date + 'T00:00:00').getFullYear();
-      const byMonth = new Map<string, number[]>();
-      filteredEntries.forEach((e) => {
-        const d = new Date(e.date);
-        if (d.getFullYear() !== selectedYear) return;
-        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        if (!byMonth.has(monthKey)) byMonth.set(monthKey, []);
-        byMonth.get(monthKey)!.push(e.weightLb);
-      });
-      // Sort by month descending (most recent first)
-      return Array.from(byMonth.entries())
-        .sort((a, b) => b[0].localeCompare(a[0]))
-        .map(([monthKey, weights]) => {
-          const avg = Math.round((weights.reduce((s, w) => s + w, 0) / weights.length) * 10) / 10;
-          const [year, month] = monthKey.split('-');
-          const monthName = new Date(parseInt(year), parseInt(month) - 1).toLocaleString('default', { month: 'long' });
-          return {
-            label: monthName,
-            date: monthKey,
-            weightLb: avg,
-            isAggregated: true,
-          };
-        });
-    } else if (range === 'all') {
-      // Group by year, compute average for each year
-      const byYear = new Map<string, number[]>();
-      filteredEntries.forEach((e) => {
-        const d = new Date(e.date);
-        const year = d.getFullYear().toString();
-        if (!byYear.has(year)) byYear.set(year, []);
-        byYear.get(year)!.push(e.weightLb);
-      });
-      // Sort by year descending (most recent first)
-      return Array.from(byYear.entries())
-        .sort((a, b) => b[0].localeCompare(a[0]))
-        .map(([year, weights]) => {
-          const avg = Math.round((weights.reduce((s, w) => s + w, 0) / weights.length) * 10) / 10;
-          return {
-            label: year,
-            date: year,
-            weightLb: avg,
-            isAggregated: true,
-          };
-        });
-    } else {
-      // Detail view: week and month show individual entries (most recent first)
-      return filteredEntries
-        .slice()
-        .sort((a, b) => b.date.localeCompare(a.date))
-        .map((e) => ({
-          label: '',
-          date: e.date,
-          weightLb: e.weightLb,
-          isAggregated: false,
-        }));
-    }
-  })();
-
-  // compute average weight for the currently selected period (filteredEntries)
-  const averageWeightLb: number = filteredEntries.length === 0
-    ? 0
-    : Math.round((filteredEntries.reduce((s, it) => s + it.weightLb, 0) / filteredEntries.length) * 10) / 10;
-
-  // convert average to display unit
-  const averageWeightDisplay = averageWeightLb !== 0
-    ? (unit === 'kg' ? Math.round((averageWeightLb / 2.20462) * 10) / 10 : averageWeightLb)
-    : 0;
-
-  const targetMessage = (() => {
-    // Derive the header message showing distance to target (or success)
-    if (!targetLbs) {
-      return null;
-    }
-    if (entries && entries.length > 0) {
-      const latest = entries[entries.length - 1];
-      const latestLbs = latest ? latest.weightLb : null;
-      if (latestLbs == null) return 'Latest weight unavailable';
-      const diff = Math.round((targetLbs - latestLbs) * 10) / 10; // one decimal
-      // convert diff to display unit
-      const diffDisplay = unit === 'kg' ? Math.round((diff / 2.20462) * 10) / 10 : diff;
-      const unitLabel = unit === 'kg' ? 'kg' : 'lbs';
-      
-      // Goal is reached if latest entry meets the threshold based on primaryGoal
-      let goalReached = false;
-      if (primaryGoal === 'lose_weight') {
-        goalReached = latestLbs <= targetLbs;
-      } else if (primaryGoal === 'gain_weight') {
-        goalReached = latestLbs >= targetLbs;
-      }
-      
-      if (goalReached) {
-        return <span style={{ color: '#22c55e', fontWeight: 700 }}>Great Job! Target Reached!</span>;
-      }
-      
-      // Show remaining distance based on goal direction
-      if (primaryGoal === 'lose_weight') {
-        return `${Math.abs(diffDisplay)} ${unitLabel} to lose to reach target`;
-      } else if (primaryGoal === 'gain_weight') {
-        return `${Math.abs(diffDisplay)} ${unitLabel} to gain to reach target`;
-      }
-      return `${Math.abs(diffDisplay)} ${unitLabel} to reach target`;
-    }
-    const targetDisplay = unit === 'kg' ? Math.round((targetLbs / 2.20462) * 10) / 10 : targetLbs;
-    const unitLabel = unit === 'kg' ? 'kg' : 'lbs';
-    return `No weight entries yet — add your first entry to see progress toward ${targetDisplay} ${unitLabel}.`;
-  })();
+  const latestEntry = entries.length > 0 ? entries[entries.length - 1] : undefined;
+  const targetMessage = generateTargetMessage(targetLbs, latestEntry, entries, unit);
+  const rangeLabelText = getRangeLabel(range, referenceDate, date);
 
   // Handlers for editing entries
   const handleEditEntry = (entry: WeightEntry) => {
@@ -390,43 +176,24 @@ export const WeightTracker: React.FC = () => {
     setEditDate(entry.date);
   };
 
-  // Standardized weight validation helper
-  function validateWeightInput(value: string, unit: string): string | null {
-    const val = parseFloat(value);
-    if (isNaN(val)) {
-      return 'Enter a valid weight';
-    }
-    // enforce allowed input range
-    const minAllowed = 1;
-    const maxAllowed = unit === 'kg' ? 700 : 1500;
-    if (val < minAllowed || val > maxAllowed) {
-      return `Enter a weight between ${minAllowed} and ${maxAllowed} ${unit}`;
-    }
-    return null;
-  }
-
-  // Save edits to an existing entry
   const handleSaveEdit = async () => {
     if (!editingEntry) return;
-    const validationError = validateWeightInput(editWeight, unit); // validate input
-    if (validationError) { // show error if invalid
-      setError(validationError);
+    
+    // Validate and process weight input
+    let processed: ReturnType<typeof processWeightInput>;
+    try {
+      processed = processWeightInput(editWeight, unit, editDate);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Invalid input');
       return;
     }
-    const val = parseFloat(editWeight);
-    // Prevent future dates
-    const todayStr = new Date().toISOString().split('T')[0];
-    if (editDate > todayStr) { // future date
-      setError('Cannot update weight for a future date');
-      return;
-    }
-    // convert (if kg) and round to 1 decimal place
-    const lbsRaw = unit === 'kg' ? val * 2.20462 : val;
-    const lbs = Math.round(lbsRaw * 10) / 10;
+
+    const { weightLb: lbs, date: processedDate } = processed;
+
     setBusy(true);
     try { // remove old entry and add new one (to handle date changes)
       await remove(editingEntry.id);
-      await add({ date: editDate, weightLb: lbs });
+      await add({ date: processedDate, weightLb: lbs });
       setEditingEntry(null);
       setEditWeight('');
       setEditDate('');
@@ -434,17 +201,10 @@ export const WeightTracker: React.FC = () => {
       setToast('Weight Updated');
       if (toastTimer.current) window.clearTimeout(toastTimer.current); // reset toast timer
       toastTimer.current = window.setTimeout(() => setToast(null), 3000);
-      // Check if goal was just reached and this is the most recent entry
-      if (targetLbs !== null && primaryGoal !== null) {
-        let goalReached = false;
-        if (primaryGoal === 'lose_weight') {
-          goalReached = lbs <= targetLbs;
-        } else if (primaryGoal === 'gain_weight') {
-          goalReached = lbs >= targetLbs;
-        }
-        const allDates = [...entries.map(e => e.date), editDate];
-        const latestDate = allDates.reduce((a, b) => a > b ? a : b);
-        if (goalReached && editDate === latestDate) {
+
+      // Check if goal was reached
+      if (targetLbs !== null && hasReachedGoal(lbs, targetLbs, entries.filter(e => e.id !== editingEntry.id))) {
+        if (isLatestEntry(processedDate, entries)) {
           setTimeout(() => setShowCongrats(true), 500);
         }
       }
@@ -569,6 +329,7 @@ export const WeightTracker: React.FC = () => {
                   style={{ marginBottom: 8, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}
                 >
                   <div className="water-custom-input-wrapper" style={{ flex: '0 1 auto', minWidth: 0 }}>
+                    {/* CWE-20: Improper Input Validation - Numeric input with bounds */}
                     <input
                       type="number"
                       placeholder={unit === 'kg' ? "Weight (kg)" : "Weight (lbs)"}
@@ -581,6 +342,7 @@ export const WeightTracker: React.FC = () => {
                       aria-label="Weight value"
                       style={{ minWidth: 180 }}
                     />
+                    {/* CWE-20: Improper Input Validation - Unit selection control */}
                     <select
                       className="water-custom-unit"
                       value={unit}
@@ -595,6 +357,7 @@ export const WeightTracker: React.FC = () => {
 
                   <div style={{ flex: '0 0 auto', minWidth: 160 }}>
                     <div className="water-custom-input-wrapper" style={{ minWidth: 160 }}>
+                      {/* CWE-20: Improper Input Validation - Date input with no future dates */}
                       <input
                         type="date"
                         value={date}
@@ -639,54 +402,45 @@ export const WeightTracker: React.FC = () => {
                 {error ? <div role="alert" style={{ color: 'crimson', marginTop: 6 }}>{error}</div> : null}
               </div>
 
-              {/* Data table card - always visible */}
-              <div className="card">
-                {entries.length === 0 ? (
-                  <div style={{ padding: '1rem', color: '#9ca3af', textAlign: 'center' }}>
-                    No weight entries yet - add your first entry above
-                  </div>
-                ) : range === 'year' && tableRows.length === 0 ? (
-                  <div style={{ padding: '1rem', color: '#9ca3af', textAlign: 'center' }}>
-                      No weight entries for this year.
-                    </div>
-                  ) : (
-                    <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                      <thead>
-                        <tr>
-                          <th style={{ textAlign: "left", paddingBottom: 8, width: '50%' }}>
-                            {range === 'year' ? (() => { const d = new Date(date + 'T00:00:00'); return d.getFullYear(); })() : range === 'all' ? 'Year' : range === 'month' ? (() => { const d = new Date(date + 'T00:00:00'); return d.toLocaleString('default', { month: 'long', year: 'numeric' }); })() : range === 'week' ? (() => { const startMonth = start.toLocaleString('default', { month: 'short' }); const startDay = start.getDate(); const endMonth = end.toLocaleString('default', { month: 'short' }); const endDay = end.getDate(); const year = end.getFullYear(); return startMonth === endMonth ? `${startMonth} ${startDay} - ${endDay}, ${year}` : `${startMonth} ${startDay} - ${endMonth} ${endDay}, ${year}`; })() : 'Date'}
-                          </th>
-                          <th style={{ textAlign: "left", paddingBottom: 8, width: '50%' }}>
-                            Weight ({unit}){range === 'year' || range === 'all' ? ' (avg)' : ''}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {tableRows.map((row, idx) => {
-                          const displayWeight = unit === 'kg' ? Math.round((row.weightLb / 2.20462) * 10) / 10 : row.weightLb;
-                          const isClickable = !row.isAggregated;
-                          const entry = filteredEntries.find((e) => e.date === row.date && e.weightLb === row.weightLb);
-                          return (
-                            <tr
-                              key={idx}
-                              onClick={() => isClickable && entry && handleEditEntry(entry)}
-                              style={{
-                                borderTop: '1px solid rgba(255,255,255,0.1)',
-                                cursor: isClickable ? 'pointer' : 'default',
-                                transition: 'background-color 0.2s',
-                                opacity: row.isAggregated ? 0.7 : 1,
-                              }}
-                              onMouseEnter={(ev) => isClickable && (ev.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)')}
-                              onMouseLeave={(ev) => (ev.currentTarget.style.backgroundColor = 'transparent')}
-                            >
-                              <td style={{ paddingTop: 8, paddingBottom: 8, width: '50%' }}>{row.label || (() => { const d = new Date(row.date + 'T00:00:00'); return d.toLocaleString('default', { weekday: 'short', month: 'short', day: 'numeric' }); })()}</td>
-                              <td style={{ paddingTop: 8, paddingBottom: 8, width: '50%' }}>{displayWeight.toFixed(1)}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  )}
+              {/* Data table card */}
+              {filteredEntries.length > 0 && (
+                <div className="card">
+                  <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                    <thead>
+                      <tr>
+                        <th style={{ textAlign: "left", paddingBottom: 8, width: '50%' }}>
+                          {rangeLabelText}
+                        </th>
+                        <th style={{ textAlign: "left", paddingBottom: 8, width: '50%' }}>
+                          Weight ({unit}){range === 'year' || range === 'all' ? ' (avg)' : ''}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tableData.map((row) => {
+                        const displayWeight = unit === 'kg' ? Math.round((row.weightLb / 2.20462) * 10) / 10 : row.weightLb;
+                        const isClickable = !row.isAggregated;
+                        const entry = filteredEntries.find((e) => e.date === row.date && e.weightLb === row.weightLb);
+                        return (
+                          <tr
+                            key={`${row.date}-${row.weightLb}`}
+                            onClick={() => isClickable && entry && handleEditEntry(entry)}
+                            style={{
+                              borderTop: '1px solid rgba(255,255,255,0.1)',
+                              cursor: isClickable ? 'pointer' : 'default',
+                              transition: 'background-color 0.2s',
+                              opacity: row.isAggregated ? 0.7 : 1,
+                            }}
+                            onMouseEnter={(ev) => isClickable && (ev.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)')}
+                            onMouseLeave={(ev) => (ev.currentTarget.style.backgroundColor = 'transparent')}
+                          >
+                            <td style={{ paddingTop: 8, paddingBottom: 8, width: '50%' }}>{row.displayLabel}</td>
+                            <td style={{ paddingTop: 8, paddingBottom: 8, width: '50%' }}>{displayWeight.toFixed(1)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
 
               {/* Edit Modal */}
@@ -714,6 +468,7 @@ export const WeightTracker: React.FC = () => {
                   }}>
                     <h2 style={{ marginTop: 0, marginBottom: '1.5rem' }}>Edit Weight Entry</h2>
 
+                    {/* CWE-20: Improper Input Validation - Weight field with min/max bounds */}
                     <div style={{ marginBottom: '1rem' }}>
                       <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#9ca3af' }}>Weight ({unit})</label>
                       <input
@@ -738,6 +493,7 @@ export const WeightTracker: React.FC = () => {
 
                     <div style={{ marginBottom: '1.5rem' }}>
                       <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#9ca3af' }}>Date</label>
+                      {/* CWE-20: Improper Input Validation - Date field prevents future dates */}
                       <input
                         type="date"
                         value={editDate}

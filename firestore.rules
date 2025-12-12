@@ -1,58 +1,21 @@
-/**
- * Firestore Security Rules for On-Campus Nutrition Tracker
- * 
- * Purpose: Server-side validation and authorization enforcement
- * Security Principles:
- * - Defense in Depth: Mirrors client-side validation for DoS protection
- * - Principle of Least Privilege: Users can only access their own data
- * - Authorization Gates: All writes require user authentication and ownership check
- * 
- * DRY (Don't Repeat Yourself): Validation constraints defined once:
- * - MAX_NAME_LENGTH = 100 characters (meal name, serving size)
- * - MAX_TEXT_LENGTH = 300 characters (notes/other info)
- * - MAX_CALORIES = 5000 per serving
- * - MAX_MACRO = 2000 grams (carbs, fat, protein)
- * 
- * These match src/utils/mealValidation.ts MEAL_CONSTRAINTS for consistency
- */
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper function: Check if user is authenticated
+    // Helper functions for auth and validation (keeps DRY and clarity)
     function isAuthenticated() {
       return request.auth != null;
     }
-    
-    // Helper function: Check if user owns the resource
     function isOwner(userId) {
-      return request.auth.uid == userId;
+      return isAuthenticated() && request.auth.uid == userId;
     }
-    
-    // Helper function: Validate meal data structure and constraints
-    // Returns true if all validation checks pass
+    // Meal validation aligned with client constraints
     function isValidMeal(data) {
-      // Required fields presence check
-      return data.keys().hasAll(['name', 'servingSize', 'calories', 'userId', 'createdAt'])
-        // Name validation: Required, max 100 chars (prevent DoS via oversized strings)
-        && data.name is string
-        && data.name.size() > 0
-        && data.name.size() <= 100
-        // Serving size validation: Required, max 100 chars
-        && data.servingSize is string
-        && data.servingSize.size() > 0
-        && data.servingSize.size() <= 100
-        // Calories validation: Required numeric, 0-5000 range (realistic bounds)
-        && data.calories is number
-        && data.calories >= 0
-        && data.calories <= 5000
-        // User ID validation: Must be string
-        && data.userId is string
-        && data.userId.size() > 0
-        // Created timestamp validation: Must be numeric (milliseconds since epoch)
+      return data.keys().hasAll(['name','servingSize','calories','userId','createdAt'])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.servingSize is string && data.servingSize.size() > 0 && data.servingSize.size() <= 100
+        && data.calories is number && data.calories >= 0 && data.calories <= 5000
+        && data.userId is string && data.userId.size() > 0
         && (data.createdAt is number || data.createdAt is timestamp)
-        // Optional numeric fields: If present, must be valid numbers within realistic bounds
         && (!('servingsHad' in data) || (data.servingsHad is number && data.servingsHad >= 0))
         && (!('totalCarbs' in data) || (data.totalCarbs is number && data.totalCarbs >= 0 && data.totalCarbs <= 2000))
         && (!('totalFat' in data) || (data.totalFat is number && data.totalFat >= 0 && data.totalFat <= 2000))
@@ -61,165 +24,92 @@ service cloud.firestore {
         && (!('sugars' in data) || (data.sugars is number && data.sugars >= 0))
         && (!('calcium' in data) || (data.calcium is number && data.calcium >= 0))
         && (!('iron' in data) || (data.iron is number && data.iron >= 0))
-        // Optional string fields: If present, must be valid strings within length limits
         && (!('fatCategories' in data) || (data.fatCategories is string && data.fatCategories.size() <= 100))
         && (!('vitamins' in data) || (data.vitamins is string && data.vitamins.size() <= 300))
         && (!('otherInfo' in data) || (data.otherInfo is string && data.otherInfo.size() <= 300));
     }
-    
-    // User documents: Store user preferences, meal history, favorites
-    match /users/{userId} {
-      // Users can only read/write their own document
-      allow read, write: if isAuthenticated() && isOwner(userId);
-      
-      // Subcollections: All user data is private to the user
-      match /{document=**} {
-        allow read, write: if isAuthenticated() && isOwner(userId);
-      }
-    }
-    
-    // Meals collection: Track user meal entries with nutrition data
-    match /meals/{mealId} {
-      // Read: Users can only read meals they own (privacy)
-      // Works for both individual document reads and queries
-      allow read: if isAuthenticated() && isOwner(resource.data.userId);
-      
-      // Create: Authenticated users can create meals if they set userId to their own ID
-      // Prevents spoofing (user cannot create meals for another user)
-      allow create: if isAuthenticated()
-        && request.auth.uid == request.resource.data.userId
-        && isValidMeal(request.resource.data);
-      
-      // Update: Users can only update meals they own
-      // Validates all fields match constraints
-      allow update: if isAuthenticated()
-        && isOwner(resource.data.userId)
-        && request.resource.data.userId == resource.data.userId  // Cannot change ownership
-        && isValidMeal(request.resource.data);
-      
-      // Delete: Users can only delete meals they own
-      allow delete: if isAuthenticated()
-        && isOwner(resource.data.userId);
-    }
-    
-    // Favorites collection: Store user's favorite meals for quick access
-    match /favorites/{favoriteId} {
-      // Read: Users can only access their own favorites
-      allow read: if isAuthenticated() && isOwner(resource.data.userId);
-      
-      // Create: Authenticated users can add to their favorites
-      allow create: if isAuthenticated()
-        && request.auth.uid == request.resource.data.userId;
-      
-      // Update: Users can only update their own favorites
-      allow update: if isAuthenticated()
-        && isOwner(resource.data.userId);
-      
-      // Delete: Users can only delete their own favorites
-      allow delete: if isAuthenticated()
-        && isOwner(resource.data.userId);
-    }
-    
-    // Water collection: Track user water intake logs
-    match /water/{waterId} {
-      // Read: Users can only read their own water logs
-      // Works for both individual document reads and queries
-      allow read: if isAuthenticated() && isOwner(resource.data.userId);
-      
-      // Create: Authenticated users can create water logs for themselves
-      allow create: if isAuthenticated()
-        && request.auth.uid == request.resource.data.userId
-        && request.resource.data.userId is string
-        && request.resource.data.amountMl is number
-        && request.resource.data.amountMl >= 0
-        && request.resource.data.amountMl <= 10000  // Reasonable max (10L)
-        && (request.resource.data.createdAt is number || request.resource.data.createdAt is timestamp);
-      
-      // Update: Users can only update their own water logs
-      allow update: if isAuthenticated()
-        && isOwner(resource.data.userId)
-        && request.resource.data.userId == resource.data.userId  // Cannot change ownership
-        && request.resource.data.amountMl is number
-        && request.resource.data.amountMl >= 0
-        && request.resource.data.amountMl <= 10000;
-      
-      // Delete: Users can only delete their own water logs
-      allow delete: if isAuthenticated()
-        && isOwner(resource.data.userId);
-    }
-    
-    // Weight collection: Track user weight entries
+
+    // CWE-862: Missing Authorization - Enforce user-scoped access to weight collection
+    // Documents in the 'weight' collection have 'owner' and 'userID' fields for backward compatibility
+    // Only authenticated users can read/write their own weight entries
     match /weight/{weightId} {
-      // Read: Users can only read their own weight entries
-      // Support both 'owner' and 'userID' fields for legacy compatibility
-      // Works for both individual document reads and queries
-      allow read: if isAuthenticated() 
-        && (isOwner(resource.data.owner) || isOwner(resource.data.userID));
-      
-      // Create: Authenticated users can create weight entries for themselves
+      allow read: if isAuthenticated() && (isOwner(resource.data.owner) || isOwner(resource.data.userID));
       allow create: if isAuthenticated()
         && (request.auth.uid == request.resource.data.owner || request.auth.uid == request.resource.data.userID)
         && (request.resource.data.owner is string || request.resource.data.userID is string)
-        && request.resource.data.date is string
-        && request.resource.data.date.size() > 0
+        && request.resource.data.date is string && request.resource.data.date.size() > 0
         && (request.resource.data.weightLb is number || request.resource.data.weightKg is number);
-      
-      // Update: Users can only update their own weight entries
       allow update: if isAuthenticated()
         && (isOwner(resource.data.owner) || isOwner(resource.data.userID))
         && (request.resource.data.owner == resource.data.owner || !('owner' in request.resource.data))
         && (request.resource.data.userID == resource.data.userID || !('userID' in request.resource.data));
-      
-      // Delete: Users can only delete their own weight entries
-      allow delete: if isAuthenticated()
-        && (isOwner(resource.data.owner) || isOwner(resource.data.userID));
+      allow delete: if isAuthenticated() && (isOwner(resource.data.owner) || isOwner(resource.data.userID));
     }
-    
-    // MealPlans collection: Track user meal planning data
-    // Structure: mealPlans/{userId}/dates/{date}/meals/{mealId}
-    match /mealPlans/{userId} {
-      // Users can only access their own meal plans
-      allow read, write: if isAuthenticated() && isOwner(userId);
-      
-      // Subcollections: dates and meals
-      match /dates/{dateId} {
-        allow read, write: if isAuthenticated() && isOwner(userId);
-        
-        match /meals/{mealId} {
-          allow read, write: if isAuthenticated() && isOwner(userId);
-        }
-      }
+
+    // CWE-862: Missing Authorization - Enforce user-scoped access to meals collection
+    // Documents in the 'meals' collection have 'userId' field
+    // Only authenticated users can read/write their own meal entries
+    match /meals/{mealId} {
+      allow read: if isOwner(resource.data.userId);
+      allow create: if isAuthenticated()
+        && request.auth.uid == request.resource.data.userId
+        && isValidMeal(request.resource.data);
+      allow update: if isOwner(resource.data.userId)
+        && request.resource.data.userId == resource.data.userId
+        && isValidMeal(request.resource.data);
+      allow delete: if isOwner(resource.data.userId);
     }
-    
-    // Restaurants collection: Public restaurant data (read-only for authenticated users)
-    // Structure: restaurants_sample/{restaurantId}/menu/{menuItemId}
+
+    // CWE-862: Missing Authorization - Enforce user-scoped access to water collection
+    // Documents in the 'water' collection have 'userId' field
+    // Only authenticated users can read/write their own water intake logs
+    match /water/{logId} {
+      allow read: if isOwner(resource.data.userId);
+      allow create: if isAuthenticated()
+        && request.auth.uid == request.resource.data.userId
+        && request.resource.data.userId is string
+        && request.resource.data.amountMl is number
+        && request.resource.data.amountMl >= 0 && request.resource.data.amountMl <= 10000
+        && (request.resource.data.createdAt is number || request.resource.data.createdAt is timestamp);
+      allow update: if isOwner(resource.data.userId)
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.amountMl is number
+        && request.resource.data.amountMl >= 0 && request.resource.data.amountMl <= 10000;
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // CWE-862: Missing Authorization - Enforce user-scoped access to meal plans
+    // Hierarchical structure: /mealPlans/{userId}/dates/{date}/meals/{mealId}
+    // Only authenticated users can access their own meal plans
+    match /mealPlans/{userId}/{document=**} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Public read access to restaurant sample data (shared across all users)
     match /restaurants_sample/{restaurantId} {
-      // All authenticated users can read restaurant information
-      allow read: if isAuthenticated();
-      
-      // Only allow writes by authenticated users (for admin purposes)
-      // In production, you may want to restrict this further
-      allow write: if isAuthenticated();
-      
-      // Menu subcollection: Public menu items (read-only for authenticated users)
-      match /menu/{menuItemId} {
-        allow read: if isAuthenticated();
-        allow write: if isAuthenticated();
-      }
+      allow read: if true;
+      allow write: if false;
     }
-    
-    // Legacy restaurants collection (if used)
-    match /restaurants/{restaurantId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
-      
-      match /menu/{menuItemId} {
-        allow read: if isAuthenticated();
-        allow write: if isAuthenticated();
-      }
+    match /restaurants_sample/{restaurantId}/items/{itemId} {
+      allow read: if true;
+      allow write: if false;
     }
-    
-    // Deny all other access by default (secure by default)
+    // Some components may use 'menu' as the subcollection name
+    match /restaurants_sample/{restaurantId}/menu/{menuItemId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // CWE-862: Missing Authorization - Enforce user-scoped access to user documents (goals, preferences, favorites)
+    // Only authenticated users can read/write their own user profile and preferences
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+    match /users/{userId}/{document=**} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // CWE-862: Missing Authorization - Deny all other access by default
     match /{document=**} {
       allow read, write: if false;
     }

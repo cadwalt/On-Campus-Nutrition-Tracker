@@ -21,13 +21,12 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true,
-    
+    "noUncheckedSideEffectImports": true
   },
   "include": ["src"],
   "exclude": [
     "node_modules",
-    "src/testt",             // <-- Ignore test folder
-    "src/uploadSecurity.ts"  // <-- Ignore backend file
+    "src/testt",
+    "src/uploadSecurity.ts"
   ]
 }
