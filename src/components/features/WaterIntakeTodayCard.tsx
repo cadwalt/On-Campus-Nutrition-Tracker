@@ -55,13 +55,7 @@ const WaterIntakeTodayCard: React.FC<WaterIntakeTodayCardProps> = ({
   };
 
   const handleSaveGoal = async () => {
-    if (!user?.uid) {
-      // CWE-269 (Improper Privilege Management) mitigation:
-      // Never allow anonymous or unauthenticated users to write to Firestore,
-      // and never guess which user document to touch. All writes are scoped to
-      // the current auth user, which enforces separation of privileges.
-      return;
-    }
+    if (!user?.uid) return;
 
     const val = parseFloat(goalInput);
     if (!val || val <= 0) return;
@@ -70,8 +64,6 @@ const WaterIntakeTodayCard: React.FC<WaterIntakeTodayCardProps> = ({
     try {
       const newGoalMl = goalInputUnit === 'oz' ? ozToMl(val) : Math.round(val);
       const { dbClient, firestore } = await resolveFirebase();
-      // Privilege separation: each user can only update their own "users/{uid}"
-      // document. We never pass arbitrary user IDs from the client/UI.
       const userDocRef = firestore.doc(dbClient, 'users', user.uid);
       await firestore.updateDoc(userDocRef, {
         water_goal_ml: newGoalMl,
@@ -97,12 +89,14 @@ const WaterIntakeTodayCard: React.FC<WaterIntakeTodayCardProps> = ({
       <div className="section-header-with-tooltip">
         <h2>Today's Water Intake</h2>
       </div>
+
       <div className="water-tracker">
         {isEditingGoal ? (
           <div className="water-goal-edit-container">
             <div className="water-goal-edit-header">
               <h3>Edit Daily Goal</h3>
             </div>
+
             <div className="water-goal-edit">
               <div className="water-goal-edit-input-wrap">
                 <input
@@ -121,31 +115,39 @@ const WaterIntakeTodayCard: React.FC<WaterIntakeTodayCardProps> = ({
                       handleCancelEditGoal();
                     }
                   }}
+                  aria-label="Daily water goal amount"
+                  aria-required="true"
                   disabled={isLoading || !user}
                   autoFocus
                 />
+
                 <select
                   className="water-goal-unit"
                   value={goalInputUnit}
                   onChange={(e) => setGoalInputUnit(e.target.value as 'oz' | 'ml')}
+                  aria-label="Daily water goal unit"
                   disabled={isLoading}
                 >
                   <option value="oz">oz</option>
                   <option value="ml">ml</option>
                 </select>
               </div>
+
               <div className="water-goal-edit-actions">
                 <button
                   className="water-goal-save-btn"
                   onClick={handleSaveGoal}
                   disabled={isLoading || !goalInput || !user}
+                  aria-label="Save daily water goal"
                 >
                   Save
                 </button>
+
                 <button
                   className="water-goal-cancel-btn"
                   onClick={handleCancelEditGoal}
                   disabled={isLoading}
+                  aria-label="Cancel editing daily water goal"
                 >
                   Cancel
                 </button>
@@ -157,6 +159,7 @@ const WaterIntakeTodayCard: React.FC<WaterIntakeTodayCardProps> = ({
             <div className="water-amount">
               {unit === 'oz' ? `${totalOzToday} oz` : `${totalMlDisplay} ml`}
             </div>
+
             <div className="water-label">
               <div className="water-goal-display">
                 of {unit === 'oz' ? `${goalOz} oz` : `${goalMl} ml`} goal
@@ -166,6 +169,7 @@ const WaterIntakeTodayCard: React.FC<WaterIntakeTodayCardProps> = ({
                     onClick={handleStartEditGoal}
                     disabled={isLoading}
                     title="Edit daily goal"
+                    aria-label="Edit daily water goal"
                   >
                     <svg
                       width="16"
@@ -187,24 +191,44 @@ const WaterIntakeTodayCard: React.FC<WaterIntakeTodayCardProps> = ({
           </div>
         )}
 
-        {/* Progress Bar - Only show when not editing goal */}
+        {/* Progress Bar */}
         {!isEditingGoal && (
           <div className="water-progress-container">
-            <div className="water-progress-bar">
-              <div 
+            <div
+              className="water-progress-bar"
+              role="progressbar"
+              aria-label="Daily water goal progress"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.min(Math.max(Math.round(progressPercentage), 0), 100)}
+              aria-valuetext={`You have consumed ${
+                unit === 'oz' ? `${totalOzToday} oz` : `${totalMlDisplay} ml`
+              } out of ${
+                unit === 'oz' ? `${goalOz} oz` : `${goalMl} ml`
+              } (${Math.round(progressPercentage)}% of goal).`}
+            >
+              <div
                 className="water-progress-fill"
                 style={{ width: `${progressPercentage}%` }}
               />
             </div>
-            <div className="water-progress-info">
+
+            <div
+              className="water-progress-info"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            >
               <span className="water-progress-percentage">
                 {Math.round(progressPercentage)}%
               </span>
+
               {remainingMl > 0 && (
                 <span className="water-progress-remaining">
                   {unit === 'oz' ? `${remainingOz} oz` : `${remainingMl} ml`} remaining
                 </span>
               )}
+
               {remainingMl <= 0 && (
                 <span className="water-progress-complete">
                   Goal achieved! 🎉
