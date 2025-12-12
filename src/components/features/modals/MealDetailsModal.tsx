@@ -225,7 +225,8 @@ const MealDetailsModal: React.FC<MealDetailsModalProps> = ({ isOpen, meal, onClo
 
     // Validate using centralized validation utility (DRY principle)
     // Ensures consistent validation rules across all components
-    const validationError = validateMeal(form);
+    const sanitizedForm = sanitizeMeal(form);
+    const validationError = validateMeal(sanitizedForm);
     if (validationError) {
       setFormError({ message: validationError.message });
       showToast(validationError.message, 'error');
@@ -245,20 +246,20 @@ const MealDetailsModal: React.FC<MealDetailsModalProps> = ({ isOpen, meal, onClo
     setSubmitting(true);
     try {
       const updates: any = {
-        name: form.name.trim(),
-        servingSize: form.servingSize.trim(),
-        calories: Number(form.calories),
+        name: sanitizedForm.name?.trim(),
+        servingSize: sanitizedForm.servingSize?.trim(),
+        calories: Number(sanitizedForm.calories),
       };
 
       const numericOptional: Record<string, string> = {
-        servingsHad: form.servingsHad,
-        totalCarbs: form.totalCarbs,
-        totalFat: form.totalFat,
-        protein: form.protein,
-        sodium: form.sodium,
-        sugars: form.sugars,
-        calcium: form.calcium,
-        iron: form.iron,
+        servingsHad: sanitizedForm.servingsHad,
+        totalCarbs: sanitizedForm.totalCarbs,
+        totalFat: sanitizedForm.totalFat,
+        protein: sanitizedForm.protein,
+        sodium: sanitizedForm.sodium,
+        sugars: sanitizedForm.sugars,
+        calcium: sanitizedForm.calcium,
+        iron: sanitizedForm.iron,
       };
       Object.entries(numericOptional).forEach(([key, raw]) => {
         const parsed = parseNumber(raw);
@@ -267,9 +268,9 @@ const MealDetailsModal: React.FC<MealDetailsModalProps> = ({ isOpen, meal, onClo
       });
 
       const stringOptional: Record<string, string> = {
-        fatCategories: form.fatCategories,
-        vitamins: form.vitamins,
-        otherInfo: form.otherInfo,
+        fatCategories: sanitizedForm.fatCategories,
+        vitamins: sanitizedForm.vitamins,
+        otherInfo: sanitizedForm.otherInfo,
       };
       Object.entries(stringOptional).forEach(([key, raw]) => {
         const trimmed = raw.trim();

@@ -224,29 +224,26 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
    * Build meal object from form data for database storage
    * Handles type conversion, sanitization, and optional field inclusion
    */
-  const buildMealObject = (userId: string): Meal => {
-    // Sanitization function for XSS prevention
-    const sanitize = (val: string) => val.replace(/[<>]/g, "").trim();
-
+  const buildMealObject = (userId: string, sanitizedForm: typeof form): Meal => {
     // Base required fields
     const mealBase: Meal = {
       userId,
-      name: sanitize(form.name),
-      calories: Number(form.calories),
-      servingSize: sanitize(form.servingSize),
+      name: sanitizedForm.name.trim(),
+      calories: Number(sanitizedForm.calories),
+      servingSize: sanitizedForm.servingSize.trim(),
       createdAt: Date.now(),
     };
 
     // Add optional numeric fields if they have valid values
     const numericOptional: Record<string, string> = {
-      servingsHad: form.servingsHad,
-      totalCarbs: form.totalCarbs,
-      totalFat: form.totalFat,
-      protein: form.protein,
-      sodium: form.sodium,
-      sugars: form.sugars,
-      calcium: form.calcium,
-      iron: form.iron,
+      servingsHad: sanitizedForm.servingsHad,
+      totalCarbs: sanitizedForm.totalCarbs,
+      totalFat: sanitizedForm.totalFat,
+      protein: sanitizedForm.protein,
+      sodium: sanitizedForm.sodium,
+      sugars: sanitizedForm.sugars,
+      calcium: sanitizedForm.calcium,
+      iron: sanitizedForm.iron,
     };
 
     Object.entries(numericOptional).forEach(([key, raw]) => {
@@ -259,13 +256,13 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
 
     // Add optional string fields if they have non-empty values
     const stringOptional: Record<string, string> = {
-      fatCategories: form.fatCategories,
-      vitamins: form.vitamins,
-      otherInfo: form.otherInfo,
+      fatCategories: sanitizedForm.fatCategories,
+      vitamins: sanitizedForm.vitamins,
+      otherInfo: sanitizedForm.otherInfo,
     };
 
     Object.entries(stringOptional).forEach(([key, raw]) => {
-      const trimmed = sanitize(raw);
+      const trimmed = raw.trim();
       if (trimmed) {
         // @ts-expect-error dynamic assignment of optional field
         mealBase[key] = trimmed;
@@ -414,9 +411,10 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
       return;
     }
 
-    // 3. Validate using centralized validation utility (DRY principle)
+    // 3. Sanitize & validate using centralized validation utility (DRY principle)
     // Ensures consistent validation across all components
-    const validationError = validateMeal(form);
+    const sanitizedForm = sanitizeMeal(form);
+    const validationError = validateMeal(sanitizedForm);
     if (validationError) {
       setFormError({ message: validationError.message });
       showToast(validationError.message, "error");
@@ -426,7 +424,7 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
     // 4. Build meal object and save to database
     setSubmitting(true);
     try {
-      const meal = buildMealObject(user.uid);
+      const meal = buildMealObject(user.uid, sanitizedForm);
       const { db, firestore } = await resolveFirebase();
 
       if (planningMode) {
