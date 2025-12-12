@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { describe, it, expect } from 'vitest';
 
 // --- Types ---
