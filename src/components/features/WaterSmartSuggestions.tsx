@@ -20,6 +20,9 @@ interface WaterSmartSuggestionsProps {
   todayRange: { startMs: number; endMs: number };
   user: any | null;
   loading: boolean;
+  // Security note: onAddWater is passed in from a higher-level component that
+  // already scopes writes to the authenticated user. This component stays in a
+  // "read / suggest" role and never talks to Firestore directly.
   onAddWater: (amountMl: number) => void;
 }
 
@@ -30,6 +33,9 @@ const toMillis = (val: any): number => {
   return 0;
 };
 
+// Pure function: derives suggestions from logs + todayRange only.
+// This keeps "smart suggestions" as a local, low-privilege concern and
+// avoids any direct reads/writes to privileged data stores.
 export const generateSmartSuggestions = (
   logs: WaterLog[] | null,
   totalMlToday: number,
@@ -219,6 +225,12 @@ const WaterSmartSuggestions: React.FC<WaterSmartSuggestionsProps> = ({
                 <div className="water-suggestion-icon">{suggestion.icon}</div>
                 <div className="water-suggestion-content">
                   <p className="water-suggestion-message">{suggestion.message}</p>
+                  {/*
+                    Least privilege: Only authenticated users get the "Add X" action
+                    wired, and the parent handler ensures the write goes into that
+                    user's own water log. This UI layer never accepts a userId or
+                    modifies cross-user state directly.
+                  */}
                   {suggestion.actionAmount && user && (
                     <button
                       className="water-suggestion-action"
@@ -246,4 +258,3 @@ const WaterSmartSuggestions: React.FC<WaterSmartSuggestionsProps> = ({
 };
 
 export default WaterSmartSuggestions;
-

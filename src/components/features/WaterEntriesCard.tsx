@@ -4,6 +4,9 @@ import { mlToOz, ozToMl } from '../../types/water';
 
 // Load Firebase lazily
 const resolveFirebase = async () => {
+  // By resolving Firebase here instead of importing globally, we keep the
+  // database client in a separate "privileged" compartment. This component
+  // only uses it to edit/delete the current user's own logs.
   const mod: any = await import('../../firebase');
   const authClient = await mod.getAuthClient();
   const dbClient = await mod.getFirestoreClient();
@@ -149,7 +152,12 @@ const WaterEntriesCard: React.FC<WaterEntriesCardProps> = ({
   };
 
   const handleSaveEdit = async () => {
-    if (!user?.uid || !editingId || !editAmount) return;
+    if (!user?.uid || !editingId || !editAmount) {
+      // Least privilege: editing is only permitted for the current signed-in
+      // user. We rely on Firestore security rules to enforce that the `water`
+      // document being updated actually belongs to this uid.
+      return;
+    }
     const val = parseFloat(editAmount);
     if (!val || val <= 0) {
       alert('Please enter a valid amount greater than 0');
@@ -184,7 +192,12 @@ const WaterEntriesCard: React.FC<WaterEntriesCardProps> = ({
   };
 
   const handleDelete = async (logId: string) => {
-    if (!user?.uid || !logId) return;
+    if (!user?.uid || !logId) {
+      // Again, only authenticated users can request deletion. Back-end
+      // Firestore rules should additionally ensure that only the owner of
+      // a given water log document can delete it (CWE-269 mitigation).
+      return;
+    }
     if (!confirm('Are you sure you want to delete this entry?')) return;
 
     setLocalLoading(true);
