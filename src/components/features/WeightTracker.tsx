@@ -1,14 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useWeightEntries } from "../../hooks/useWeightEntries";
 import type { WeightEntry } from "../../types/weight";
-import WeightChart from './WeightChart';
+import { WeightChart } from './WeightChart.tsx';
 import { resolveFirebase } from '../../lib/resolveFirebase';
 import { useNavigate } from 'react-router-dom';
-
-function formatDateInput(d: string) {
-  // ensure YYYY-MM-DD
-  return d;
-}
 
 // Main Weight Tracker component
 export const WeightTracker: React.FC = () => {
@@ -639,54 +634,45 @@ export const WeightTracker: React.FC = () => {
                 {error ? <div role="alert" style={{ color: 'crimson', marginTop: 6 }}>{error}</div> : null}
               </div>
 
-              {/* Data table card - always visible */}
-              <div className="card">
-                {entries.length === 0 ? (
-                  <div style={{ padding: '1rem', color: '#9ca3af', textAlign: 'center' }}>
-                    No weight entries yet - add your first entry above
-                  </div>
-                ) : range === 'year' && tableRows.length === 0 ? (
-                  <div style={{ padding: '1rem', color: '#9ca3af', textAlign: 'center' }}>
-                      No weight entries for this year.
-                    </div>
-                  ) : (
-                    <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                      <thead>
-                        <tr>
-                          <th style={{ textAlign: "left", paddingBottom: 8, width: '50%' }}>
-                            {range === 'year' ? (() => { const d = new Date(date + 'T00:00:00'); return d.getFullYear(); })() : range === 'all' ? 'Year' : range === 'month' ? (() => { const d = new Date(date + 'T00:00:00'); return d.toLocaleString('default', { month: 'long', year: 'numeric' }); })() : range === 'week' ? (() => { const startMonth = start.toLocaleString('default', { month: 'short' }); const startDay = start.getDate(); const endMonth = end.toLocaleString('default', { month: 'short' }); const endDay = end.getDate(); const year = end.getFullYear(); return startMonth === endMonth ? `${startMonth} ${startDay} - ${endDay}, ${year}` : `${startMonth} ${startDay} - ${endMonth} ${endDay}, ${year}`; })() : 'Date'}
-                          </th>
-                          <th style={{ textAlign: "left", paddingBottom: 8, width: '50%' }}>
-                            Weight ({unit}){range === 'year' || range === 'all' ? ' (avg)' : ''}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {tableRows.map((row, idx) => {
-                          const displayWeight = unit === 'kg' ? Math.round((row.weightLb / 2.20462) * 10) / 10 : row.weightLb;
-                          const isClickable = !row.isAggregated;
-                          const entry = filteredEntries.find((e) => e.date === row.date && e.weightLb === row.weightLb);
-                          return (
-                            <tr
-                              key={idx}
-                              onClick={() => isClickable && entry && handleEditEntry(entry)}
-                              style={{
-                                borderTop: '1px solid rgba(255,255,255,0.1)',
-                                cursor: isClickable ? 'pointer' : 'default',
-                                transition: 'background-color 0.2s',
-                                opacity: row.isAggregated ? 0.7 : 1,
-                              }}
-                              onMouseEnter={(ev) => isClickable && (ev.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)')}
-                              onMouseLeave={(ev) => (ev.currentTarget.style.backgroundColor = 'transparent')}
-                            >
-                              <td style={{ paddingTop: 8, paddingBottom: 8, width: '50%' }}>{row.label || (() => { const d = new Date(row.date + 'T00:00:00'); return d.toLocaleString('default', { weekday: 'short', month: 'short', day: 'numeric' }); })()}</td>
-                              <td style={{ paddingTop: 8, paddingBottom: 8, width: '50%' }}>{displayWeight.toFixed(1)}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  )}
+              {/* Data table card */}
+              {filteredEntries.length > 0 && (
+                <div className="card">
+                  <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                    <thead>
+                      <tr>
+                        <th style={{ textAlign: "left", paddingBottom: 8, width: '50%' }}>
+                          {rangeLabelText}
+                        </th>
+                        <th style={{ textAlign: "left", paddingBottom: 8, width: '50%' }}>
+                          Weight ({unit}){range === 'year' || range === 'all' ? ' (avg)' : ''}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tableData.map((row: { date: string; weightLb: number; displayLabel: string; isAggregated: boolean }) => {
+                        const displayWeight = unit === 'kg' ? Math.round((row.weightLb / 2.20462) * 10) / 10 : row.weightLb;
+                        const isClickable = !row.isAggregated;
+                        const entry = filteredEntries.find((e: WeightEntry) => e.date === row.date && e.weightLb === row.weightLb);
+                        return (
+                          <tr
+                            key={`${row.date}-${row.weightLb}`}
+                            onClick={() => isClickable && entry && handleEditEntry(entry)}
+                            style={{
+                              borderTop: '1px solid rgba(255,255,255,0.1)',
+                              cursor: isClickable ? 'pointer' : 'default',
+                              transition: 'background-color 0.2s',
+                              opacity: row.isAggregated ? 0.7 : 1,
+                            }}
+                            onMouseEnter={(ev) => isClickable && (ev.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)')}
+                            onMouseLeave={(ev) => (ev.currentTarget.style.backgroundColor = 'transparent')}
+                          >
+                            <td style={{ paddingTop: 8, paddingBottom: 8, width: '50%' }}>{row.displayLabel}</td>
+                            <td style={{ paddingTop: 8, paddingBottom: 8, width: '50%' }}>{displayWeight.toFixed(1)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
 
               {/* Edit Modal */}
