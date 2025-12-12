@@ -17,23 +17,3 @@
     { "path": "./tsconfig.node.json" }
   ]
 }
-
-{
-  "compilerOptions": {
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "skipLibCheck": true
-  },
-  "exclude": [
-    "node_modules",
-    "dist",
-    "build",
-    "src/testt",
-    "src/uploadSecurity.ts"
-  ],
-  "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ]
-}
