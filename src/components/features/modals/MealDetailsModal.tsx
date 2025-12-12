@@ -23,7 +23,7 @@ import type { Meal } from '../../../types/meal';
 import Toast from '../../ui/Toast';
 import { calculateActualCalories, calculateActualMacros } from '../../../utils/mealCalculations';
 import { canAccess } from '../../../utils/authorization';
-import { validateMeal, MEAL_CONSTRAINTS, sanitizeMeal, parseNumber } from '../../../utils/mealValidation';
+import { validateMeal, MEAL_CONSTRAINTS, parseNumber } from '../../../utils/mealValidation';
 
 interface MealDetailsModalProps {
   isOpen: boolean;

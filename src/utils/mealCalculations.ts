@@ -26,3 +26,23 @@ export const calculateActualMacros = (meal: Meal) => {
     fat: meal.totalFat ? Math.round(meal.totalFat * servings * 10) / 10 : undefined,
   };
 };
+
+/**
+ * Calculate actual micronutrients based on servings had
+ * @param meal - The meal object
+ * @returns Object with adjusted micronutrient values
+ */
+export const calculateActualMicros = (meal: Meal) => {
+  const servings = meal.servingsHad || 1;
+  // keep scaling reusable to treat unspecified values as undefined
+  const scale = (val?: number) =>
+    val !== undefined ? Math.round(val * servings * 10) / 10 : undefined;
+
+  return {
+    // micronutrients scale with servings just like macros do
+    sodium: scale(meal.sodium),
+    sugars: scale(meal.sugars),
+    calcium: scale(meal.calcium),
+    iron: scale(meal.iron),
+  };
+};
