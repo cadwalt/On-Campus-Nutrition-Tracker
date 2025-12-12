@@ -86,58 +86,6 @@ First, make sure you have Git installed in your code editor. Then,
 | `npm run preview` | Preview the production build locally |
 | `npm run lint` | Run ESLint to check for code issues |
 
-### Firebase Deployment
-
-#### Install Firebase CLI
-```bash
-npm install -g firebase-tools
-```
-
-#### Login to Firebase
-```bash
-firebase login
-```
-
-#### Deploy Firestore Security Rules
-```bash
-firebase deploy --only firestore:rules
-```
-
-**Security Rules:** The project includes Firestore security rules (`firestore.rules`) that enforce:
-- **CWE-862 (Missing Authorization):** Only authenticated users can read/write their own data
-  - **Weight collection (`/weight/{docId}`):** User-scoped via `owner` or `userID` field
-  - **Meals collection (`/meals/{mealId}`):** User-scoped via `userId` field
-  - **Water collection (`/water/{logId}`):** User-scoped via `userId` field
-  - **Meal Plans (`/mealPlans/{userId}/...`):** User-scoped via document path
-  - **User collection (`/users/{userId}/...`):** User-scoped via document path
-  - **Restaurants (`/restaurants_sample/...`):** Public read-only access (shared data)
-- **User scoping:** Each user's data is isolated by their unique Firebase Auth UID
-- **Default deny:** All unlisted paths are blocked
-
-#### Data Structure
-- **Root-level collections:**
-  - `/weight/{docId}` - Weight entries with `owner`/`userID` fields
-  - `/meals/{mealId}` - Meal entries with `userId` field
-  - `/water/{logId}` - Water intake logs with `userId` field
-  - `/restaurants_sample/{restaurantId}` - Public restaurant data (read-only)
-- **Hierarchical collections:**
-  - `/mealPlans/{userId}/dates/{date}/meals/{mealId}` - User meal plans
-  - `/users/{userId}` - User profiles, goals, preferences, favorites
-- **Field-based vs. path-based authorization:**
-  - Flat collections (weight, meals, water) use field checks (`userId`, `owner`)
-  - Hierarchical collections (mealPlans, users) use path-based authorization
-
-#### Verify Rules Deployment
-```bash
-firebase rules:list
-```
-
-**Troubleshooting:** If users cannot view their weight data:
-1. Check that rules have been deployed: `firebase rules:list`
-2. Verify user is authenticated: Check Firebase Auth tab in Console
-3. Check document has `owner` or `userID` field matching user's UID
-4. Redeploy rules if needed: `firebase deploy --only firestore:rules`
-
 ### Running the Project
 
 #### Development Mode
