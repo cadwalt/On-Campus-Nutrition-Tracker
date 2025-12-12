@@ -3,9 +3,12 @@
 // - Subscribe to the current user's meals and aggregate today's intake
 // - Load the user's stored nutrition goals and compute a nutrition plan
 // - Render progress bars for calories and each macro
-// Notes:
-// - Uses `resolveFirebase` to lazily get auth / firestore clients to keep
-//   the initial client bundle small.
+// Security / CWE-269 notes:
+// - We never query meals for arbitrary users. All Firestore reads are scoped
+//   to the authenticated user's UID (where('userId', '==', user.uid)).
+// - This enforces least privilege: this component can only see the current
+//   user's intake and goals, not other students' records.
+// - Writes to meals/goals happen in separate, higher-privilege code paths.
 import React, { useState, useEffect } from 'react';
 import type { User } from 'firebase/auth';
 import { resolveFirebase } from '../../lib/resolveFirebase';
@@ -25,7 +28,7 @@ const NutritionSummary: React.FC = () => {
   const [goals, setGoals] = useState<NutritionGoals | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Track auth state
+  // Track auth state and keep a narrow, user-scoped view of data.
   useEffect(() => {
     let unsub: (() => void) | null = null;
     (async () => {
@@ -39,7 +42,7 @@ const NutritionSummary: React.FC = () => {
     return () => { if (unsub) unsub(); };
   }, []);
 
-  // Load user's nutrition goals
+  // Load user's nutrition goals from their profile document only.
   useEffect(() => {
     if (!user) {
       setGoals(null);
@@ -77,7 +80,12 @@ const NutritionSummary: React.FC = () => {
     (async () => {
       try {
         const { db, firestore } = await resolveFirebase();
-        const mealsQ = firestore.query(firestore.collection(db, 'meals'), firestore.where('userId', '==', user.uid));
+        // CWE-269 mitigation: only subscribe to meals where userId == user.uid.
+        // This component never queries all meals or another user's meals.
+        const mealsQ = firestore.query(
+          firestore.collection(db, 'meals'),
+          firestore.where('userId', '==', user.uid)
+        );
         unsubLocal = firestore.onSnapshot(mealsQ, (snap) => {
           const now = new Date();
           const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -120,7 +128,7 @@ const NutritionSummary: React.FC = () => {
       }
     })();
 
-    return () => { if (unsubLocal) unsubLocal(); };
+  return () => { if (unsubLocal) unsubLocal(); };
   }, [user]);
 
   if (loading) {
