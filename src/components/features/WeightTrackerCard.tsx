@@ -9,4 +9,8 @@ export const WeightTrackerCard: React.FC = () => {
   );
 };
 
+<<<<<<< HEAD
 export default WeightTrackerCard;
+=======
+export default WeightTrackerCard;
+>>>>>>> 3449604f23503c51d893151942e46f034bb45a8d
