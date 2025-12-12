@@ -34,6 +34,10 @@ const WaterAddCard: React.FC<WaterAddCardProps> = ({
             <button 
               className="water-btn" 
               onClick={() => onQuickAdd(8)} 
+              // UI-level guard: only authenticated users can add entries.
+              // The actual write operation is implemented in a higher-level
+              // handler which uses user.uid and Firestore rules to ensure
+              // entries are only added to that user's log.
               disabled={loading || !user}
             >
               +8 oz
@@ -112,4 +116,3 @@ const WaterAddCard: React.FC<WaterAddCardProps> = ({
 };
 
 export default WaterAddCard;
-
