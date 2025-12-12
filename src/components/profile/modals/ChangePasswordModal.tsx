@@ -1,3 +1,22 @@
+/**
+ * ChangePasswordModal
+ * ------------------------------------------------------------
+ * This modal allows the *current authenticated user* to update
+ * their password. Firebase requires "recent login" for sensitive
+ * operations, so we re-authenticate using the user's current
+ * password before calling updatePassword().
+ *
+ * UX notes:
+ *  - Uses createPortal to render on top of everything else.
+ *  - Blocks body scroll while open (see useEffect).
+ *  - Provides toast feedback for success/failure.
+ *
+ * Security notes:
+ *  - We never accept a userId; we always use auth.currentUser.
+ *  - This ensures we cannot update another user’s password.
+ * ------------------------------------------------------------
+ */
+
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Toast from '../../ui/Toast';
@@ -15,10 +34,12 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   onSuccess,
   onError
 }) => {
+  // ------------ State ------------
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const [showToast, setShowToast] = useState(false);
@@ -29,7 +50,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     setShowToast(true);
   };
 
-  // Handle ESC key to close modal and body scroll management
+  // ------------ Accessibility + UX: ESC key + disable background scroll ------------
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && isOpen) {
@@ -39,8 +60,11 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
     if (isOpen) {
       document.addEventListener('keydown', handleKeyDown);
+
+      // Prevent background scrolling
       const originalOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
+
       return () => {
         document.removeEventListener('keydown', handleKeyDown);
         document.body.style.overflow = originalOverflow;
@@ -48,6 +72,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     }
   }, [isOpen, onClose]);
 
+  // ------------ Client-side validation ------------
   const validateInputs = (): boolean => {
     if (!currentPassword.trim()) {
       showLocalToast('Current password is required', 'error');
@@ -61,35 +86,35 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       showLocalToast('New password must be at least 6 characters', 'error');
       return false;
     }
-    if (newPassword !== confirmPassword) {
-      showLocalToast('Passwords do not match', 'error');
+    if (currentPassword === newPassword) {
+      showLocalToast('New password must differ from current password', 'error');
       return false;
     }
-    if (currentPassword === newPassword) {
-      showLocalToast('New password must be different from current password', 'error');
+    if (newPassword !== confirmPassword) {
+      showLocalToast('Passwords do not match', 'error');
       return false;
     }
     return true;
   };
 
+  // ------------ Firebase password change flow ------------
   const handleChangePassword = async () => {
-    if (!validateInputs()) {
-      return;
-    }
+    if (!validateInputs()) return;
 
     setLoading(true);
     try {
-      // Re-authenticate the user before changing password
       const mod: any = await import('../../../firebase');
-      const authClient = (mod.getAuthClient ? await mod.getAuthClient() : mod.auth) as any;
+      const authClient =
+        (mod.getAuthClient ? await mod.getAuthClient() : mod.auth) as any;
+
       const firebaseAuth = await import('firebase/auth');
       const user = authClient.currentUser;
 
       if (!user || !user.email) {
-        throw new Error('No user logged in');
+        throw new Error('No authenticated user');
       }
 
-      // Re-authenticate with current password
+      // Re-authenticate using EmailAuthProvider
       const credential = firebaseAuth.EmailAuthProvider.credential(
         user.email,
         currentPassword
@@ -99,36 +124,36 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       // Update password
       await firebaseAuth.updatePassword(user, newPassword);
 
-      // Clear form and close modal
+      // Success UX
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      showLocalToast('Password changed successfully', 'success');
-      onSuccess('Password changed successfully');
-      
-      // Close modal after a short delay to show the toast
-      setTimeout(() => {
-        onClose();
-      }, 500);
+
+      showLocalToast('Password updated successfully', 'success');
+      onSuccess('Password updated successfully');
+
+      // Close modal after toast
+      setTimeout(() => onClose(), 500);
     } catch (error: any) {
-      let errorMessage = 'Failed to change password';
+      let message = 'Unable to change password';
+
       if (error.code === 'auth/invalid-credential') {
-        errorMessage = 'Current password is incorrect';
-      } else if (error.code === 'auth/password-does-not-meet-requirements') {
-        errorMessage = 'New password must include at least 1 lowercase letter';
+        message = 'Current password is incorrect';
       } else if (error.code === 'auth/requires-recent-login') {
-        errorMessage = 'Please sign out and sign in again before changing your password';
+        message = 'Please log in again before changing your password';
       } else if (error.message) {
-        errorMessage = error.message;
+        message = error.message;
       }
-      showLocalToast(errorMessage, 'error');
-      onError(errorMessage);
+
+      showLocalToast(message, 'error');
+      onError(message);
       console.error('Error changing password:', error);
     } finally {
       setLoading(false);
     }
   };
 
+  // Reset when closing
   const handleClose = () => {
     setCurrentPassword('');
     setNewPassword('');
@@ -138,11 +163,25 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
   if (!isOpen) return null;
 
+  // ------------ Modal markup (polished, accessible) ------------
   return createPortal(
-    <div className="modal-overlay" onClick={handleClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="modal-overlay"
+      onClick={handleClose}
+      role="presentation"
+    >
+      <div
+        className="modal-content account-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="change-password-title"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="modal-header">
-          <h3>Change Password</h3>
+          <h3 id="change-password-title">Change Password</h3>
+          <p className="modal-subtitle">
+            Please confirm your current password and enter a new one.
+          </p>
         </div>
 
         <div className="modal-body">
@@ -155,6 +194,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
               onChange={(e) => setCurrentPassword(e.target.value)}
               placeholder="Enter your current password"
               disabled={loading}
+              aria-required="true"
             />
           </div>
 
@@ -167,7 +207,9 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="Enter your new password"
               disabled={loading}
+              aria-required="true"
             />
+            <small className="field-hint">Must be at least 6 characters.</small>
           </div>
 
           <div className="form-group">
@@ -179,6 +221,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Confirm your new password"
               disabled={loading}
+              aria-required="true"
             />
           </div>
         </div>
@@ -188,17 +231,16 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
             className="btn btn-secondary"
             onClick={handleClose}
             disabled={loading}
-            style={{ backgroundColor: 'black', color: 'white' }}
           >
             Cancel
           </button>
+
           <button
             className="btn btn-primary"
             onClick={handleChangePassword}
             disabled={loading}
-            style={{ backgroundColor: 'black', color: 'white' }}
           >
-            {loading ? 'Changing...' : 'Change Password'}
+            {loading ? 'Changing…' : 'Change Password'}
           </button>
         </div>
 
@@ -218,3 +260,4 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 };
 
 export default ChangePasswordModal;
+
