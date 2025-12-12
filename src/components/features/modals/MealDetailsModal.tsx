@@ -262,7 +262,8 @@ const MealDetailsModal: React.FC<MealDetailsModalProps> = ({ isOpen, meal, onClo
       };
       Object.entries(numericOptional).forEach(([key, raw]) => {
         const parsed = parseNumber(raw);
-        if (typeof parsed === 'number') updates[key] = parsed; else updates[key] = null;
+        if (typeof parsed === 'number') updates[key] = parsed;
+        // Don't set null - Firestore rejects it, just omit the field
       });
 
       const stringOptional: Record<string, string> = {
@@ -272,7 +273,8 @@ const MealDetailsModal: React.FC<MealDetailsModalProps> = ({ isOpen, meal, onClo
       };
       Object.entries(stringOptional).forEach(([key, raw]) => {
         const trimmed = raw.trim();
-        if (trimmed) updates[key] = trimmed; else updates[key] = null;
+        if (trimmed) updates[key] = trimmed;
+        // Don't set null - Firestore rejects it, just omit the field
       });
 
       // If an external save handler is provided (e.g., for favorites), call it instead

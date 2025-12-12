@@ -201,6 +201,7 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
         return;
       }
 
+      // Ensuring that the database only returns records belonging to the authenticated user
       const { db, firestore } = await resolveFirebase();
       const q = firestore.query(
         firestore.collection(db, "meals"),
@@ -487,7 +488,7 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
 
   return (
     <>
-      <form className="meal-form" onSubmit={handleSubmit}>
+      <form className="meal-form" onSubmit={handleSubmit} autoComplete="off">
         {/* Required fields */}
         <div className="form-grid" style={{ overflow: "visible" }}>
           <div className="form-field required" style={{ position: "relative", overflow: "visible" }}>
@@ -508,6 +509,7 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
               }}
               placeholder="e.g. Grilled Chicken Salad"
               required
+              autoComplete="off"
               aria-required="true"
               aria-invalid={!!formError}
               aria-describedby={formError ? "meal-form-error" : undefined}
@@ -559,6 +561,7 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
               value={form.calories}
               onChange={(e) => updateField("calories", e.target.value)}
               placeholder="e.g. 450"
+              autoComplete="off"
               aria-required="true"
               inputMode="decimal"
               aria-invalid={!!formError}
@@ -574,6 +577,7 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
               maxLength={MEAL_CONSTRAINTS.MAX_NAME_LENGTH}
               onChange={(e) => updateField("servingSize", e.target.value)}
               placeholder="e.g. 1 bowl"
+              autoComplete="off"
               aria-required="true"
               aria-invalid={!!formError}
               aria-describedby={formError ? "meal-form-error" : undefined}
@@ -590,6 +594,7 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
               value={form.servingsHad}
               onChange={(e) => updateField("servingsHad", e.target.value)}
               placeholder="e.g. 1.5"
+              autoComplete="off"
               aria-required="true"
               inputMode="decimal"
               aria-invalid={!!formError}
@@ -618,15 +623,15 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
             <legend id="optional-nutrition-legend" style={{ color: "#e2e8f0", fontWeight: 600, marginBottom: 8 }}>Optional nutrition details</legend>
             <div className="form-field">
               <label htmlFor="meal-carbs">Total Carbs (g)</label>
-              <input id="meal-carbs" type="number" min={0} max={MEAL_CONSTRAINTS.MAX_MACRO} value={form.totalCarbs} onChange={(e) => updateField("totalCarbs", e.target.value)} inputMode="decimal" />
+              <input id="meal-carbs" type="number" min={0} max={MEAL_CONSTRAINTS.MAX_MACRO} step="0.01" value={form.totalCarbs} onChange={(e) => updateField("totalCarbs", e.target.value)} inputMode="decimal" />
             </div>
             <div className="form-field">
               <label htmlFor="meal-fat">Total Fat (g)</label>
-              <input id="meal-fat" type="number" min={0} max={MEAL_CONSTRAINTS.MAX_MACRO} value={form.totalFat} onChange={(e) => updateField("totalFat", e.target.value)} inputMode="decimal" />
+              <input id="meal-fat" type="number" min={0} max={MEAL_CONSTRAINTS.MAX_MACRO} step="0.01" value={form.totalFat} onChange={(e) => updateField("totalFat", e.target.value)} inputMode="decimal" />
             </div>
             <div className="form-field">
               <label htmlFor="meal-protein">Protein (g)</label>
-              <input id="meal-protein" type="number" min={0} max={MEAL_CONSTRAINTS.MAX_MACRO} value={form.protein} onChange={(e) => updateField("protein", e.target.value)} inputMode="decimal" />
+              <input id="meal-protein" type="number" min={0} max={MEAL_CONSTRAINTS.MAX_MACRO} step="0.01" value={form.protein} onChange={(e) => updateField("protein", e.target.value)} inputMode="decimal" />
             </div>
             <div className="form-field">
               <label htmlFor="meal-fatcat">Fat Categories</label>
@@ -634,15 +639,15 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
             </div>
             <div className="form-field">
               <label htmlFor="meal-sodium">Sodium (mg)</label>
-              <input id="meal-sodium" type="number" min={0} value={form.sodium} onChange={(e) => updateField("sodium", e.target.value)} inputMode="decimal" />
+              <input id="meal-sodium" type="number" min={0} step="0.01" value={form.sodium} onChange={(e) => updateField("sodium", e.target.value)} inputMode="decimal" />
             </div>
             <div className="form-field">
               <label htmlFor="meal-sugars">Sugars (g)</label>
-              <input id="meal-sugars" type="number" min={0} value={form.sugars} onChange={(e) => updateField("sugars", e.target.value)} inputMode="decimal" />
+              <input id="meal-sugars" type="number" min={0} step="0.01" value={form.sugars} onChange={(e) => updateField("sugars", e.target.value)} inputMode="decimal" />
             </div>
             <div className="form-field">
               <label htmlFor="meal-calcium">Calcium (mg)</label>
-              <input id="meal-calcium" type="number" min={0} value={form.calcium} onChange={(e) => updateField("calcium", e.target.value)} inputMode="decimal" />
+              <input id="meal-calcium" type="number" min={0} step="0.01" value={form.calcium} onChange={(e) => updateField("calcium", e.target.value)} inputMode="decimal" />
             </div>
             <div className="form-field">
               <label htmlFor="meal-vitamins">Vitamins</label>
@@ -650,7 +655,7 @@ const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitial
             </div>
             <div className="form-field">
               <label htmlFor="meal-iron">Iron (mg)</label>
-              <input id="meal-iron" type="number" min={0} value={form.iron} onChange={(e) => updateField("iron", e.target.value)} inputMode="decimal" />
+              <input id="meal-iron" type="number" min={0} step="0.01" value={form.iron} onChange={(e) => updateField("iron", e.target.value)} inputMode="decimal" />
             </div>
             <div className="form-field span-2">
               <label htmlFor="meal-notes">Other Info / Notes</label>

@@ -283,16 +283,29 @@ const YourMealsList: React.FC<YourMealsListProps> = ({
     }
 
     try {
+      // Build nutrition object with only defined values (Firebase rejects undefined)
+      const nutrition: any = {
+        calories: meal.calories,
+      };
+      
+      // Add optional nutrition fields only if they exist
+      if (meal.protein !== undefined) nutrition.protein = meal.protein;
+      if (meal.totalCarbs !== undefined) nutrition.carbs = meal.totalCarbs;
+      if (meal.totalFat !== undefined) nutrition.fat = meal.totalFat;
+      if (meal.sodium !== undefined) nutrition.sodium = meal.sodium;
+      if (meal.sugars !== undefined) nutrition.sugars = meal.sugars;
+      if (meal.calcium !== undefined) nutrition.calcium = meal.calcium;
+      if (meal.iron !== undefined) nutrition.iron = meal.iron;
+      if (meal.fatCategories !== undefined) nutrition.fatCategories = meal.fatCategories;
+      if (meal.vitamins !== undefined) nutrition.vitamins = meal.vitamins;
+      if (meal.otherInfo !== undefined) nutrition.otherInfo = meal.otherInfo;
+
       const fav: FavoriteItem = {
         id: `fav_meal_${meal.id}`,
         name: meal.name,
+        servingSize: meal.servingSize, // Include serving size
         source: 'meal',
-        nutrition: {
-          calories: meal.calories,
-          protein: meal.protein,
-          carbs: meal.totalCarbs,
-          fat: meal.totalFat,
-        },
+        nutrition,
         created_at: Date.now(),
       };
 

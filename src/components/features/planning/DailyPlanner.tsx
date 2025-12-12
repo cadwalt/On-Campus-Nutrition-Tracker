@@ -8,6 +8,7 @@ import PlannedMealCard from './PlannedMealCard';
 import NutritionProjection from './NutritionProjection';
 import MealForm from '../MealForm';
 import { XIcon, AlertTriangleIcon } from '../../ui/Icons';
+import Toast from '../../ui/Toast';
 
 interface PlannedMeal extends Meal {
   mealType: 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack';
@@ -27,6 +28,17 @@ const DailyPlanner: React.FC<DailyPlannerProps> = ({ selectedDate, user, onMealA
   const [nutritionPlan, setNutritionPlan] = useState<ReturnType<typeof computeNutritionPlan> | null>(null);
   const [showAddMeal, setShowAddMeal] = useState(false);
   const [selectedMealType, setSelectedMealType] = useState<'Breakfast' | 'Lunch' | 'Dinner' | 'Snack'>('Lunch');
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; visible: boolean }>({
+    message: '',
+    type: 'success',
+    visible: false,
+  });
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type, visible: true });
+  };
+
+  const closeToast = () => setToast((t) => ({ ...t, visible: false }));
 
   const dateKey = selectedDate.toISOString().split('T')[0];
 
@@ -100,16 +112,19 @@ const DailyPlanner: React.FC<DailyPlannerProps> = ({ selectedDate, user, onMealA
 
     try {
       const { db, firestore } = await resolveFirebase();
+      // Path must match load/add: mealPlans/{userId}/dates/{date}/meals/{mealId}
       const mealPlansRef = firestore.collection(db, 'mealPlans');
-      const userPlansRef = firestore.collection(mealPlansRef, user.uid);
-      const datePlanRef = firestore.doc(userPlansRef, dateKey);
-      const mealsRef = firestore.collection(datePlanRef, 'meals');
+      const userPlanDocRef = firestore.doc(mealPlansRef, user.uid);
+      const datesRef = firestore.collection(userPlanDocRef, 'dates');
+      const dateDocRef = firestore.doc(datesRef, dateKey);
+      const mealsRef = firestore.collection(dateDocRef, 'meals');
       const mealRef = firestore.doc(mealsRef, mealId);
 
       await firestore.deleteDoc(mealRef);
+      showToast('Meal removed from plan', 'success');
     } catch (err) {
       console.error('Error removing planned meal:', err);
-      alert('Failed to remove meal. Please try again.');
+      showToast('Failed to remove meal. Please try again.', 'error');
     }
   };
 
@@ -396,6 +411,8 @@ const DailyPlanner: React.FC<DailyPlannerProps> = ({ selectedDate, user, onMealA
           </div>
         </div>
       )}
+
+      <Toast message={toast.message} type={toast.type} isVisible={toast.visible} onClose={closeToast} />
     </div>
   );
 };
