@@ -78,18 +78,18 @@ export const WeightChart: React.FC<Props> = ({ entries, height = 160, width, ran
   const innerLeft = Math.round(measuredWidth * 0.05); // 5% left margin
   const labelAreaStartX = Math.round(measuredWidth * 0.85); // 85% -> start of 15% label area
   const rightGraphMarginPx = 0; // no gap between plotted area and label area
-  const innerWidth = Math.max(1, labelAreaStartX - innerLeft - rightGraphMarginPx);
+  const innerWidth = Math.max(1, labelAreaStartX - innerLeft - rightGraphMarginPx); // width available for plotting
 
-  const plotLeft = innerLeft + axisMargin + innerPad;
-  const plotRight = innerLeft + innerWidth;
-  const plotTop = axisMargin + innerPad;
-  const plotBottom = height - (axisMargin + innerPad);
+  const plotLeft = innerLeft + axisMargin + innerPad; // left edge of plotted area
+  const plotRight = innerLeft + innerWidth; // right edge of plotted area
+  const plotTop = axisMargin + innerPad; // top edge of plotted area
+  const plotBottom = height - (axisMargin + innerPad); // bottom edge of plotted area
 
-  const plotW = Math.max(1, plotRight - plotLeft);
-  const plotH = Math.max(1, plotBottom - plotTop);
+  const plotW = Math.max(1, plotRight - plotLeft); // width of plotted area
+  const plotH = Math.max(1, plotBottom - plotTop); // height of plotted area
   // Responsive font sizes to avoid label clipping on small screens
-  const xLabelFont = measuredWidth < 360 ? 9 : measuredWidth < 480 ? 10 : 12;
-  const yLabelFont = measuredWidth < 360 ? 9 : measuredWidth < 480 ? 10 : 12;
+  const xLabelFont = measuredWidth < 360 ? 9 : measuredWidth < 480 ? 10 : 12; // X axis
+  const yLabelFont = measuredWidth < 360 ? 9 : measuredWidth < 480 ? 10 : 12; // Y axis
   
   // Y axis ticks: label in increments of 50 from (minY - 50) to (maxY + 50)
   const displayMinY = Math.floor((minY - 50) / 50) * 50;
@@ -102,14 +102,31 @@ export const WeightChart: React.FC<Props> = ({ entries, height = 160, width, ran
   // Use displayMinY/displayMaxY for vertical scaling so labels align with ticks
   const scaleY = (y: number) => plotTop + (plotH - ((y - displayMinY) / (displayMaxY - displayMinY || 1)) * plotH);
 
+  // Avoid overlapping y labels by enforcing a minimum pixel gap between rendered ticks.
+  const filteredYTicks = (() => {
+    const minGapPx = 18; // increase spacing or drop labels when too close
+    const res: { y: number; label: string }[] = [];
+    let lastPos = Infinity;
+    yTicks
+      .slice()
+      .sort((a, b) => b.y - a.y) // top to bottom for consistent spacing
+      .forEach((t) => {
+        const pos = scaleY(t.y);
+        if (Math.abs(pos - lastPos) >= minGapPx) {
+          res.push(t);
+          lastPos = pos;
+        }
+      });
+    return res;
+  })();
+
   // Domain will be determined by ticks so labels extend full width; start with data bounds
   const dataMinX = minX;
   const dataMaxX = maxX;
   let domainStart = dataMinX;
   let domainEnd = dataMaxX;
 
-  
-
+  // Reference to the path element for animation
   const pathRef = useRef<SVGPathElement | null>(null);
 
   // Generate X ticks and labels depending on range. Use them to set domainStart/domainEnd so labels span full width.
@@ -130,7 +147,7 @@ export const WeightChart: React.FC<Props> = ({ entries, height = 160, width, ran
       const dd = new Date(t);
       ticks.push({ x: t, label: names[dd.getDay()] });
     }
-  } else if (range === 'month') {
+  } else if (range === 'month') { // align to month containing data
     const d = new Date(dataMinX);
     const year = d.getFullYear();
     const month = d.getMonth();
@@ -144,7 +161,7 @@ export const WeightChart: React.FC<Props> = ({ entries, height = 160, width, ran
       const dt = new Date(year, month, day).getTime();
       ticks.push({ x: dt, label: `${day}` });
     }
-  } else if (range === 'year') {
+  } else if (range === 'year') { // align to year containing data
     const d = new Date(dataMinX);
     const year = d.getFullYear();
     domainStart = new Date(year, 0, 1).getTime();
@@ -154,7 +171,7 @@ export const WeightChart: React.FC<Props> = ({ entries, height = 160, width, ran
       const t = new Date(year, m, 1).getTime();
       ticks.push({ x: t, label: monthNames[m] });
     }
-  } else { // all
+  } else { // align to full years spanned by data
     const startY = new Date(dataMinX).getFullYear();
     const endY = new Date(dataMaxX).getFullYear();
     domainStart = new Date(startY, 0, 1).getTime();
@@ -169,8 +186,28 @@ export const WeightChart: React.FC<Props> = ({ entries, height = 160, width, ran
   domainStart = Math.min(domainStart, dataMinX);
   domainEnd = Math.max(domainEnd, dataMaxX);
 
+  // X scaling function
   const scaleX = (x: number) => ((x - domainStart) / (domainEnd - domainStart || 1)) * plotW + plotLeft;
 
+  // Avoid overlapping x labels by enforcing a minimum pixel gap between rendered ticks.
+  const filteredXTicks = (() => {
+    const minGapPx = 40; // increase spacing or drop labels when too close
+    const res: { x: number; label: string }[] = [];
+    let lastPos = -Infinity;
+    ticks
+      .slice()
+      .sort((a, b) => a.x - b.x)
+      .forEach((t) => {
+        const pos = scaleX(t.x);
+        if (pos - lastPos >= minGapPx) {
+          res.push(t);
+          lastPos = pos;
+        }
+      });
+    return res;
+  })();
+
+  // Generate SVG path data
   const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${scaleX(p.x)} ${scaleY(p.y)}`).join(' ');
 
   // Trigger animation when entries change (run after pathD is available)
@@ -179,7 +216,6 @@ export const WeightChart: React.FC<Props> = ({ entries, height = 160, width, ran
     if (!el) return;
     try {
       const len = el.getTotalLength();
-      setPathLength(len);
       // Reset to hidden then animate to 0 offset
       el.style.transition = 'none';
       el.style.strokeDasharray = `${len} ${len}`;
@@ -195,7 +231,7 @@ export const WeightChart: React.FC<Props> = ({ entries, height = 160, width, ran
   }, [pathD]);
 
   
-
+  // Container style
   const containerStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', overflow: 'visible' };
 
   // center correction: compute a percentage-based shift so we can tune per breakpoint.
@@ -210,7 +246,7 @@ export const WeightChart: React.FC<Props> = ({ entries, height = 160, width, ran
     : (measuredWidth < 480 ? 0.95 : (measuredWidth < 980 ? 0.85 : 0.91));
   const centerShift = diff * computedFactor;
 
-  return (
+  return ( /* render graph svg */
     <div ref={containerRef} style={containerStyle}>
       <svg width={measuredWidth} height={height} role="img" aria-label="Weight over time" style={{ display: 'block', margin: '0 auto', overflow: 'visible' }}>
         {/* plotting group is shifted left slightly to visually center with right-side labels */}
@@ -219,7 +255,7 @@ export const WeightChart: React.FC<Props> = ({ entries, height = 160, width, ran
           <line x1={innerLeft + axisMargin} y1={height - axisMargin} x2={innerLeft + innerWidth} y2={height - axisMargin} stroke="rgba(255,255,255,0.12)" />
 
           {/* X ticks and labels */}
-          {ticks.map((t, i) => {
+          {filteredXTicks.map((t, i) => {
             const xPos = scaleX(t.x);
             return (
               <g key={i}>
@@ -252,7 +288,7 @@ export const WeightChart: React.FC<Props> = ({ entries, height = 160, width, ran
         {/* Y tick labels on the right side (not shifted) */}
         {(() => {
           // Place Y ticks at the plotted area's right edge so labels sit immediately to the right
-          return yTicks.map((t, i) => {
+          return filteredYTicks.map((t, i) => {
             // Skip labels within +/- 20 lbs of target weight
             if (targetWeight !== null && Math.abs(t.y - targetWeight) <= 20) {
               return null;
@@ -286,3 +322,4 @@ export const WeightChart: React.FC<Props> = ({ entries, height = 160, width, ran
 }
 
 export default WeightChart;
+
