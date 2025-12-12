@@ -2774,13 +2774,7 @@ body::after {
 
 /* Micronutrient Snapshot Card */
 .micronutrient-card {
-  background: rgba(26, 26, 46, 0.9);
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  padding: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(10px);
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
 }
 
 .micronutrient-card__header {
@@ -2793,7 +2787,7 @@ body::after {
 .micronutrient-card h3 {
   margin: 0;
   color: #e2e8f0;
-  font-size: 1.1rem;
+  font-size: 1.25rem;
   font-weight: 600;
 }
 

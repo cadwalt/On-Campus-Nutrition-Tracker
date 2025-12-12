@@ -163,7 +163,7 @@ const MicronutrientSummary: React.FC = () => {
   }
 
   return (
-    <div className="micronutrient-card">
+    <div className="card micronutrient-card">
       <div className="micronutrient-card__header">
         <div>
           <h3>Micronutrient Snapshot</h3>
