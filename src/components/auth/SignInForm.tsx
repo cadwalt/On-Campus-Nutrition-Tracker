@@ -22,6 +22,8 @@ const SignInForm: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null); // <-- Change from userEmail to userName
   const [loading, setLoading] = useState(false);
+  // New: general info/success message for resetting a forgotten password
+  const [info, setInfo] = useState<string | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
   const [fadeOut, setFadeOut] = useState(false);
   const [visible, setVisible] = useState(false);
@@ -88,6 +90,7 @@ const SignInForm: React.FC = () => {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null); // Clear previous errors
+    setInfo(null);  // Clear previous info messages
     try {
       const authClient = await resolveAuthClient();
       const { signInWithEmailAndPassword } = await import('firebase/auth');
@@ -109,6 +112,7 @@ const SignInForm: React.FC = () => {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null); // Clear previous errors
+    setInfo(null);  // Clear previous info messages
     setLoading(true); // Start loading
     try {
       // Add your sign-up logic here
@@ -122,6 +126,32 @@ const SignInForm: React.FC = () => {
       setLoading(false); // Stop loading
     }
   };
+
+  // Handle "Forgot password?" action
+  // Uses Firebase's password reset email flow
+  const handleForgotPassword = async () => {
+    // Reuse the email the user typed into the sign-in form
+    setError(null);
+    setInfo(null);
+
+    if (!email) {
+      // Enter an email first
+      setError("Please enter your email above, then click 'Forgot password?' again.");
+      return;
+    }
+
+    try {
+      const authClient = await resolveAuthClient();
+      const { sendPasswordResetEmail } = await import('firebase/auth');
+
+      await sendPasswordResetEmail(authClient, email);
+      setInfo(`Password reset email sent to ${email}. Please check your inbox.`);
+    } catch (firebaseError: any) {
+      const message = firebaseError?.message ?? String(firebaseError);
+      setError(message);
+    }
+  };
+
 
   return (
     <div className="auth-form-centered">
@@ -179,3 +209,4 @@ const SignInForm: React.FC = () => {
 };
 
 export default SignInForm;
+
