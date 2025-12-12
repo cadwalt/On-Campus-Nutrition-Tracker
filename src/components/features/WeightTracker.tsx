@@ -123,19 +123,19 @@ export const WeightTracker: React.FC = () => {
     };
   }, []);
   const onAdd = async () => {
-    // Add/update a weight entry for the selected date (one per date)
+    // CWE-20: Improper Input Validation - Parse and validate numeric weight input
     const val = parseFloat(weight);
     if (isNaN(val)) {
       setError(unit === 'kg' ? 'Enter a valid weight in kg' : 'Enter a valid weight in lbs');
       return;
     }
-    // Prevent future dates
+    // CWE-20: Improper Input Validation - Reject future dates
     const todayStr = new Date().toISOString().split('T')[0];
     if (date > todayStr) {
       setError('Cannot enter weight for a future date');
       return;
     }
-    // enforce allowed input range in the entered unit
+    // CWE-20: Improper Input Validation - Enforce min/max bounds for weight
     const maxAllowed = unit === 'kg' ? 700 : 1500;
     if (val < 1 || val > maxAllowed) {
       setError(`Enter a weight between 1 and ${maxAllowed} ${unit === 'kg' ? 'kg' : 'lbs'}`);
@@ -474,11 +474,12 @@ export const WeightTracker: React.FC = () => {
 
   // Standardized weight validation helper with overflow protection
   function validateWeightInput(value: string, unit: string): string | null {
+    // CWE-20: Improper Input Validation - Check for numeric and finite value
     const val = parseFloat(value);
     if (isNaN(val) || !Number.isFinite(val)) {
       return 'Enter a valid weight';
     }
-    // enforce allowed input range
+    // CWE-20: Improper Input Validation - Enforce min/max bounds
     const minAllowed = 1;
     const maxAllowed = unit === 'kg' ? 700 : 1500;
     if (val < minAllowed || val > maxAllowed) {
@@ -498,13 +499,14 @@ export const WeightTracker: React.FC = () => {
   // Save edits to an existing entry
   const handleSaveEdit = async () => {
     if (!editingEntry) return;
-    const validationError = validateWeightInput(editWeight, unit); // validate input
-    if (validationError) { // show error if invalid
+    // CWE-20: Improper Input Validation - Validate weight input via helper
+    const validationError = validateWeightInput(editWeight, unit);
+    if (validationError) {
       setError(validationError);
       return;
     }
     const val = parseFloat(editWeight);
-    // Prevent future dates
+    // CWE-20: Improper Input Validation - Reject future dates
     const todayStr = new Date().toISOString().split('T')[0];
     if (editDate > todayStr) { // future date
       setError('Cannot update weight for a future date');
@@ -665,6 +667,7 @@ export const WeightTracker: React.FC = () => {
                   style={{ marginBottom: 8, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}
                 >
                   <div className="water-custom-input-wrapper" style={{ flex: '0 1 auto', minWidth: 0 }}>
+                    {/* CWE-20: Improper Input Validation - Numeric input with bounds */}
                     <input
                       type="number"
                       placeholder={unit === 'kg' ? "Weight (kg)" : "Weight (lbs)"}
@@ -677,6 +680,7 @@ export const WeightTracker: React.FC = () => {
                       aria-label="Weight value"
                       style={{ minWidth: 180 }}
                     />
+                    {/* CWE-20: Improper Input Validation - Unit selection control */}
                     <select
                       className="water-custom-unit"
                       value={unit}
@@ -691,6 +695,7 @@ export const WeightTracker: React.FC = () => {
 
                   <div style={{ flex: '0 0 auto', minWidth: 160 }}>
                     <div className="water-custom-input-wrapper" style={{ minWidth: 160 }}>
+                      {/* CWE-20: Improper Input Validation - Date input with no future dates */}
                       <input
                         type="date"
                         value={date}
@@ -803,6 +808,7 @@ export const WeightTracker: React.FC = () => {
                   }}>
                     <h2 style={{ marginTop: 0, marginBottom: '1.5rem' }}>Edit Weight Entry</h2>
 
+                    {/* CWE-20: Improper Input Validation - Weight field with min/max bounds */}
                     <div style={{ marginBottom: '1rem' }}>
                       <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#9ca3af' }}>Weight ({unit})</label>
                       <input
@@ -827,6 +833,7 @@ export const WeightTracker: React.FC = () => {
 
                     <div style={{ marginBottom: '1.5rem' }}>
                       <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#9ca3af' }}>Date</label>
+                      {/* CWE-20: Improper Input Validation - Date field prevents future dates */}
                       <input
                         type="date"
                         value={editDate}
