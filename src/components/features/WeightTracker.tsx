@@ -4,6 +4,7 @@ import type { WeightEntry } from "../../types/weight";
 import { WeightChart } from './WeightChart.tsx';
 import { resolveFirebase } from '../../lib/resolveFirebase';
 import { useNavigate } from 'react-router-dom';
+<<<<<<< HEAD
 
 // Helper function to format date input
 function formatDateInput(dateStr: string): string {
@@ -41,6 +42,22 @@ function safeAverage(weights: number[]): number {
   }
   return sum / weights.length;
 }
+=======
+import {
+  processWeightInput,
+  findExistingEntry,
+  getDisplayWeight,
+  calculateAverageForPeriod,
+  prepareChartData,
+  prepareTableData,
+  hasReachedGoal,
+  generateTargetMessage,
+  isLatestEntry,
+  getRangeLabel,
+} from '../../utils/weightTrackerLogic';
+import { getTodayAsString, parseLocalDate } from '../../utils/dateUtils';
+import { filterEntriesByRange } from '../../utils/weightAggregation';
+>>>>>>> a9315db (Weight Tracking Refactoring for Reliability)
 
 // Main Weight Tracker component
 export const WeightTracker: React.FC = () => {
@@ -124,55 +141,40 @@ export const WeightTracker: React.FC = () => {
     };
   }, []);
   const onAdd = async () => {
-    // CWE-20: Improper Input Validation - Parse and validate numeric weight input
-    const val = parseFloat(weight);
-    if (isNaN(val)) {
-      setError(unit === 'kg' ? 'Enter a valid weight in kg' : 'Enter a valid weight in lbs');
-      return;
-    }
-    // CWE-20: Improper Input Validation - Reject future dates
-    const todayStr = new Date().toISOString().split('T')[0];
-    if (date > todayStr) {
-      setError('Cannot enter weight for a future date');
-      return;
-    }
-    // CWE-20: Improper Input Validation - Enforce min/max bounds for weight
-    const maxAllowed = unit === 'kg' ? 700 : 1500;
-    if (val < 1 || val > maxAllowed) {
-      setError(`Enter a weight between 1 and ${maxAllowed} ${unit === 'kg' ? 'kg' : 'lbs'}`);
-      return;
-    }
-    // convert (if kg) and round to 1 decimal place with overflow protection
-    let lbs: number;
+    // Validate and process weight input (handles CWE-20 validation)
+    let processed: ReturnType<typeof processWeightInput>;
     try {
-      const lbsRaw = unit === 'kg' ? safeConvert(val, 2.20462, 1500) : val;
-      lbs = Math.round(lbsRaw * 10) / 10;
+      processed = processWeightInput(weight, unit, date);
     } catch (err) {
-      setError(`Conversion error: ${err instanceof Error ? err.message : 'Invalid weight'}`);
+      setError(err instanceof Error ? err.message : 'Invalid input');
       return;
     }
-    const formattedDate = formatDateInput(date);
-    
+
+    const { weightLb: lbs, date: formattedDate } = processed;
+
     setBusy(true);
     try {
-      // Check if an entry already exists for this date
-      const existingEntry = entries.find((e) => e.date === formattedDate);
-      
+      // CWE-862: Check if entry exists for this date
+      const existingEntry = findExistingEntry(entries, formattedDate);
+
       if (existingEntry) {
-        // Update existing entry
         await update(existingEntry.id, { weightLb: lbs });
         setToast('Weight Updated');
       } else {
-        // Add new entry
         await add({ date: formattedDate, weightLb: lbs });
         setToast('Weight Saved');
       }
+<<<<<<< HEAD
       
       // Clear input fields and error if successful
+=======
+
+>>>>>>> a9315db (Weight Tracking Refactoring for Reliability)
       setWeight("");
       setError(null);
       if (toastTimer.current) window.clearTimeout(toastTimer.current);
       toastTimer.current = window.setTimeout(() => setToast(null), 3000);
+<<<<<<< HEAD
       
       // Check if goal was just reached based on the current entry and user goal direction
       if (targetLbs !== null && primaryGoal !== null) {
@@ -196,6 +198,13 @@ export const WeightTracker: React.FC = () => {
           if (formattedDate === latestDate) {
             setTimeout(() => setShowCongrats(true), 500);
           }
+=======
+
+      // Check if goal was reached
+      if (targetLbs !== null && hasReachedGoal(lbs, targetLbs, entries)) {
+        if (isLatestEntry(formattedDate, entries)) {
+          setTimeout(() => setShowCongrats(true), 500);
+>>>>>>> a9315db (Weight Tracking Refactoring for Reliability)
         }
       } else { // log missing target/goal
         console.log('WeightTracker: Goal check skipped - targetLbs:', targetLbs, 'primaryGoal:', primaryGoal);
@@ -212,6 +221,7 @@ export const WeightTracker: React.FC = () => {
     };
   }, []);
 
+<<<<<<< HEAD
   // Prepare sorted and filtered entries according to selected range
   const allSorted = [...entries].sort((a, b) => (a.date < b.date ? -1 : 1));
   
@@ -451,6 +461,26 @@ export const WeightTracker: React.FC = () => {
     const unitLabel = unit === 'kg' ? 'kg' : 'lbs';
     return `No weight entries yet — add your first entry to see progress toward ${targetDisplay} ${unitLabel}.`;
   })();
+=======
+  // Prepare data for chart and table using business logic utilities
+  const referenceDate = (range === 'week' || range === 'month') 
+    ? parseLocalDate(date) 
+    : new Date();
+
+  const filteredEntries = filterEntriesByRange(entries, range, referenceDate);
+  const chartEntries = prepareChartData(entries, range, referenceDate);
+  const tableData = prepareTableData(entries, range, referenceDate);
+
+  // Calculate statistics
+  const averageWeightLb = calculateAverageForPeriod(filteredEntries);
+  const averageWeightDisplay = averageWeightLb != null
+    ? getDisplayWeight(averageWeightLb, unit)
+    : null;
+
+  const latestEntry = entries.length > 0 ? entries[entries.length - 1] : undefined;
+  const targetMessage = generateTargetMessage(targetLbs, latestEntry, entries, unit);
+  const rangeLabelText = getRangeLabel(range, referenceDate, date);
+>>>>>>> a9315db (Weight Tracking Refactoring for Reliability)
 
   // Determine range label for table header
   const rangeLabelText = (() => {
@@ -473,6 +503,7 @@ export const WeightTracker: React.FC = () => {
     setEditDate(entry.date);
   };
 
+<<<<<<< HEAD
   // Standardized weight validation helper with overflow protection
   function validateWeightInput(value: string, unit: string): string | null {
     // CWE-20: Improper Input Validation - Check for numeric and finite value
@@ -515,17 +546,26 @@ export const WeightTracker: React.FC = () => {
     }
     // convert (if kg) with overflow protection
     let lbs: number;
+=======
+  const handleSaveEdit = async () => {
+    if (!editingEntry) return;
+    
+    // Validate and process weight input
+    let processed: ReturnType<typeof processWeightInput>;
+>>>>>>> a9315db (Weight Tracking Refactoring for Reliability)
     try {
-      const lbsRaw = unit === 'kg' ? safeConvert(val, 2.20462, 1500) : val;
-      lbs = Math.round(lbsRaw * 10) / 10;
+      processed = processWeightInput(editWeight, unit, editDate);
     } catch (err) {
-      setError(`Conversion error: ${err instanceof Error ? err.message : 'Invalid weight'}`);
+      setError(err instanceof Error ? err.message : 'Invalid input');
       return;
     }
+
+    const { weightLb: lbs, date: processedDate } = processed;
+
     setBusy(true);
     try { // remove old entry and add new one (to handle date changes)
       await remove(editingEntry.id);
-      await add({ date: editDate, weightLb: lbs });
+      await add({ date: processedDate, weightLb: lbs });
       setEditingEntry(null);
       setEditWeight('');
       setEditDate('');
@@ -533,6 +573,7 @@ export const WeightTracker: React.FC = () => {
       setToast('Weight Updated');
       if (toastTimer.current) window.clearTimeout(toastTimer.current); // reset toast timer
       toastTimer.current = window.setTimeout(() => setToast(null), 3000);
+<<<<<<< HEAD
       // Check if goal was just reached and this is the most recent entry
       if (targetLbs !== null && primaryGoal !== null) {
         let goalReached = false;
@@ -544,6 +585,12 @@ export const WeightTracker: React.FC = () => {
         const allDates = [...entries.map(e => e.date), editDate];
         const latestDate = allDates.reduce((a, b) => a > b ? a : b);
         if (goalReached && editDate === latestDate) {
+=======
+
+      // Check if goal was reached
+      if (targetLbs !== null && hasReachedGoal(lbs, targetLbs, entries.filter(e => e.id !== editingEntry.id))) {
+        if (isLatestEntry(processedDate, entries)) {
+>>>>>>> a9315db (Weight Tracking Refactoring for Reliability)
           setTimeout(() => setShowCongrats(true), 500);
         }
       }
@@ -756,7 +803,11 @@ export const WeightTracker: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
+<<<<<<< HEAD
                       {tableRows.map((row) => {
+=======
+                      {tableData.map((row) => {
+>>>>>>> a9315db (Weight Tracking Refactoring for Reliability)
                         const displayWeight = unit === 'kg' ? Math.round((row.weightLb / 2.20462) * 10) / 10 : row.weightLb;
                         const isClickable = !row.isAggregated;
                         const entry = filteredEntries.find((e: WeightEntry) => e.date === row.date && e.weightLb === row.weightLb);
@@ -774,7 +825,11 @@ export const WeightTracker: React.FC = () => {
                             onMouseEnter={(ev) => isClickable && (ev.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)')}
                             onMouseLeave={(ev) => (ev.currentTarget.style.backgroundColor = 'transparent')}
                           >
+<<<<<<< HEAD
                             <td style={{ paddingTop: 8, paddingBottom: 8, width: '50%' }}>{displayLabel}</td>
+=======
+                            <td style={{ paddingTop: 8, paddingBottom: 8, width: '50%' }}>{row.displayLabel}</td>
+>>>>>>> a9315db (Weight Tracking Refactoring for Reliability)
                             <td style={{ paddingTop: 8, paddingBottom: 8, width: '50%' }}>{displayWeight.toFixed(1)}</td>
                           </tr>
                         );

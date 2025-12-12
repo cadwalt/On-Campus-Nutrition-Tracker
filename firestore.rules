@@ -184,15 +184,24 @@ service cloud.firestore {
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // CWE-862: Missing Authorization - Enforce user-scoped access to weight entries
+    // CWE-862: Missing Authorization - Enforce user-scoped access to weight collection
+    // Documents in the 'weight' collection have 'owner' and 'userID' fields for backward compatibility
     // Only authenticated users can read/write their own weight entries
-    match /users/{userId}/weight_entries/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    match /weight/{document=**} {
+      allow read: if request.auth != null && 
+        (resource.data.owner == request.auth.uid || resource.data.userID == request.auth.uid);
+      allow write: if request.auth != null && 
+        (resource.data.owner == request.auth.uid || resource.data.userID == request.auth.uid);
+      allow create: if request.auth != null;
     }
 
     // CWE-862: Missing Authorization - Enforce user-scoped access to user documents (goals, preferences)
     // Only authenticated users can read/write their own user profile and goals
     match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /users/{userId}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 

@@ -104,14 +104,27 @@ firebase deploy --only firestore:rules
 ```
 
 **Security Rules:** The project includes Firestore security rules (`firestore.rules`) that enforce:
-- **CWE-862 (Missing Authorization):** Only authenticated users can read/write their own weight entries and user preferences
-- **User scoping:** Each user's data is isolated by their unique Firebase Auth UID
+- **CWE-862 (Missing Authorization):** Only authenticated users can read/write their own data
+  - **Weight collection (`/weight/{docId}`):** Users can only access documents where `owner == auth.uid` or `userID == auth.uid` (backward compatibility)
+  - **User collection (`/users/{userId}/...`):** Users can only access their own profile and preferences
+- **User scoping:** Each user's data is isolated by their unique Firebase Auth UID stored in the document
 - **Default deny:** All unlisted paths are blocked
+
+#### Data Structure
+- **Root-level collection:** `/weight/{docId}` contains weight entries with `owner` and `userID` fields
+- **User collection:** `/users/{userId}` contains user profile, goals, and preferences
+- **Field-based authorization:** Rules check `owner` or `userID` field in each document to verify access
 
 #### Verify Rules Deployment
 ```bash
 firebase rules:list
 ```
+
+**Troubleshooting:** If users cannot view their weight data:
+1. Check that rules have been deployed: `firebase rules:list`
+2. Verify user is authenticated: Check Firebase Auth tab in Console
+3. Check document has `owner` or `userID` field matching user's UID
+4. Redeploy rules if needed: `firebase deploy --only firestore:rules`
 
 ### Running the Project
 
