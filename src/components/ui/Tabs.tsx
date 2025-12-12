@@ -19,7 +19,11 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onTabChange }) => {
       gap: '0.5rem',
       borderBottom: '2px solid rgba(255, 255, 255, 0.1)',
       marginBottom: '1.5rem',
-      paddingBottom: '0.5rem'
+      paddingBottom: '0.5rem',
+      overflowX: 'auto',
+      WebkitOverflowScrolling: 'touch',
+      scrollbarWidth: 'none',
+      msOverflowStyle: 'none'
     }}>
       {tabs.map((tab) => (
         <button
@@ -43,7 +47,9 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onTabChange }) => {
             gap: '0.5rem',
             transition: 'all 0.2s',
             marginBottom: '-0.5rem',
-            borderRadius: '6px 6px 0 0'
+            borderRadius: '6px 6px 0 0',
+            flexShrink: 0,
+            whiteSpace: 'nowrap'
           }}
           onMouseEnter={(e) => {
             if (activeTab !== tab.id) {

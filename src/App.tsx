@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import './App.css';
 import GlobalSidebar from './components/ui/GlobalSidebar';
+import MobileNavMenu from './components/ui/MobileNavMenu';
 import BackgroundBlobs from './components/ui/BackgroundBlobs';
 import React, { Suspense } from 'react';
 
@@ -25,6 +26,7 @@ function AppContent() {
     <div className="app-container">
       {/* Autonomous decorative background blobs (non-interactive, behind UI) */}
       <BackgroundBlobs />
+      {!isAuth && <MobileNavMenu />}
       {!isAuth && <GlobalSidebar />}
       <div className={"app-layout" + (isAuth ? " no-sidebar" : "")}>
         <main className={

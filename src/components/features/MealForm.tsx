@@ -1,515 +1,761 @@
-import React, { useEffect, useMemo, useState } from 'react';
+/**
+ * MealForm Component
+ * 
+ * Main form for adding/editing meal entries with nutrition tracking.
+ * Implements security, accessibility, and reliability best practices:
+ * - Input validation & sanitization
+ * - ARIA attributes & keyboard navigation
+ * - Defensive parsing & error handling
+ * 
+ * Architecture:
+ * - Form state management with validation
+ * - Favorites integration with search
+ * - Lazy Firebase loading for performance
+ * - Comprehensive error handling and user feedback
+ */
 
+import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+
+// Lazy-load Firebase to avoid bundling auth in initial chunk (Performance & Security)
 const resolveFirebase = async () => {
-  const mod: any = await import('../../firebase');
+  const mod: any = await import("../../firebase");
   const db = (mod.getFirestoreClient ? await mod.getFirestoreClient() : mod.db) as any;
-  const firestore = await import('firebase/firestore');
-  const firebaseAuth = await import('firebase/auth');
+  const firestore = await import("firebase/firestore");
+  const firebaseAuth = await import("firebase/auth");
   return { db, firestore, firebaseAuth };
 };
-import type { Meal } from '../../types/meal';
-import Toast from '../ui/Toast';
-import type { FavoriteItem } from '../../types/favorite';
-import { getFavoritesForUser } from '../services/favoritesService';
+import type { Meal } from "../../types/meal";
+import Toast from "../ui/Toast";
+import type { FavoriteItem } from "../../types/favorite";
+import { getFavoritesForUser } from "../services/favoritesService";
+import { validateMeal, MEAL_CONSTRAINTS, sanitizeMeal, parseNumber } from "../../utils/mealValidation";
+import {
+  SUGGESTION_ITEM_STYLE,
+  SUGGESTION_PANEL_STYLE,
+  SUGGESTION_PLUS_BUTTON_STYLE,
+  SUGGESTION_NAME_STYLE,
+  SUGGESTION_MAIN_TEXT_STYLE,
+  SUGGESTION_SECONDARY_TEXT_STYLE,
+  FORM_ACTIONS_STYLE,
+  BUTTON_GROUP_STYLE,
+  MODAL_BODY_STYLE,
+  SEARCH_INPUT_STYLE,
+  FAVORITES_LIST_BUTTON_STYLE,
+  FAVORITES_LIST_NAME_STYLE,
+  FAVORITES_LIST_META_STYLE,
+  FAVORITES_LIST_EMPTY_STYLE,
+  CLEAR_BUTTON_STYLE,
+} from "./styles/mealFormStyles";
 
+/**
+ * Props for MealForm component
+ * @param onMealAdded - Callback when meal is successfully added
+ * @param initialMeal - Pre-populate form with existing meal data
+ * @param onInitialMealSet - Callback when initial data is loaded
+ * @param planningMode - If true, don't save to database, only call onMealAdded
+ */
 interface MealFormProps {
   onMealAdded: (meal: Meal) => void;
   initialMeal?: Meal | null;
   onInitialMealSet?: () => void;
-  planningMode?: boolean; // If true, don't save to meals collection, only call onMealAdded
+  planningMode?: boolean;
 }
 
+/**
+ * Default form state - all fields as strings for easier input control
+ */
+const DEFAULT_FORM_STATE = {
+  name: "",
+  calories: "",
+  servingSize: "",
+  servingsHad: "",
+  totalCarbs: "",
+  totalFat: "",
+  protein: "",
+  fatCategories: "",
+  sodium: "",
+  sugars: "",
+  calcium: "",
+  vitamins: "",
+  iron: "",
+  otherInfo: "",
+};
+
+/**
+ * Populate form from meal data defensively
+ * Uses optional chaining and nullish coalescing to handle missing/incomplete data
+ */
+const populateFormFromMeal = (meal: Meal | null | undefined) => {
+  if (!meal) return DEFAULT_FORM_STATE;
+  
+  return {
+    name: meal?.name ?? "",
+    calories: meal?.calories != null ? String(meal?.calories) : "",
+    servingSize: meal?.servingSize ?? "",
+    servingsHad: meal?.servingsHad != null ? String(meal?.servingsHad) : "",
+    totalCarbs: meal?.totalCarbs != null ? String(meal?.totalCarbs) : "",
+    totalFat: meal?.totalFat != null ? String(meal?.totalFat) : "",
+    protein: meal?.protein != null ? String(meal?.protein) : "",
+    fatCategories: meal?.fatCategories ?? "",
+    sodium: meal?.sodium != null ? String(meal?.sodium) : "",
+    sugars: meal?.sugars != null ? String(meal?.sugars) : "",
+    calcium: meal?.calcium != null ? String(meal?.calcium) : "",
+    vitamins: meal?.vitamins ?? "",
+    iron: meal?.iron != null ? String(meal?.iron) : "",
+    otherInfo: meal?.otherInfo ?? "",
+  };
+};
+
 const MealForm: React.FC<MealFormProps> = ({ onMealAdded, initialMeal, onInitialMealSet, planningMode = false }) => {
-  const [form, setForm] = useState({
-    name: '',
-    calories: '',
-    servingSize: '',
-    servingsHad: '',
-    totalCarbs: '',
-    totalFat: '',
-    protein: '',
-    fatCategories: '',
-    sodium: '',
-    sugars: '',
-    calcium: '',
-    vitamins: '',
-    iron: '',
-    otherInfo: '',
-  });
+  // ─────────────────────────────────────────────────────────────────
+  // STATE MANAGEMENT
+  // ─────────────────────────────────────────────────────────────────
+  
+  // Form fields: All stored as strings for easier input control
+  // Numbers are parsed/validated only on submit to avoid blocking user typing
+  const [form, setForm] = useState(populateFormFromMeal(initialMeal));
+
+  // UI state for notifications and error display
   const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; visible: boolean }>({
-    message: '',
-    type: 'success',
+  const [formError, setFormError] = useState<{ field?: string; message: string } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error"; visible: boolean }>({
+    message: "",
+    type: "success",
     visible: false,
   });
-  const [showOptional, setShowOptional] = useState(false);
-  const [priorMeals, setPriorMeals] = useState<Meal[] | null>(null);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [favorites, setFavorites] = useState<FavoriteItem[] | null>(null);
-  const [selectedFavoriteId, setSelectedFavoriteId] = useState<string>('');
 
-  // Fill form when initialMeal is provided
+  // UI state for collapsible sections and modals
+  const [showOptional, setShowOptional] = useState(false);
+  const [favorites, setFavorites] = useState<FavoriteItem[] | null>(null);
+  const [meals, setMeals] = useState<Meal[]>([]);
+  const [showFavoritesModal, setShowFavoritesModal] = useState(false);
+  const [favoritesSearch, setFavoritesSearch] = useState("");
+  const [showNameSuggestions, setShowNameSuggestions] = useState(false);
+
+  // ─────────────────────────────────────────────────────────────────
+  // INITIALIZATION & SIDE EFFECTS
+  // ─────────────────────────────────────────────────────────────────
+
+  // Initialize form with meal data on mount or when initialMeal changes
   useEffect(() => {
     if (initialMeal) {
-      setForm({
-        name: initialMeal.name || '',
-        calories: String(initialMeal.calories ?? ''),
-        servingSize: initialMeal.servingSize || '',
-        servingsHad: initialMeal.servingsHad != null ? String(initialMeal.servingsHad) : '',
-        totalCarbs: initialMeal.totalCarbs != null ? String(initialMeal.totalCarbs) : '',
-        totalFat: initialMeal.totalFat != null ? String(initialMeal.totalFat) : '',
-        protein: initialMeal.protein != null ? String(initialMeal.protein) : '',
-        fatCategories: initialMeal.fatCategories || '',
-        sodium: initialMeal.sodium != null ? String(initialMeal.sodium) : '',
-        sugars: initialMeal.sugars != null ? String(initialMeal.sugars) : '',
-        calcium: initialMeal.calcium != null ? String(initialMeal.calcium) : '',
-        vitamins: initialMeal.vitamins || '',
-        iron: initialMeal.iron != null ? String(initialMeal.iron) : '',
-        otherInfo: initialMeal.otherInfo || '',
-      });
-      setShowSuggestions(false);
+      setForm(populateFormFromMeal(initialMeal));
       if (onInitialMealSet) {
         onInitialMealSet();
       }
     }
   }, [initialMeal, onInitialMealSet]);
 
-  // fetch current user on-demand to avoid bundling auth into initial chunk
+  // ─────────────────────────────────────────────────────────────────
+  // HELPER FUNCTIONS
+  // ─────────────────────────────────────────────────────────────────
+
+  // Get current authenticated user from Firebase
+  // Lazy loads auth library only when needed
   const getCurrentUser = async () => {
     const { firebaseAuth } = await resolveFirebase();
     return firebaseAuth.getAuth ? firebaseAuth.getAuth().currentUser : null;
   };
 
-  const showToast = (message: string, type: 'success' | 'error') => {
+  // User feedback helpers
+  const showToast = (message: string, type: "success" | "error") => {
     setToast({ message, type, visible: true });
   };
 
   const closeToast = () => setToast((t) => ({ ...t, visible: false }));
 
+  // Update form field and clear any field-specific errors
+  // Provides immediate feedback as user corrects validation errors
   const updateField = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
-    if (field === 'name') setShowSuggestions(true);
+    if (formError && formError.field === field) {
+      setFormError(null);
+    }
   };
 
+  // Reset form to empty state
+  const resetForm = () => {
+    setForm(DEFAULT_FORM_STATE);
+    setShowOptional(false);
+  };
+
+  // List of required fields for quick validation
   const requiredMissing = () => {
     const missing: string[] = [];
-    if (!form.name.trim()) missing.push('Meal name');
-    if (!form.calories.trim()) missing.push('Calories');
-    if (!form.servingSize.trim()) missing.push('Serving size');
-    if (!form.servingsHad.trim()) missing.push('Servings Had');
+    if (!form.name.trim()) missing.push("Name");
+    if (!form.servingSize.trim()) missing.push("Serving Size");
+    if (!form.calories.trim()) missing.push("Calories");
     return missing;
   };
 
-  const parseNumber = (val: string): number | undefined => {
-    if (!val.trim()) return undefined;
-    const n = Number(val);
-    return isFinite(n) ? n : undefined;
-  };
-
-  // Subscribe to this user's prior meals for predictive suggestions
-  useEffect(() => {
-    (async () => {
+  /**
+   * Load meal history from Firestore for the current user
+   * Used both on mount and after saving a new meal to keep predictive search updated
+   */
+  const loadMealHistory = async (mounted: boolean = true) => {
+    try {
       const user = await getCurrentUser();
       if (!user) {
-        setPriorMeals([]);
+        if (mounted) setMeals([]);
         return;
       }
-      const { db, firestore } = await resolveFirebase();
-      const qUserMeals = firestore.query(firestore.collection(db, 'meals'), firestore.where('userId', '==', user.uid));
-      const unsub = firestore.onSnapshot(
-        qUserMeals,
-        (snap: any) => {
-          const list: Meal[] = [];
-          snap.forEach((docSnap: any) => {
-            const data = docSnap.data() as Meal;
-            list.push({ ...data, id: docSnap.id });
-          });
-          setPriorMeals(list);
-        },
-        (err: any) => {
-          console.error('Error loading meals for suggestions:', err);
-          setPriorMeals([]);
-        }
-      );
-      return () => unsub();
-    })();
-  }, []);
 
-  // Load user's favorites for quick-add
+      const { db, firestore } = await resolveFirebase();
+      const q = firestore.query(
+        firestore.collection(db, "meals"),
+        firestore.where("userId", "==", user.uid)
+      );
+      const snapshot = await firestore.getDocs(q);
+      const mealsList: Meal[] = [];
+      snapshot.forEach((doc: any) => {
+        const data = doc.data();
+        mealsList.push({ id: doc.id, ...data } as Meal);
+      });
+      if (mounted) setMeals(mealsList);
+    } catch (e) {
+      console.error("Failed to load meals", e);
+      if (mounted) setMeals([]);
+    }
+  };
+
+  /**
+   * Build meal object from form data for database storage
+   * Handles type conversion, sanitization, and optional field inclusion
+   */
+  const buildMealObject = (userId: string): Meal => {
+    // Sanitization function for XSS prevention
+    const sanitize = (val: string) => val.replace(/[<>]/g, "").trim();
+
+    // Base required fields
+    const mealBase: Meal = {
+      userId,
+      name: sanitize(form.name),
+      calories: Number(form.calories),
+      servingSize: sanitize(form.servingSize),
+      createdAt: Date.now(),
+    };
+
+    // Add optional numeric fields if they have valid values
+    const numericOptional: Record<string, string> = {
+      servingsHad: form.servingsHad,
+      totalCarbs: form.totalCarbs,
+      totalFat: form.totalFat,
+      protein: form.protein,
+      sodium: form.sodium,
+      sugars: form.sugars,
+      calcium: form.calcium,
+      iron: form.iron,
+    };
+
+    Object.entries(numericOptional).forEach(([key, raw]) => {
+      const parsed = parseNumber(raw);
+      if (typeof parsed === "number") {
+        // @ts-expect-error dynamic assignment of optional field
+        mealBase[key] = parsed;
+      }
+    });
+
+    // Add optional string fields if they have non-empty values
+    const stringOptional: Record<string, string> = {
+      fatCategories: form.fatCategories,
+      vitamins: form.vitamins,
+      otherInfo: form.otherInfo,
+    };
+
+    Object.entries(stringOptional).forEach(([key, raw]) => {
+      const trimmed = sanitize(raw);
+      if (trimmed) {
+        // @ts-expect-error dynamic assignment of optional field
+        mealBase[key] = trimmed;
+      }
+    });
+
+    return mealBase;
+  };
+
+  // ─────────────────────────────────────────────────────────────────
+  // SIDE EFFECTS & DATA LOADING
+  // ─────────────────────────────────────────────────────────────────
+
+  // Load user's favorite meals and meal history on component mount
+  // Uses cleanup function to prevent memory leaks from stale state updates
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
         const user = await getCurrentUser();
         if (!user) {
-          if (mounted) setFavorites([]);
+          if (mounted) {
+            setFavorites([]);
+            setMeals([]);
+          }
           return;
         }
+
+        // Load favorites
         const favs = await getFavoritesForUser(user.uid);
-        if (mounted) setFavorites(favs || []);
+        const sortedFavs = (favs || []).slice().sort((a: FavoriteItem, b: FavoriteItem) => (a.name || "").localeCompare(b.name || ""));
+        if (mounted) setFavorites(sortedFavs);
+
+        // Load meal history from firestore
+        await loadMealHistory(mounted);
       } catch (e) {
-        console.error('Failed to load favorites', e);
-        if (mounted) setFavorites([]);
+        console.error("Failed to load favorites or meals", e);
+        if (mounted) {
+          setFavorites([]);
+          setMeals([]);
+        }
       }
     })();
     return () => { mounted = false; };
   }, []);
 
-  const filteredSuggestions = useMemo(() => {
+  // ─────────────────────────────────────────────────────────────────
+  // MEMOIZED SELECTORS & COMPUTATIONS
+  // ─────────────────────────────────────────────────────────────────
+
+  // Filter favorites by search term and sort alphabetically
+  const filteredFavorites = useMemo(() => {
+    if (!favorites) return [];
+    const base: FavoriteItem[] = favorites;
+    const filtered = favoritesSearch ? base.filter((f) => (f.name || "").toLowerCase().includes(favoritesSearch)) : base;
+    return filtered.slice().sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  }, [favorites, favoritesSearch]);
+
+  // Get meal name suggestions from favorites and meal history
+  // Prioritizes favorites, then adds meal names from history
+  const nameSuggestions = useMemo(() => {
     const term = form.name.trim().toLowerCase();
-    if (!term || term.length < 2 || !priorMeals) return [] as Meal[];
-    // dedupe by lowercase name; keep latest
-    const map = new Map<string, Meal>();
-    for (const m of priorMeals) {
-      map.set(m.name.toLowerCase(), m);
+    const allItems: (FavoriteItem & { isFavorite: boolean; mealData?: Meal })[] = [];
+
+    if (!favorites || (favorites.length === 0 && meals.length === 0)) {
+      return [] as (FavoriteItem & { isFavorite: boolean; mealData?: Meal })[];
     }
-    const unique = Array.from(map.values());
-    const toMs = (v: any) =>
-      typeof v === 'number'
-        ? v
-        : v?.seconds
-        ? v.seconds * 1000 + Math.floor((v.nanoseconds || 0) / 1e6)
-        : v instanceof Date
-        ? v.getTime()
-        : 0;
-    return unique
-      .filter((m) => m.name.toLowerCase().includes(term))
-      .sort((a, b) => toMs(b.createdAt) - toMs(a.createdAt))
-      .slice(0, 5);
-  }, [form.name, priorMeals]);
 
-  const applySuggestionToForm = (m: Meal) => {
-    setForm({
-      name: m.name || '',
-      calories: String(m.calories ?? ''),
-      servingSize: m.servingSize || '',
-      servingsHad: m.servingsHad != null ? String(m.servingsHad) : '',
-      totalCarbs: m.totalCarbs != null ? String(m.totalCarbs) : '',
-      totalFat: m.totalFat != null ? String(m.totalFat) : '',
-      protein: m.protein != null ? String(m.protein) : '',
-      fatCategories: m.fatCategories || '',
-      sodium: m.sodium != null ? String(m.sodium) : '',
-      sugars: m.sugars != null ? String(m.sugars) : '',
-      calcium: m.calcium != null ? String(m.calcium) : '',
-      vitamins: m.vitamins || '',
-      iron: m.iron != null ? String(m.iron) : '',
-      otherInfo: m.otherInfo || '',
-    });
-    setShowSuggestions(false);
-  };
-
-  const quickAddSuggestion = async (m: Meal) => {
-    const user = await getCurrentUser();
-    if (!user) {
-      showToast('You must be signed in to save meals', 'error');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const base: Meal = {
-        userId: user.uid,
-        name: m.name,
-        calories: m.calories,
-        servingSize: m.servingSize,
-        createdAt: Date.now(),
-      };
-      const optional: Partial<Meal> = {};
-      // Only include numeric optionals if they are numbers
-      if (typeof m.servingsHad === 'number') optional.servingsHad = m.servingsHad;
-      if (typeof m.totalCarbs === 'number') optional.totalCarbs = m.totalCarbs;
-      if (typeof m.totalFat === 'number') optional.totalFat = m.totalFat;
-      if (typeof m.protein === 'number') optional.protein = m.protein;
-      if (typeof m.sodium === 'number') optional.sodium = m.sodium;
-      if (typeof m.sugars === 'number') optional.sugars = m.sugars;
-      if (typeof m.calcium === 'number') optional.calcium = m.calcium;
-      if (typeof m.iron === 'number') optional.iron = m.iron;
-      // Include string optionals only if non-empty
-      if (m.fatCategories && m.fatCategories.trim()) optional.fatCategories = m.fatCategories.trim();
-      if (m.vitamins && m.vitamins.trim()) optional.vitamins = m.vitamins.trim();
-      if (m.otherInfo && m.otherInfo.trim()) optional.otherInfo = m.otherInfo.trim();
-
-      const meal: Meal = { ...base, ...optional } as Meal;
-      
-      if (planningMode) {
-        // In planning mode, don't save to meals collection, just call callback
-        showToast('Meal prepared for planning!', 'success');
-        onMealAdded(meal);
-      } else {
-        // Normal mode: save to meals collection
-        const { db, firestore } = await resolveFirebase();
-        const ref = await firestore.addDoc(firestore.collection(db, 'meals'), meal);
-        const added: Meal = { ...meal, id: ref.id };
-        onMealAdded(added);
-        showToast('Meal added from suggestion', 'success');
-      }
-      setForm({
-        name: '', calories: '', servingSize: '', servingsHad: '', totalCarbs: '', totalFat: '', protein: '', fatCategories: '', sodium: '', sugars: '', calcium: '', vitamins: '', iron: '', otherInfo: '',
+    // Add favorites with priority flag
+    if (favorites) {
+      favorites.forEach((f) => {
+        allItems.push({ ...f, isFavorite: true });
       });
-    } catch (e: any) {
-      console.error('Quick add failed', e);
-      showToast(e.message || 'Failed to add meal', 'error');
-    } finally {
-      setSubmitting(false);
-      setShowSuggestions(false);
     }
-  };
 
+    // Add unique meal names from history (deduplicate by normalized name)
+    const favoriteNames = new Set(favorites?.map((f) => (f.name || "").toLowerCase().trim()) || []);
+    const mealNames = new Set<string>();
+    if (meals) {
+      meals.forEach((m) => {
+        const normalizedName = (m.name || "").toLowerCase().trim();
+        // Only add if not already in favorites and not already added
+        if (!favoriteNames.has(normalizedName) && !mealNames.has(normalizedName)) {
+          mealNames.add(normalizedName);
+          allItems.push({
+            id: `meal_${m.id}`,
+            name: m.name,
+            source: "meal" as const,
+            created_at: Date.now(),
+            isFavorite: false,
+            mealData: m, // Include the full meal data for auto-population
+          });
+        }
+      });
+    }
+
+    // If no search term, show favorites first, then recent meals (up to 6 total)
+    if (!term) {
+      const favOnly = allItems.filter((i) => i.isFavorite).slice(0, 6);
+      if (favOnly.length < 6) {
+        const remaining = allItems.filter((i) => !i.isFavorite).slice(0, 6 - favOnly.length);
+        return favOnly.concat(remaining);
+      }
+      return favOnly;
+    }
+
+    // Filter by search term
+    const matches = allItems.filter((item) => {
+      const name = (item.name || "").toLowerCase();
+      return name.includes(term);
+    });
+
+    // Sort: favorites first, then alphabetically
+    return matches
+      .sort((a, b) => {
+        if (a.isFavorite !== b.isFavorite) {
+          return a.isFavorite ? -1 : 1; // Favorites first
+        }
+        return (a.name || "").localeCompare(b.name || "");
+      })
+      .slice(0, 6);
+  }, [favorites, meals, form.name]);
+
+  // ─────────────────────────────────────────────────────────────────
+  // FORM SUBMISSION
+  // ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Main form submission handler
+   * Multi-layer validation: authentication → required fields → constraints → database save
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 1. Require authentication before any write operation
     const user = await getCurrentUser();
     if (!user) {
-      showToast('You must be signed in to save meals', 'error');
+      showToast("You must be signed in to save meals", "error");
       return;
     }
+
+    // 2. Check required fields first (fast validation)
     const missing = requiredMissing();
     if (missing.length) {
-      showToast(`Missing required: ${missing.join(', ')}`, 'error');
+      showToast(`Missing: ${missing.join(", ")}`, "error");
       return;
     }
+
+    // 3. Validate using centralized validation utility (DRY principle)
+    // Ensures consistent validation across all components
+    const validationError = validateMeal(form);
+    if (validationError) {
+      setFormError({ message: validationError.message });
+      showToast(validationError.message, "error");
+      return;
+    }
+
+    // 4. Build meal object and save to database
     setSubmitting(true);
     try {
-      // Build meal object with ONLY defined optional fields (Firestore rejects undefined)
-      const mealBase: Meal = {
-        userId: user.uid,
-        name: form.name.trim(),
-        calories: Number(form.calories),
-        servingSize: form.servingSize.trim(),
-        createdAt: Date.now(),
-      };
+      const meal = buildMealObject(user.uid);
+      const { db, firestore } = await resolveFirebase();
 
-      const numericOptional: Record<string, string> = {
-        servingsHad: form.servingsHad,
-        totalCarbs: form.totalCarbs,
-        totalFat: form.totalFat,
-        protein: form.protein,
-        sodium: form.sodium,
-        sugars: form.sugars,
-        calcium: form.calcium,
-        iron: form.iron,
-      };
+      if (planningMode) {
+        // Planning mode: only call callback, don't save to database
+        showToast("Meal prepared for planning!", "success");
+        onMealAdded(meal);
+      } else {
+        // Normal mode: save to Firestore
+        const ref = await firestore.addDoc(firestore.collection(db, "meals"), meal);
+        console.debug("[MealForm] Added meal", { id: ref.id, meal });
+        const added: Meal = { ...meal, id: ref.id };
+        onMealAdded(added);
+        showToast("Meal saved", "success");
 
-      Object.entries(numericOptional).forEach(([key, raw]) => {
-        const parsed = parseNumber(raw);
-        if (typeof parsed === 'number') {
-          // @ts-expect-error dynamic assignment of optional field
-          mealBase[key] = parsed;
-        }
-      });
+        // Reload meal history so it appears immediately in predictive search
+        // This ensures just-entered meals are available for suggestions without page refresh
+        await loadMealHistory(true);
+      }
 
-      const stringOptional: Record<string, string> = {
-        fatCategories: form.fatCategories,
-        vitamins: form.vitamins,
-        otherInfo: form.otherInfo,
-      };
-      Object.entries(stringOptional).forEach(([key, raw]) => {
-        const trimmed = raw.trim();
-        if (trimmed) {
-          // @ts-expect-error dynamic assignment of optional field
-          mealBase[key] = trimmed;
-        }
-      });
-
-        const meal: Meal = mealBase;
-        const { db, firestore } = await resolveFirebase();
-        
-        if (planningMode) {
-          // In planning mode, don't save to meals collection, just call callback
-          showToast('Meal prepared for planning!', 'success');
-          onMealAdded(meal);
-        } else {
-          // Normal mode: save to meals collection
-          const ref = await firestore.addDoc(firestore.collection(db, 'meals'), meal);
-          console.debug('[MealForm] Added meal', { id: ref.id, meal });
-          const added: Meal = { ...meal, id: ref.id };
-          onMealAdded(added);
-          showToast('Meal saved', 'success');
-        }
-      setForm({
-        name: '', calories: '', servingSize: '', servingsHad: '', totalCarbs: '', totalFat: '', protein: '', fatCategories: '', sodium: '', sugars: '', calcium: '', vitamins: '', iron: '', otherInfo: '',
-      });
+      // Clear form after successful save
+      resetForm();
     } catch (err: any) {
       console.error(err);
-      showToast(err.message || 'Failed to save meal', 'error');
+      showToast(err.message || "Failed to save meal", "error");
     } finally {
       setSubmitting(false);
     }
   };
 
+  // Apply favorite or meal data to form with defensive null checks
+  const applyFavoriteToForm = (item: FavoriteItem & { isFavorite?: boolean; mealData?: Meal }) => {
+    // If it's from meal history, populate from the meal data
+    if (item.mealData) {
+      setForm(populateFormFromMeal(item.mealData));
+    } else {
+      // It's a favorite, populate from favorite data
+      setForm((prev) => ({
+        ...prev,
+        name: item.name || prev.name,
+        calories: item.nutrition?.calories != null ? String(item.nutrition.calories) : prev.calories,
+        servingSize: item.servingSize != null ? item.servingSize : prev.servingSize,
+        totalCarbs: item.nutrition?.carbs != null ? String(item.nutrition.carbs) : prev.totalCarbs,
+        totalFat: item.nutrition?.fat != null ? String(item.nutrition.fat) : prev.totalFat,
+        protein: item.nutrition?.protein != null ? String(item.nutrition.protein) : prev.protein,
+        sodium: item.nutrition?.sodium != null ? String(item.nutrition.sodium) : prev.sodium,
+        sugars: item.nutrition?.sugars != null ? String(item.nutrition.sugars) : prev.sugars,
+        calcium: item.nutrition?.calcium != null ? String(item.nutrition.calcium) : prev.calcium,
+        iron: item.nutrition?.iron != null ? String(item.nutrition.iron) : prev.iron,
+        fatCategories: item.nutrition?.fatCategories != null ? String(item.nutrition.fatCategories) : prev.fatCategories,
+        vitamins: item.nutrition?.vitamins != null ? String(item.nutrition.vitamins) : prev.vitamins,
+        otherInfo: item.nutrition?.otherInfo != null ? String(item.nutrition.otherInfo) : prev.otherInfo,
+      }));
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────
+  // RENDER
+  // ─────────────────────────────────────────────────────────────────
+
   return (
-    <form className="meal-form" onSubmit={handleSubmit}>
-      {/* Add a Favorite quick-fill */}
-      <div style={{ marginBottom: 12 }}>
-        <h4 style={{ margin: '0 0 6px 0' }}>Add a Favorite</h4>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <select
-            className="favorite-select"
-            value={selectedFavoriteId}
-            onChange={(e) => {
-              const id = e.target.value;
-              setSelectedFavoriteId(id);
-              if (!id) return;
-              const fav = (favorites || []).find((f) => f.id === id);
-              if (!fav) return;
-              // apply favorite to form (populate all available nutritional fields and serving size)
-              setForm((prev) => ({
-                ...prev,
-                name: fav.name || prev.name,
-                calories: fav.nutrition?.calories != null ? String(fav.nutrition.calories) : prev.calories,
-                servingSize: fav.servingSize != null ? fav.servingSize : prev.servingSize,
-                totalCarbs: fav.nutrition?.carbs != null ? String(fav.nutrition.carbs) : prev.totalCarbs,
-                totalFat: fav.nutrition?.fat != null ? String(fav.nutrition.fat) : prev.totalFat,
-                protein: fav.nutrition?.protein != null ? String(fav.nutrition.protein) : prev.protein,
-                sodium: fav.nutrition?.sodium != null ? String(fav.nutrition.sodium) : prev.sodium,
-                sugars: fav.nutrition?.sugars != null ? String(fav.nutrition.sugars) : prev.sugars,
-                calcium: fav.nutrition?.calcium != null ? String(fav.nutrition.calcium) : prev.calcium,
-                iron: fav.nutrition?.iron != null ? String(fav.nutrition.iron) : prev.iron,
-                fatCategories: fav.nutrition?.fatCategories != null ? String(fav.nutrition.fatCategories) : prev.fatCategories,
-                vitamins: fav.nutrition?.vitamins != null ? String(fav.nutrition.vitamins) : prev.vitamins,
-                otherInfo: fav.nutrition?.otherInfo != null ? String(fav.nutrition.otherInfo) : prev.otherInfo,
-              }));
-            }}
-          >
-            <option value="">Select a favorite to prefill the form...</option>
-            {(favorites || []).map((f) => (
-              <option key={f.id} value={f.id}>{f.name}</option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className="favorite-clear-button"
-            onClick={() => setSelectedFavoriteId('')}
-          >Clear</button>
-        </div>
-      </div>
-      {/* Required fields */}
-      <div className="form-grid">
-        <div className="form-field required">
-          <label>Meal Name</label>
-          <div className="autocomplete">
+    <>
+      <form className="meal-form" onSubmit={handleSubmit}>
+        {/* Required fields */}
+        <div className="form-grid" style={{ overflow: "visible" }}>
+          <div className="form-field required" style={{ position: "relative", overflow: "visible" }}>
+            <label htmlFor="meal-name">Meal Name</label>
             <input
+              id="meal-name"
               value={form.name}
-              onChange={(e) => updateField('name', e.target.value)}
-              onFocus={() => setShowSuggestions(true)}
-              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+              maxLength={MEAL_CONSTRAINTS.MAX_NAME_LENGTH}
+              onChange={(e) => {
+                const value = e.target.value;
+                updateField("name", value);
+                setShowNameSuggestions(true);
+              }}
+              onFocus={() => setShowNameSuggestions(true)}
+              onBlur={() => {
+                // Delay hiding suggestions to allow onClick on suggestion buttons to fire first
+                setTimeout(() => setShowNameSuggestions(false), 200);
+              }}
               placeholder="e.g. Grilled Chicken Salad"
               required
               aria-required="true"
+              aria-invalid={!!formError}
+              aria-describedby={formError ? "meal-form-error" : undefined}
             />
-            {showSuggestions && filteredSuggestions.length > 0 && (
-              <ul className="autocomplete-list">
-                {filteredSuggestions.map((m) => (
-                  <li key={m.id || m.name} className="autocomplete-item">
-                    <button
-                      type="button"
-                      className="autocomplete-fill"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        applySuggestionToForm(m);
-                      }}
-                      onClick={() => applySuggestionToForm(m)}
-                    >
-                      <div className="auto-name">{m.name}</div>
-                      <div className="auto-meta">{m.calories} cal • {m.servingSize}</div>
-                    </button>
-                    <button
-                      type="button"
-                      className="autocomplete-quick"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        void quickAddSuggestion(m);
-                      }}
-                      onClick={() => void quickAddSuggestion(m)}
-                      disabled={submitting}
-                      title="Add now"
-                    >
-                      +
-                    </button>
-                  </li>
+            {showNameSuggestions && nameSuggestions.length > 0 && (
+              <div className="suggestions-panel" style={SUGGESTION_PANEL_STYLE}>
+                {nameSuggestions.map((fav) => (
+                  <button
+                    key={fav.id}
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      applyFavoriteToForm(fav);
+                      setShowNameSuggestions(false);
+                    }}
+                    className="suggestion-item"
+                    style={SUGGESTION_ITEM_STYLE}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "rgba(139, 92, 246, 0.08)";
+                      e.currentTarget.style.borderLeftColor = "rgba(139, 92, 246, 0.6)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "transparent";
+                      e.currentTarget.style.borderLeftColor = "transparent";
+                    }}
+                  >
+                    <div style={SUGGESTION_NAME_STYLE}>
+                      <span style={SUGGESTION_MAIN_TEXT_STYLE}>{fav.name}</span>
+                      <small style={SUGGESTION_SECONDARY_TEXT_STYLE}>
+                        {(fav.mealData?.calories ?? fav.nutrition?.calories ?? "--") + " cal"}
+                        {(fav.mealData?.servingSize ?? fav.servingSize) ? ` • ${fav.mealData?.servingSize ?? fav.servingSize}` : ""}
+                        {fav.isFavorite ? " • in favorites" : " • from history"}
+                      </small>
+                    </div>
+                    <div style={SUGGESTION_PLUS_BUTTON_STYLE}>+</div>
+                  </button>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
+          <div className="form-field required">
+            <label htmlFor="meal-calories">Calories</label>
+            <input
+              id="meal-calories"
+              required
+              type="number"
+              min={0}
+              max={MEAL_CONSTRAINTS.MAX_CALORIES}
+              value={form.calories}
+              onChange={(e) => updateField("calories", e.target.value)}
+              placeholder="e.g. 450"
+              aria-required="true"
+              inputMode="decimal"
+              aria-invalid={!!formError}
+              aria-describedby={formError ? "meal-form-error" : undefined}
+            />
+          </div>
+          <div className="form-field required">
+            <label htmlFor="meal-serving-size">Serving Size</label>
+            <input
+              id="meal-serving-size"
+              required
+              value={form.servingSize}
+              maxLength={MEAL_CONSTRAINTS.MAX_NAME_LENGTH}
+              onChange={(e) => updateField("servingSize", e.target.value)}
+              placeholder="e.g. 1 bowl"
+              aria-required="true"
+              aria-invalid={!!formError}
+              aria-describedby={formError ? "meal-form-error" : undefined}
+            />
+          </div>
+          <div className="form-field required">
+            <label htmlFor="meal-servings">Servings Had</label>
+            <input
+              id="meal-servings"
+              required
+              type="number"
+              min={0}
+              step="0.1"
+              value={form.servingsHad}
+              onChange={(e) => updateField("servingsHad", e.target.value)}
+              placeholder="e.g. 1.5"
+              aria-required="true"
+              inputMode="decimal"
+              aria-invalid={!!formError}
+              aria-describedby={formError ? "meal-form-error" : undefined}
+            />
+          </div>
         </div>
-        <div className="form-field required">
-          <label>Calories</label>
-          <input required type="number" min={0} value={form.calories} onChange={(e) => updateField('calories', e.target.value)} placeholder="e.g. 450" aria-required="true" />
-        </div>
-        <div className="form-field required">
-          <label>Serving Size</label>
-          <input required value={form.servingSize} onChange={(e) => updateField('servingSize', e.target.value)} placeholder="e.g. 1 bowl" aria-required="true" />
-        </div>
-        <div className="form-field required">
-          <label>Servings Had</label>
-          <input required type="number" min={0} step="0.1" value={form.servingsHad} onChange={(e) => updateField('servingsHad', e.target.value)} placeholder="e.g. 1.5" aria-required="true" />
-        </div>
-      </div>
 
-      {/* Toggle for optional fields */}
-      <div className="form-toggle-row">
-        <button
-          type="button"
-          className="form-toggle"
-          aria-expanded={showOptional}
-          aria-controls="optional-meal-fields"
-          onClick={() => setShowOptional((v) => !v)}
-        >
-          <span className={`chev ${showOptional ? 'open' : ''}`}>▾</span>
-          {showOptional ? 'Hide optional nutrition' : 'Show more nutrition values'}
-        </button>
-      </div>
+        {/* Toggle for optional fields */}
+        <div className="form-toggle-row">
+          <button
+            type="button"
+            className="form-toggle"
+            aria-expanded={showOptional}
+            aria-controls="optional-meal-fields"
+            onClick={() => setShowOptional((v) => !v)}
+          >
+            <span className={`chev ${showOptional ? "open" : ""}`}></span>
+            {showOptional ? "Hide optional nutrition" : "Show more nutrition values"}
+          </button>
+        </div>
 
-      {/* Optional fields */}
-      {showOptional && (
-        <div className="form-grid" id="optional-meal-fields">
-          <div className="form-field">
-            <label>Total Carbs (g)</label>
-            <input type="number" min={0} value={form.totalCarbs} onChange={(e) => updateField('totalCarbs', e.target.value)} />
+        {/* Optional fields */}
+        {showOptional && (
+          <fieldset className="form-grid" id="optional-meal-fields" aria-labelledby="optional-nutrition-legend">
+            <legend id="optional-nutrition-legend" style={{ color: "#e2e8f0", fontWeight: 600, marginBottom: 8 }}>Optional nutrition details</legend>
+            <div className="form-field">
+              <label htmlFor="meal-carbs">Total Carbs (g)</label>
+              <input id="meal-carbs" type="number" min={0} max={MEAL_CONSTRAINTS.MAX_MACRO} value={form.totalCarbs} onChange={(e) => updateField("totalCarbs", e.target.value)} inputMode="decimal" />
+            </div>
+            <div className="form-field">
+              <label htmlFor="meal-fat">Total Fat (g)</label>
+              <input id="meal-fat" type="number" min={0} max={MEAL_CONSTRAINTS.MAX_MACRO} value={form.totalFat} onChange={(e) => updateField("totalFat", e.target.value)} inputMode="decimal" />
+            </div>
+            <div className="form-field">
+              <label htmlFor="meal-protein">Protein (g)</label>
+              <input id="meal-protein" type="number" min={0} max={MEAL_CONSTRAINTS.MAX_MACRO} value={form.protein} onChange={(e) => updateField("protein", e.target.value)} inputMode="decimal" />
+            </div>
+            <div className="form-field">
+              <label htmlFor="meal-fatcat">Fat Categories</label>
+              <input id="meal-fatcat" value={form.fatCategories} maxLength={MEAL_CONSTRAINTS.MAX_NAME_LENGTH} onChange={(e) => updateField("fatCategories", e.target.value)} placeholder="e.g. Saturated, Unsaturated" />
+            </div>
+            <div className="form-field">
+              <label htmlFor="meal-sodium">Sodium (mg)</label>
+              <input id="meal-sodium" type="number" min={0} value={form.sodium} onChange={(e) => updateField("sodium", e.target.value)} inputMode="decimal" />
+            </div>
+            <div className="form-field">
+              <label htmlFor="meal-sugars">Sugars (g)</label>
+              <input id="meal-sugars" type="number" min={0} value={form.sugars} onChange={(e) => updateField("sugars", e.target.value)} inputMode="decimal" />
+            </div>
+            <div className="form-field">
+              <label htmlFor="meal-calcium">Calcium (mg)</label>
+              <input id="meal-calcium" type="number" min={0} value={form.calcium} onChange={(e) => updateField("calcium", e.target.value)} inputMode="decimal" />
+            </div>
+            <div className="form-field">
+              <label htmlFor="meal-vitamins">Vitamins</label>
+              <input id="meal-vitamins" value={form.vitamins} maxLength={MEAL_CONSTRAINTS.MAX_TEXT_LENGTH} onChange={(e) => updateField("vitamins", e.target.value)} placeholder="e.g. A, C, D" />
+            </div>
+            <div className="form-field">
+              <label htmlFor="meal-iron">Iron (mg)</label>
+              <input id="meal-iron" type="number" min={0} value={form.iron} onChange={(e) => updateField("iron", e.target.value)} inputMode="decimal" />
+            </div>
+            <div className="form-field span-2">
+              <label htmlFor="meal-notes">Other Info / Notes</label>
+              <textarea id="meal-notes" value={form.otherInfo} maxLength={MEAL_CONSTRAINTS.MAX_TEXT_LENGTH} onChange={(e) => updateField("otherInfo", e.target.value)} rows={3} placeholder="Any additional nutritional notes" />
+            </div>
+          </fieldset>
+        )}
+
+        <div className="form-actions" style={FORM_ACTIONS_STYLE}>
+          <div style={BUTTON_GROUP_STYLE}>
+            <button
+              type="button"
+              className="response-button favorites-modal-button"
+              onClick={() => setShowFavoritesModal(true)}
+            >
+              Add From Your Favorites?
+            </button>
           </div>
-          <div className="form-field">
-            <label>Total Fat (g)</label>
-            <input type="number" min={0} value={form.totalFat} onChange={(e) => updateField('totalFat', e.target.value)} />
-          </div>
-          <div className="form-field">
-            <label>Protein (g)</label>
-            <input type="number" min={0} value={form.protein} onChange={(e) => updateField('protein', e.target.value)} />
-          </div>
-          <div className="form-field">
-            <label>Fat Categories</label>
-            <input value={form.fatCategories} onChange={(e) => updateField('fatCategories', e.target.value)} placeholder="e.g. Saturated, Unsaturated" />
-          </div>
-          <div className="form-field">
-            <label>Sodium (mg)</label>
-            <input type="number" min={0} value={form.sodium} onChange={(e) => updateField('sodium', e.target.value)} />
-          </div>
-          <div className="form-field">
-            <label>Sugars (g)</label>
-            <input type="number" min={0} value={form.sugars} onChange={(e) => updateField('sugars', e.target.value)} />
-          </div>
-          <div className="form-field">
-            <label>Calcium (mg)</label>
-            <input type="number" min={0} value={form.calcium} onChange={(e) => updateField('calcium', e.target.value)} />
-          </div>
-          <div className="form-field">
-            <label>Vitamins</label>
-            <input value={form.vitamins} onChange={(e) => updateField('vitamins', e.target.value)} placeholder="e.g. A, C, D" />
-          </div>
-          <div className="form-field">
-            <label>Iron (mg)</label>
-            <input type="number" min={0} value={form.iron} onChange={(e) => updateField('iron', e.target.value)} />
-          </div>
-          <div className="form-field span-2">
-            <label>Other Info / Notes</label>
-            <textarea value={form.otherInfo} onChange={(e) => updateField('otherInfo', e.target.value)} rows={3} placeholder="Any additional nutritional notes" />
+          <div style={BUTTON_GROUP_STYLE}>
+            <button
+              type="button"
+              className="response-button"
+              style={CLEAR_BUTTON_STYLE}
+              onClick={resetForm}
+            >
+              Clear Fields
+            </button>
+            <button type="submit" className="response-button" disabled={submitting}>
+              {submitting ? "Saving" : "Save Meal"}
+            </button>
           </div>
         </div>
-      )}
-      <div className="form-actions">
-        <button type="submit" className="response-button" disabled={submitting}>{submitting ? 'Saving…' : 'Save Meal'}</button>
-      </div>
-      <Toast message={toast.message} type={toast.type} isVisible={toast.visible} onClose={closeToast} />
-    </form>
+
+        {formError && (
+          <div id="meal-form-error" role="alert" style={{ marginTop: 10, color: "#fca5a5", fontSize: "0.9rem" }}>
+            {formError.message}
+          </div>
+        )}
+        <Toast message={toast.message} type={toast.type} isVisible={toast.visible} onClose={closeToast} />
+      </form>
+
+      {showFavoritesModal &&
+        createPortal(
+          <div className="modal-overlay" style={{ zIndex: 100001 }}>
+            <div className="modal-content meal-modal" style={{ zIndex: 100002, position: "relative" }}>
+              <div className="modal-header-bar">
+                <h2 className="modal-title">Select a Favorite Meal</h2>
+                <button
+                  type="button"
+                  className="close-button"
+                  onClick={() => setShowFavoritesModal(false)}
+                  aria-label="Close"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 6L6 18"/>
+                    <path d="M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+              <div className="modal-body-scroll" style={MODAL_BODY_STYLE}>
+                <div style={{ marginBottom: 8 }}>
+                  <input
+                    type="text"
+                    value={favoritesSearch}
+                    onChange={(e) => setFavoritesSearch(e.target.value)}
+                    placeholder="Search your favorites..."
+                    style={SEARCH_INPUT_STYLE}
+                  />
+                </div>
+
+                {filteredFavorites && filteredFavorites.length > 0 ? (
+                  <ul className="favorites-list-ul" style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                    {filteredFavorites.map((fav) => (
+                      <li key={fav.id} className="favorites-list-item" style={{ marginBottom: 12 }}>
+                        <button
+                          type="button"
+                          className="favorites-list-button"
+                          style={FAVORITES_LIST_BUTTON_STYLE}
+                          onClick={() => {
+                            applyFavoriteToForm(fav);
+                            setShowFavoritesModal(false);
+                          }}
+                        >
+                          <div className="favorites-list-name" style={FAVORITES_LIST_NAME_STYLE}>
+                            {fav.name}
+                          </div>
+                          <div className="favorites-list-meta" style={FAVORITES_LIST_META_STYLE}>
+                            {fav.nutrition?.calories ?? "--"} cal • {fav.servingSize ?? "--"}
+                          </div>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="favorites-list-empty" style={FAVORITES_LIST_EMPTY_STYLE}>
+                    No favorites found.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>,
+          document.body
+        )
+      }
+    </>
   );
 };
 

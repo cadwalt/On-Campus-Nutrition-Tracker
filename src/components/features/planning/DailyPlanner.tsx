@@ -264,8 +264,8 @@ const DailyPlanner: React.FC<DailyPlannerProps> = ({ selectedDate, user, onMealA
         )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '1.5rem', marginBottom: '1.5rem' }}>
-        {/* Main content */}
+      <div className="daily-planner-layout" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '1.5rem' }}>
+        {/* Main content - meal sections */}
         <div>
           {/* Meal type sections */}
           {(['Breakfast', 'Lunch', 'Dinner', 'Snack'] as const).map((mealType) => (
@@ -331,8 +331,8 @@ const DailyPlanner: React.FC<DailyPlannerProps> = ({ selectedDate, user, onMealA
           ))}
         </div>
 
-        {/* Sidebar with projection */}
-        <div>
+        {/* Nutrition projection - below meals on mobile, beside on desktop */}
+        <div className="nutrition-projection-container">
           <NutritionProjection
             projected={projected}
             targets={targets}
