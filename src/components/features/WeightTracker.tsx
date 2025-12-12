@@ -10,6 +10,38 @@ function formatDateInput(dateStr: string): string {
   return dateStr; // Date is already in YYYY-MM-DD format from the input
 }
 
+// Safe conversion with overflow protection (CWE-190)
+function safeConvert(val: number, factor: number, maxResult: number): number {
+  if (!Number.isFinite(val) || !Number.isFinite(factor)) {
+    throw new Error('Invalid input: values must be finite numbers');
+  }
+  const result = val * factor;
+  if (!Number.isFinite(result) || Math.abs(result) > maxResult * 2) {
+    throw new Error(`Conversion overflow: ${val} × ${factor} exceeds safe range`);
+  }
+  return result;
+}
+
+// Safe averaging with overflow protection (CWE-190)
+function safeAverage(weights: number[]): number {
+  if (weights.length === 0) return 0;
+  if (weights.length > 100000) {
+    throw new Error('Too many entries for safe averaging');
+  }
+  let sum = 0;
+  for (const w of weights) {
+    if (!Number.isFinite(w)) {
+      throw new Error('Invalid weight value: must be a finite number');
+    }
+    sum += w;
+    // Safeguard against accumulated overflow
+    if (!Number.isFinite(sum) || Math.abs(sum) > Number.MAX_SAFE_INTEGER) {
+      throw new Error('Sum overflow during averaging');
+    }
+  }
+  return sum / weights.length;
+}
+
 // Main Weight Tracker component
 export const WeightTracker: React.FC = () => {
   const navigate = useNavigate(); // for navigation on goal achievement
@@ -109,10 +141,16 @@ export const WeightTracker: React.FC = () => {
       setError(`Enter a weight between 1 and ${maxAllowed} ${unit === 'kg' ? 'kg' : 'lbs'}`);
       return;
     }
-    // convert (if kg) and round to 1 decimal place
-    const lbsRaw = unit === 'kg' ? val * 2.20462 : val;
-    const lbs = Math.round(lbsRaw * 10) / 10;
-    const formattedDate = date;
+    // convert (if kg) and round to 1 decimal place with overflow protection
+    let lbs: number;
+    try {
+      const lbsRaw = unit === 'kg' ? safeConvert(val, 2.20462, 1500) : val;
+      lbs = Math.round(lbsRaw * 10) / 10;
+    } catch (err) {
+      setError(`Conversion error: ${err instanceof Error ? err.message : 'Invalid weight'}`);
+      return;
+    }
+    const formattedDate = formatDateInput(date);
     
     setBusy(true);
     try {
@@ -240,7 +278,13 @@ export const WeightTracker: React.FC = () => {
       });
       // Compute average weight for each month
       return Array.from(byMonth.entries()).map(([monthKey, weights]) => {
-        const avg = weights.reduce((s, w) => s + w, 0) / weights.length;
+        let avg: number;
+        try {
+          avg = safeAverage(weights);
+        } catch (err) {
+          console.warn(`Average calculation error for ${monthKey}:`, err);
+          avg = weights[0] || 0; // fallback to first weight
+        }
         const [year, month] = monthKey.split('-');
         const firstDayOfMonth = new Date(parseInt(year), parseInt(month) - 1, 1).toISOString().split('T')[0];
         return { id: monthKey, date: firstDayOfMonth, weightLb: avg };
@@ -256,7 +300,13 @@ export const WeightTracker: React.FC = () => {
       });
       // Compute average weight for each year
       return Array.from(byYear.entries()).map(([year, weights]) => {
-        const avg = weights.reduce((s, w) => s + w, 0) / weights.length;
+        let avg: number;
+        try {
+          avg = safeAverage(weights);
+        } catch (err) {
+          console.warn(`Average calculation error for ${year}:`, err);
+          avg = weights[0] || 0; // fallback to first weight
+        }
         const firstDayOfYear = new Date(parseInt(year), 0, 1).toISOString().split('T')[0];
         return { id: year, date: firstDayOfYear, weightLb: avg };
       });
@@ -289,7 +339,13 @@ export const WeightTracker: React.FC = () => {
       return Array.from(byMonth.entries())
         .sort((a, b) => b[0].localeCompare(a[0]))
         .map(([monthKey, weights]) => {
-          const avg = Math.round((weights.reduce((s, w) => s + w, 0) / weights.length) * 10) / 10;
+          let avg: number;
+          try {
+            avg = Math.round((safeAverage(weights)) * 10) / 10;
+          } catch (err) {
+            console.warn(`Average calculation error for ${monthKey}:`, err);
+            avg = weights[0] || 0; // fallback
+          }
           const [year, month] = monthKey.split('-');
           const monthName = new Date(parseInt(year), parseInt(month) - 1).toLocaleString('default', { month: 'long' });
           return {
@@ -312,7 +368,13 @@ export const WeightTracker: React.FC = () => {
       return Array.from(byYear.entries())
         .sort((a, b) => b[0].localeCompare(a[0]))
         .map(([year, weights]) => {
-          const avg = Math.round((weights.reduce((s, w) => s + w, 0) / weights.length) * 10) / 10;
+          let avg: number;
+          try {
+            avg = Math.round((safeAverage(weights)) * 10) / 10;
+          } catch (err) {
+            console.warn(`Average calculation error for ${year}:`, err);
+            avg = weights[0] || 0; // fallback
+          }
           return {
             label: year,
             date: year,
@@ -334,10 +396,16 @@ export const WeightTracker: React.FC = () => {
     }
   })();
 
-  // compute average weight for the currently selected period (filteredEntries)
-  const averageWeightLb: number = filteredEntries.length === 0
-    ? 0
-    : Math.round((filteredEntries.reduce((s, it) => s + it.weightLb, 0) / filteredEntries.length) * 10) / 10;
+  // compute average weight for the currently selected period (filteredEntries) with overflow protection
+  const averageWeightLb: number | null = (() => {
+    if (filteredEntries.length === 0) return null;
+    try {
+      return Math.round((safeAverage(filteredEntries.map(it => it.weightLb))) * 10) / 10;
+    } catch (err) {
+      console.warn('Average calculation error:', err);
+      return null;
+    }
+  })();
 
   // convert average to display unit
   const averageWeightDisplay = averageWeightLb !== 0
@@ -404,10 +472,10 @@ export const WeightTracker: React.FC = () => {
     setEditDate(entry.date);
   };
 
-  // Standardized weight validation helper
+  // Standardized weight validation helper with overflow protection
   function validateWeightInput(value: string, unit: string): string | null {
     const val = parseFloat(value);
-    if (isNaN(val)) {
+    if (isNaN(val) || !Number.isFinite(val)) {
       return 'Enter a valid weight';
     }
     // enforce allowed input range
@@ -415,6 +483,14 @@ export const WeightTracker: React.FC = () => {
     const maxAllowed = unit === 'kg' ? 700 : 1500;
     if (val < minAllowed || val > maxAllowed) {
       return `Enter a weight between ${minAllowed} and ${maxAllowed} ${unit}`;
+    }
+    // Attempt safe conversion to detect overflow early
+    try {
+      if (unit === 'kg') {
+        safeConvert(val, 2.20462, 1500);
+      }
+    } catch (err) {
+      return `Conversion error: ${err instanceof Error ? err.message : 'Invalid input'}`;
     }
     return null;
   }
@@ -434,9 +510,15 @@ export const WeightTracker: React.FC = () => {
       setError('Cannot update weight for a future date');
       return;
     }
-    // convert (if kg) and round to 1 decimal place
-    const lbsRaw = unit === 'kg' ? val * 2.20462 : val;
-    const lbs = Math.round(lbsRaw * 10) / 10;
+    // convert (if kg) with overflow protection
+    let lbs: number;
+    try {
+      const lbsRaw = unit === 'kg' ? safeConvert(val, 2.20462, 1500) : val;
+      lbs = Math.round(lbsRaw * 10) / 10;
+    } catch (err) {
+      setError(`Conversion error: ${err instanceof Error ? err.message : 'Invalid weight'}`);
+      return;
+    }
     setBusy(true);
     try { // remove old entry and add new one (to handle date changes)
       await remove(editingEntry.id);
