@@ -94,6 +94,11 @@ service cloud.firestore {
       allow read: if true;
       allow write: if false;
     }
+    // Some components may use 'menu' as the subcollection name
+    match /restaurants_sample/{restaurantId}/menu/{menuItemId} {
+      allow read: if true;
+      allow write: if false;
+    }
 
     // CWE-862: Missing Authorization - Enforce user-scoped access to user documents (goals, preferences, favorites)
     // Only authenticated users can read/write their own user profile and preferences
