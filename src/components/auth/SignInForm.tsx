@@ -186,10 +186,37 @@ const SignInForm: React.FC = () => {
                   required
                 />
               </div>
-              <button type="submit" className="auth-button">
-                Sign In
+              <button
+                type="submit"
+                className="auth-button"
+                disabled={loading}
+              >
+                {loading ? 'Signing in…' : 'Sign In'}
               </button>
-              {error && <p className="error-message">{error}</p>}
+
+              {/* Secondary actions under the sign-in button */}
+              <div className="auth-secondary-actions">
+                <button
+                  type="button"
+                   className="auth-link"
+                  onClick={handleForgotPassword}
+                  disabled={loading}
+                >  
+                  Forgot password?
+                </button>
+              </div>
+
+              {error && (
+                <p className="error-message" role="alert">
+                  {error}
+                </p>
+              )}
+              {info && (
+                <p className="info-message" role="status">
+                  {info}
+                </p>
+              )}
+
             </form>
             <div className="auth-switch">
               <span>New user?</span>
@@ -209,4 +236,5 @@ const SignInForm: React.FC = () => {
 };
 
 export default SignInForm;
+
 
