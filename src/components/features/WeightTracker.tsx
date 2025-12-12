@@ -5,6 +5,11 @@ import { WeightChart } from './WeightChart.tsx';
 import { resolveFirebase } from '../../lib/resolveFirebase';
 import { useNavigate } from 'react-router-dom';
 
+// Helper function to format date input
+function formatDateInput(dateStr: string): string {
+  return dateStr; // Date is already in YYYY-MM-DD format from the input
+}
+
 // Main Weight Tracker component
 export const WeightTracker: React.FC = () => {
   const navigate = useNavigate(); // for navigation on goal achievement
@@ -378,6 +383,20 @@ export const WeightTracker: React.FC = () => {
     return `No weight entries yet — add your first entry to see progress toward ${targetDisplay} ${unitLabel}.`;
   })();
 
+  // Determine range label for table header
+  const rangeLabelText = (() => {
+    if (range === 'week') {
+      const sunday = new Date(start);
+      const saturday = new Date(end);
+      return `Week of ${sunday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+    } else if (range === 'month') {
+      return referenceDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    } else if (range === 'year') {
+      return 'Month';
+    }
+    return 'Year';
+  })();
+
   // Handlers for editing entries
   const handleEditEntry = (entry: WeightEntry) => {
     setEditingEntry(entry);
@@ -649,10 +668,11 @@ export const WeightTracker: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {tableData.map((row: { date: string; weightLb: number; displayLabel: string; isAggregated: boolean }) => {
+                      {tableRows.map((row) => {
                         const displayWeight = unit === 'kg' ? Math.round((row.weightLb / 2.20462) * 10) / 10 : row.weightLb;
                         const isClickable = !row.isAggregated;
                         const entry = filteredEntries.find((e: WeightEntry) => e.date === row.date && e.weightLb === row.weightLb);
+                        const displayLabel = row.label || new Date(row.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                         return (
                           <tr
                             key={`${row.date}-${row.weightLb}`}
@@ -666,7 +686,7 @@ export const WeightTracker: React.FC = () => {
                             onMouseEnter={(ev) => isClickable && (ev.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)')}
                             onMouseLeave={(ev) => (ev.currentTarget.style.backgroundColor = 'transparent')}
                           >
-                            <td style={{ paddingTop: 8, paddingBottom: 8, width: '50%' }}>{row.displayLabel}</td>
+                            <td style={{ paddingTop: 8, paddingBottom: 8, width: '50%' }}>{displayLabel}</td>
                             <td style={{ paddingTop: 8, paddingBottom: 8, width: '50%' }}>{displayWeight.toFixed(1)}</td>
                           </tr>
                         );
@@ -674,6 +694,7 @@ export const WeightTracker: React.FC = () => {
                     </tbody>
                   </table>
                 </div>
+              )}
 
               {/* Edit Modal */}
               {editingEntry && (
