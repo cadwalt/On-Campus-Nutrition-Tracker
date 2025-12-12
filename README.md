@@ -86,6 +86,33 @@ First, make sure you have Git installed in your code editor. Then,
 | `npm run preview` | Preview the production build locally |
 | `npm run lint` | Run ESLint to check for code issues |
 
+### Firebase Deployment
+
+#### Install Firebase CLI
+```bash
+npm install -g firebase-tools
+```
+
+#### Login to Firebase
+```bash
+firebase login
+```
+
+#### Deploy Firestore Security Rules
+```bash
+firebase deploy --only firestore:rules
+```
+
+**Security Rules:** The project includes Firestore security rules (`firestore.rules`) that enforce:
+- **CWE-862 (Missing Authorization):** Only authenticated users can read/write their own weight entries and user preferences
+- **User scoping:** Each user's data is isolated by their unique Firebase Auth UID
+- **Default deny:** All unlisted paths are blocked
+
+#### Verify Rules Deployment
+```bash
+firebase rules:list
+```
+
 ### Running the Project
 
 #### Development Mode
