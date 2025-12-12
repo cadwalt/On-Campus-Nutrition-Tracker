@@ -234,7 +234,11 @@ const MicronutrientSummary: React.FC = () => {
 
       <div className="micronutrient-grid">
         {micronutrientRows.map(({ key, label, unit, target, current, percent, description, color }) => (
-          <div key={key} className="micronutrient-tile">
+          <div
+            key={key}
+            className="micronutrient-tile"
+            aria-label={`${label}: ${current}${unit}, ${percent}% of target`}
+          >
             <div className="micronutrient-tile__top">
               <div>
                 <div className="micronutrient-label">{label}</div>
@@ -266,6 +270,7 @@ const MicronutrientSummary: React.FC = () => {
             value={currentNoteText}
             onChange={(e) => setCurrentNoteText(e.target.value)}
             placeholder="Add personal targets or reminders"
+            aria-label="Custom micronutrient note input"
             style={{
               width: '100%',
               minHeight: '80px',
@@ -281,6 +286,7 @@ const MicronutrientSummary: React.FC = () => {
           {currentNoteText.trim() && (
             <button
               onClick={handleAddNote}
+              aria-label={editingIndex !== null ? 'Update micronutrient note' : 'Add micronutrient note'}
               style={{
                 padding: '0.6rem 0.85rem',
                 background: 'rgba(59, 130, 246, 0.2)',
@@ -304,6 +310,7 @@ const MicronutrientSummary: React.FC = () => {
               setCurrentNoteText('');
               setEditingIndex(null);
             }}
+            aria-label="Cancel micronutrient note edit"
             style={{
               marginTop: '0.5rem',
               marginLeft: '0.5rem',
@@ -351,6 +358,7 @@ const MicronutrientSummary: React.FC = () => {
                 <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
                   <button
                     onClick={() => handleEditNote(index)}
+                    aria-label={`Edit micronutrient note ${index + 1}`}
                     style={{
                       padding: '0.35rem 0.65rem',
                       background: 'rgba(59, 130, 246, 0.15)',
@@ -366,6 +374,7 @@ const MicronutrientSummary: React.FC = () => {
                   </button>
                   <button
                     onClick={() => handleRemoveNote(index)}
+                    aria-label={`Remove micronutrient note ${index + 1}`}
                     style={{
                       padding: '0.35rem 0.65rem',
                       background: 'rgba(239, 68, 68, 0.15)',
