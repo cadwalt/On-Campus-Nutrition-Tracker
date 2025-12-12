@@ -112,7 +112,7 @@ export const WeightTracker: React.FC = () => {
     // convert (if kg) and round to 1 decimal place
     const lbsRaw = unit === 'kg' ? val * 2.20462 : val;
     const lbs = Math.round(lbsRaw * 10) / 10;
-    const formattedDate = formatDateInput(date);
+    const formattedDate = date;
     
     setBusy(true);
     try {
