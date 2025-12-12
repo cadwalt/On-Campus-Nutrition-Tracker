@@ -442,6 +442,7 @@ export const WeightTracker: React.FC = () => {
                     </tbody>
                   </table>
                 </div>
+              )}
 
               {/* Edit Modal */}
               {editingEntry && (
