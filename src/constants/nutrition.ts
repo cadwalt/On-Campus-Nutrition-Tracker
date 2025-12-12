@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 // Nutrition Goals Constants and Validation
 
 import type { GoalOption, ActivityLevel, NutritionGoals } from '../types/nutrition';
