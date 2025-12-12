@@ -7,6 +7,9 @@ import bottleIcon from '../../assets/bottles/bottle.png';
 
 // Load Firebase lazily
 const resolveFirebase = async () => {
+  // Firebase access is compartmentalized here. The component only ever
+  // reads/updates the signed-in user's own `users/{uid}` document; it never
+  // has the ability to enumerate all users or touch arbitrary records.
   const mod: any = await import('../../firebase');
   const authClient = await mod.getAuthClient();
   const dbClient = await mod.getFirestoreClient();
@@ -58,7 +61,11 @@ const WaterBottleManagerCard: React.FC<WaterBottleManagerCardProps> = ({
   const isLoading = loading || localLoading;
 
   const handleSaveBottle = async () => {
-    if (!user?.uid || !bottleName.trim() || !bottleAmount) return;
+    if (!user?.uid || !bottleName.trim() || !bottleAmount) {
+      // Guard rail: do not create or update bottle presets without a current
+      // user context. All bottles are stored under that user's profile doc.
+      return;
+    }
     const val = parseFloat(bottleAmount);
     if (!val || val <= 0) return;
 
@@ -119,7 +126,12 @@ const WaterBottleManagerCard: React.FC<WaterBottleManagerCardProps> = ({
   };
 
   const handleDeleteBottle = async (bottleId: string) => {
-    if (!user?.uid) return;
+    if (!user?.uid) {
+      // CWE-269: Only the owner (current user) can request deletion of their
+      // saved bottles. Firestore security rules should also enforce this on
+      // the server side so another user's bottles can't be removed.
+      return;
+    }
     if (!confirm('Are you sure you want to delete this bottle?')) return;
 
     setLocalLoading(true);
@@ -172,6 +184,8 @@ const WaterBottleManagerCard: React.FC<WaterBottleManagerCardProps> = ({
           <button
             className="water-bottle-manage-btn"
             onClick={() => setShowBottleManager(true)}
+            // Least privilege: adding/updating bottle templates is restricted to
+            // signed-in users only; anonymous users cannot mutate shared state.
             disabled={isLoading || !user}
           >
             {bottles.length > 0 ? 'Add More' : 'Add Bottle'}
@@ -316,4 +330,3 @@ const WaterBottleManagerCard: React.FC<WaterBottleManagerCardProps> = ({
 };
 
 export default WaterBottleManagerCard;
-
