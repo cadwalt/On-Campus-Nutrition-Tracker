@@ -81,6 +81,7 @@ service cloud.firestore {
     // Meals collection: Track user meal entries with nutrition data
     match /meals/{mealId} {
       // Read: Users can only read meals they own (privacy)
+      // Works for both individual document reads and queries
       allow read: if isAuthenticated() && isOwner(resource.data.userId);
       
       // Create: Authenticated users can create meals if they set userId to their own ID
@@ -93,6 +94,7 @@ service cloud.firestore {
       // Validates all fields match constraints
       allow update: if isAuthenticated()
         && isOwner(resource.data.userId)
+        && request.resource.data.userId == resource.data.userId  // Cannot change ownership
         && isValidMeal(request.resource.data);
       
       // Delete: Users can only delete meals they own
@@ -116,6 +118,105 @@ service cloud.firestore {
       // Delete: Users can only delete their own favorites
       allow delete: if isAuthenticated()
         && isOwner(resource.data.userId);
+    }
+    
+    // Water collection: Track user water intake logs
+    match /water/{waterId} {
+      // Read: Users can only read their own water logs
+      // Works for both individual document reads and queries
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      
+      // Create: Authenticated users can create water logs for themselves
+      allow create: if isAuthenticated()
+        && request.auth.uid == request.resource.data.userId
+        && request.resource.data.userId is string
+        && request.resource.data.amountMl is number
+        && request.resource.data.amountMl >= 0
+        && request.resource.data.amountMl <= 10000  // Reasonable max (10L)
+        && (request.resource.data.createdAt is number || request.resource.data.createdAt is timestamp);
+      
+      // Update: Users can only update their own water logs
+      allow update: if isAuthenticated()
+        && isOwner(resource.data.userId)
+        && request.resource.data.userId == resource.data.userId  // Cannot change ownership
+        && request.resource.data.amountMl is number
+        && request.resource.data.amountMl >= 0
+        && request.resource.data.amountMl <= 10000;
+      
+      // Delete: Users can only delete their own water logs
+      allow delete: if isAuthenticated()
+        && isOwner(resource.data.userId);
+    }
+    
+    // Weight collection: Track user weight entries
+    match /weight/{weightId} {
+      // Read: Users can only read their own weight entries
+      // Support both 'owner' and 'userID' fields for legacy compatibility
+      // Works for both individual document reads and queries
+      allow read: if isAuthenticated() 
+        && (isOwner(resource.data.owner) || isOwner(resource.data.userID));
+      
+      // Create: Authenticated users can create weight entries for themselves
+      allow create: if isAuthenticated()
+        && (request.auth.uid == request.resource.data.owner || request.auth.uid == request.resource.data.userID)
+        && (request.resource.data.owner is string || request.resource.data.userID is string)
+        && request.resource.data.date is string
+        && request.resource.data.date.size() > 0
+        && (request.resource.data.weightLb is number || request.resource.data.weightKg is number);
+      
+      // Update: Users can only update their own weight entries
+      allow update: if isAuthenticated()
+        && (isOwner(resource.data.owner) || isOwner(resource.data.userID))
+        && (request.resource.data.owner == resource.data.owner || !('owner' in request.resource.data))
+        && (request.resource.data.userID == resource.data.userID || !('userID' in request.resource.data));
+      
+      // Delete: Users can only delete their own weight entries
+      allow delete: if isAuthenticated()
+        && (isOwner(resource.data.owner) || isOwner(resource.data.userID));
+    }
+    
+    // MealPlans collection: Track user meal planning data
+    // Structure: mealPlans/{userId}/dates/{date}/meals/{mealId}
+    match /mealPlans/{userId} {
+      // Users can only access their own meal plans
+      allow read, write: if isAuthenticated() && isOwner(userId);
+      
+      // Subcollections: dates and meals
+      match /dates/{dateId} {
+        allow read, write: if isAuthenticated() && isOwner(userId);
+        
+        match /meals/{mealId} {
+          allow read, write: if isAuthenticated() && isOwner(userId);
+        }
+      }
+    }
+    
+    // Restaurants collection: Public restaurant data (read-only for authenticated users)
+    // Structure: restaurants_sample/{restaurantId}/menu/{menuItemId}
+    match /restaurants_sample/{restaurantId} {
+      // All authenticated users can read restaurant information
+      allow read: if isAuthenticated();
+      
+      // Only allow writes by authenticated users (for admin purposes)
+      // In production, you may want to restrict this further
+      allow write: if isAuthenticated();
+      
+      // Menu subcollection: Public menu items (read-only for authenticated users)
+      match /menu/{menuItemId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated();
+      }
+    }
+    
+    // Legacy restaurants collection (if used)
+    match /restaurants/{restaurantId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+      
+      match /menu/{menuItemId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated();
+      }
     }
     
     // Deny all other access by default (secure by default)
