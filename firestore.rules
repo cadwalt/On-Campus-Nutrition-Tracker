@@ -1,48 +1,95 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Helper functions for auth and validation (keeps DRY and clarity)
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    // Meal validation aligned with client constraints
+    function isValidMeal(data) {
+      return data.keys().hasAll(['name','servingSize','calories','userId','createdAt'])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.servingSize is string && data.servingSize.size() > 0 && data.servingSize.size() <= 100
+        && data.calories is number && data.calories >= 0 && data.calories <= 5000
+        && data.userId is string && data.userId.size() > 0
+        && (data.createdAt is number || data.createdAt is timestamp)
+        && (!('servingsHad' in data) || (data.servingsHad is number && data.servingsHad >= 0))
+        && (!('totalCarbs' in data) || (data.totalCarbs is number && data.totalCarbs >= 0 && data.totalCarbs <= 2000))
+        && (!('totalFat' in data) || (data.totalFat is number && data.totalFat >= 0 && data.totalFat <= 2000))
+        && (!('protein' in data) || (data.protein is number && data.protein >= 0 && data.protein <= 2000))
+        && (!('sodium' in data) || (data.sodium is number && data.sodium >= 0))
+        && (!('sugars' in data) || (data.sugars is number && data.sugars >= 0))
+        && (!('calcium' in data) || (data.calcium is number && data.calcium >= 0))
+        && (!('iron' in data) || (data.iron is number && data.iron >= 0))
+        && (!('fatCategories' in data) || (data.fatCategories is string && data.fatCategories.size() <= 100))
+        && (!('vitamins' in data) || (data.vitamins is string && data.vitamins.size() <= 300))
+        && (!('otherInfo' in data) || (data.otherInfo is string && data.otherInfo.size() <= 300));
+    }
+
     // CWE-862: Missing Authorization - Enforce user-scoped access to weight collection
     // Documents in the 'weight' collection have 'owner' and 'userID' fields for backward compatibility
     // Only authenticated users can read/write their own weight entries
-    match /weight/{document=**} {
-      allow read: if request.auth != null && 
-        (resource.data.owner == request.auth.uid || resource.data.userID == request.auth.uid);
-      allow write: if request.auth != null && 
-        (resource.data.owner == request.auth.uid || resource.data.userID == request.auth.uid);
-      allow create: if request.auth != null;
+    match /weight/{weightId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.owner) || isOwner(resource.data.userID));
+      allow create: if isAuthenticated()
+        && (request.auth.uid == request.resource.data.owner || request.auth.uid == request.resource.data.userID)
+        && (request.resource.data.owner is string || request.resource.data.userID is string)
+        && request.resource.data.date is string && request.resource.data.date.size() > 0
+        && (request.resource.data.weightLb is number || request.resource.data.weightKg is number);
+      allow update: if isAuthenticated()
+        && (isOwner(resource.data.owner) || isOwner(resource.data.userID))
+        && (request.resource.data.owner == resource.data.owner || !('owner' in request.resource.data))
+        && (request.resource.data.userID == resource.data.userID || !('userID' in request.resource.data));
+      allow delete: if isAuthenticated() && (isOwner(resource.data.owner) || isOwner(resource.data.userID));
     }
 
     // CWE-862: Missing Authorization - Enforce user-scoped access to meals collection
     // Documents in the 'meals' collection have 'userId' field
     // Only authenticated users can read/write their own meal entries
     match /meals/{mealId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read: if isOwner(resource.data.userId);
+      allow create: if isAuthenticated()
+        && request.auth.uid == request.resource.data.userId
+        && isValidMeal(request.resource.data);
+      allow update: if isOwner(resource.data.userId)
+        && request.resource.data.userId == resource.data.userId
+        && isValidMeal(request.resource.data);
+      allow delete: if isOwner(resource.data.userId);
     }
 
     // CWE-862: Missing Authorization - Enforce user-scoped access to water collection
     // Documents in the 'water' collection have 'userId' field
     // Only authenticated users can read/write their own water intake logs
     match /water/{logId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read: if isOwner(resource.data.userId);
+      allow create: if isAuthenticated()
+        && request.auth.uid == request.resource.data.userId
+        && request.resource.data.userId is string
+        && request.resource.data.amountMl is number
+        && request.resource.data.amountMl >= 0 && request.resource.data.amountMl <= 10000
+        && (request.resource.data.createdAt is number || request.resource.data.createdAt is timestamp);
+      allow update: if isOwner(resource.data.userId)
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.amountMl is number
+        && request.resource.data.amountMl >= 0 && request.resource.data.amountMl <= 10000;
+      allow delete: if isOwner(resource.data.userId);
     }
 
     // CWE-862: Missing Authorization - Enforce user-scoped access to meal plans
     // Hierarchical structure: /mealPlans/{userId}/dates/{date}/meals/{mealId}
     // Only authenticated users can access their own meal plans
     match /mealPlans/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
 
     // Public read access to restaurant sample data (shared across all users)
     match /restaurants_sample/{restaurantId} {
       allow read: if true;
-      allow write: if false; // Only admins can write (via Firebase Console/Admin SDK)
+      allow write: if false;
     }
-
     match /restaurants_sample/{restaurantId}/items/{itemId} {
       allow read: if true;
       allow write: if false;
@@ -51,12 +98,10 @@ service cloud.firestore {
     // CWE-862: Missing Authorization - Enforce user-scoped access to user documents (goals, preferences, favorites)
     // Only authenticated users can read/write their own user profile and preferences
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
-
-    // Allow user to access subcollections under their user document
     match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
 
     // CWE-862: Missing Authorization - Deny all other access by default
