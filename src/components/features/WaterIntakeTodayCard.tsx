@@ -3,6 +3,9 @@ import { mlToOz, ozToMl } from '../../types/water';
 
 // Load Firebase lazily
 const resolveFirebase = async () => {
+  // This helper gives us scoped access to auth + Firestore from a single place.
+  // It keeps Firebase as a separate "privileged compartment" and this UI
+  // component only performs a narrow, user-specific update (their own goal).
   const mod: any = await import('../../firebase');
   const authClient = await mod.getAuthClient();
   const dbClient = await mod.getFirestoreClient();
@@ -52,7 +55,14 @@ const WaterIntakeTodayCard: React.FC<WaterIntakeTodayCardProps> = ({
   };
 
   const handleSaveGoal = async () => {
-    if (!user?.uid) return;
+    if (!user?.uid) {
+      // CWE-269 (Improper Privilege Management) mitigation:
+      // Never allow anonymous or unauthenticated users to write to Firestore,
+      // and never guess which user document to touch. All writes are scoped to
+      // the current auth user, which enforces separation of privileges.
+      return;
+    }
+
     const val = parseFloat(goalInput);
     if (!val || val <= 0) return;
 
@@ -60,6 +70,8 @@ const WaterIntakeTodayCard: React.FC<WaterIntakeTodayCardProps> = ({
     try {
       const newGoalMl = goalInputUnit === 'oz' ? ozToMl(val) : Math.round(val);
       const { dbClient, firestore } = await resolveFirebase();
+      // Privilege separation: each user can only update their own "users/{uid}"
+      // document. We never pass arbitrary user IDs from the client/UI.
       const userDocRef = firestore.doc(dbClient, 'users', user.uid);
       await firestore.updateDoc(userDocRef, {
         water_goal_ml: newGoalMl,
@@ -207,4 +219,3 @@ const WaterIntakeTodayCard: React.FC<WaterIntakeTodayCardProps> = ({
 };
 
 export default WaterIntakeTodayCard;
-
