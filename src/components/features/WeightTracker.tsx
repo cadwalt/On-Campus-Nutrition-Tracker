@@ -44,9 +44,16 @@ function safeAverage(weights: number[]): number {
 
 // Main Weight Tracker component
 export const WeightTracker: React.FC = () => {
+<<<<<<< HEAD
   const navigate = useNavigate(); // for navigation on goal achievement
   const { entries, loading, add, remove, update } = useWeightEntries(); // custom hook to manage weight entries
   const [date, setDate] = useState<string>(() => new Date().toISOString().slice(0, 10)); // default to today
+=======
+  const navigate = useNavigate();
+  // CWE-862: Missing Authorization - Weight entries CRUD is scoped to authenticated user via useWeightEntries hook
+  const { entries, loading, add, remove, update } = useWeightEntries();
+  const [date, setDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+>>>>>>> 06e2a65 (Add CWE-862 Handling, Incorporate Firebase tool-kit, and enforce LF line endings)
   const [weight, setWeight] = useState<string>(""); // weight value entered by user
   const [unit, setUnit] = useState<'lb' | 'kg'>('lb'); // weight unit
   const [error, setError] = useState<string | null>(null); // error message for input validation
@@ -69,19 +76,28 @@ export const WeightTracker: React.FC = () => {
     (async () => { // eslint-disable-line @typescript-eslint/no-misused-promises
       try { // get auth client
         const { auth, firebaseAuth, db, firestore } = await resolveFirebase();
-        // Wait for auth state to be ready before fetching target weight
+        // CWE-862: Missing Authorization - Verify user is authenticated before accessing data
         unsubscribe = firebaseAuth.onAuthStateChanged(auth, async (user) => {
           // if component unmounted, abort
           if (!mounted) return;
+<<<<<<< HEAD
           if (!user) { // no user logged in
             console.log('WeightTracker: No user logged in'); // reset target/goal
+=======
+          if (!user) {
+            // CWE-862: Missing Authorization - Clear data when user logs out
+>>>>>>> 06e2a65 (Add CWE-862 Handling, Incorporate Firebase tool-kit, and enforce LF line endings)
             setTargetLbs(null);
             setPrimaryGoal(null);
             return;
           }
           console.log('WeightTracker: User logged in:', user.uid); // fetch user prefs
           try {
+<<<<<<< HEAD
             // Fetch the user's nutrition goals (target + primary goal) from Firestore
+=======
+            // CWE-862: Missing Authorization - Scope data access to authenticated user's UID
+>>>>>>> 06e2a65 (Add CWE-862 Handling, Incorporate Firebase tool-kit, and enforce LF line endings)
             const userDocRef = firestore.doc(db, 'users', user.uid);
             const snap = await firestore.getDoc(userDocRef);
             if (!mounted) return;

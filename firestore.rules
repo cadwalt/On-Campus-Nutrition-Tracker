@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * Firestore Security Rules for On-Campus Nutrition Tracker
  * 
@@ -179,8 +180,30 @@ service cloud.firestore {
     }
     
     // Deny all other access by default (secure by default)
+=======
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // CWE-862: Missing Authorization - Enforce user-scoped access to weight entries
+    // Only authenticated users can read/write their own weight entries
+    match /users/{userId}/weight_entries/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // CWE-862: Missing Authorization - Enforce user-scoped access to user documents (goals, preferences)
+    // Only authenticated users can read/write their own user profile and goals
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // CWE-862: Missing Authorization - Deny all other access by default
+>>>>>>> 06e2a65 (Add CWE-862 Handling, Incorporate Firebase tool-kit, and enforce LF line endings)
     match /{document=**} {
       allow read, write: if false;
     }
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 06e2a65 (Add CWE-862 Handling, Incorporate Firebase tool-kit, and enforce LF line endings)

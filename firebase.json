@@ -1,6 +1,15 @@
 {
   "firestore": {
+<<<<<<< HEAD
     "rules": "firestore.rules"
   }
 }
 
+=======
+    "database": "(default)",
+    "location": "nam5",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  }
+}
+>>>>>>> 06e2a65 (Add CWE-862 Handling, Incorporate Firebase tool-kit, and enforce LF line endings)
