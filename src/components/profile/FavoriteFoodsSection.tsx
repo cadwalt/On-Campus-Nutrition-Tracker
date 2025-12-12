@@ -34,6 +34,7 @@ const FavoriteFoodsSection: React.FC<FavoriteFoodsSectionProps> = ({
     vitamins?: string;
     otherInfo?: string;
   }>({});
+  const [formErrors, setFormErrors] = useState<string | null>(null);
   const [showFavOptional, setShowFavOptional] = useState(false);
   const [recentMeals, setRecentMeals] = useState<any[]>([]);
   const [selectedFavMeal, setSelectedFavMeal] = useState<any | null>(null);
@@ -78,6 +79,43 @@ const FavoriteFoodsSection: React.FC<FavoriteFoodsSectionProps> = ({
 
   const normalize = (s: string) => s.trim().toLowerCase();
 
+  // Basic validator for favorites input fields
+  const validateFavoriteInput = () => {
+    const name = newFavorite?.trim();
+    if (!name) return 'Please enter a favorite meal name';
+    if (name.length > 200) return 'Favorite name is too long';
+
+    const servingSize = newNutrition.servingSize?.trim();
+    if (!servingSize) return 'Please provide a serving size';
+    if (servingSize.length > 200) return 'Serving size is too long';
+
+    const numFields: Array<{ key: keyof typeof newNutrition; label: string }> = [
+      { key: 'calories', label: 'Calories' },
+      { key: 'protein', label: 'Protein' },
+      { key: 'carbs', label: 'Carbs' },
+      { key: 'fat', label: 'Fat' },
+      { key: 'sodium', label: 'Sodium' },
+      { key: 'sugars', label: 'Sugars' },
+      { key: 'calcium', label: 'Calcium' },
+      { key: 'iron', label: 'Iron' },
+    ];
+
+    for (const { key, label } of numFields) {
+      const val = newNutrition[key];
+      if (val == null) continue; // optional
+      if (Number.isNaN(val)) return `${label} must be a number`;
+      if (typeof val !== 'number') return `${label} must be a number`;
+      if (val < 0) return `${label} cannot be negative`;
+      if (!Number.isFinite(val)) return `${label} must be a finite number`;
+      // Soft upper bounds to catch obvious mistakes
+      if ((key === 'calories' && val > 5000) || (key !== 'calories' && val > 10000)) {
+        return `${label} value seems too large`;
+      }
+    }
+
+    return null;
+  };
+
   const handleAddFavorite = async () => {
     if (!user) return;
     const name = newFavorite.trim();
@@ -89,9 +127,11 @@ const FavoriteFoodsSection: React.FC<FavoriteFoodsSectionProps> = ({
       return;
     }
 
-    // Validate required fields for favorite
-    if (!newNutrition.servingSize || newNutrition.calories == null) {
-      onError('Please provide a serving size and calories for the favorite');
+    // Validate inputs for favorite
+    const err = validateFavoriteInput();
+    if (err) {
+      setFormErrors(err);
+      onError(err);
       return;
     }
 
@@ -123,6 +163,7 @@ const FavoriteFoodsSection: React.FC<FavoriteFoodsSectionProps> = ({
       setFavorites(updated as FavoriteItem[]);
       setNewFavorite('');
       setNewNutrition({});
+      setFormErrors(null);
       onSuccess('Added to favorites');
     } catch (err: any) {
       onError(err.message || 'Failed to add favorite');
@@ -346,18 +387,42 @@ const FavoriteFoodsSection: React.FC<FavoriteFoodsSectionProps> = ({
                     if (!user || !mealId) throw new Error('User not found');
                     
                     const partial: any = {};
-                    if (updates.name !== undefined) partial.name = updates.name;
-                    if (updates.servingSize !== undefined) partial.servingSize = updates.servingSize;
+                      if (updates.name !== undefined) {
+                        const n = String(updates.name || '').trim();
+                        if (!n) throw new Error('Favorite name cannot be empty');
+                        if (n.length > 200) throw new Error('Favorite name is too long');
+                        partial.name = n;
+                      }
+                      if (updates.servingSize !== undefined) {
+                        const s = String(updates.servingSize || '').trim();
+                        if (!s) throw new Error('Serving size cannot be empty');
+                        if (s.length > 200) throw new Error('Serving size is too long');
+                        partial.servingSize = s;
+                      }
                     
                     partial.nutrition = {};
-                    if (updates.calories !== undefined) partial.nutrition.calories = updates.calories;
-                    if (updates.protein !== undefined) partial.nutrition.protein = updates.protein;
-                    if (updates.totalCarbs !== undefined) partial.nutrition.carbs = updates.totalCarbs;
-                    if (updates.totalFat !== undefined) partial.nutrition.fat = updates.totalFat;
-                    if (updates.sodium !== undefined) partial.nutrition.sodium = updates.sodium;
-                    if (updates.sugars !== undefined) partial.nutrition.sugars = updates.sugars;
-                    if (updates.calcium !== undefined) partial.nutrition.calcium = updates.calcium;
-                    if (updates.iron !== undefined) partial.nutrition.iron = updates.iron;
+                      const ensureNum = (val: any, label: string) => {
+                        if (val === undefined) return undefined;
+                        const num = Number(val);
+                        if (!Number.isFinite(num) || num < 0) throw new Error(`${label} must be a non-negative number`);
+                        return num;
+                      };
+                      const cals = ensureNum(updates.calories, 'Calories');
+                      if (cals !== undefined) partial.nutrition.calories = cals;
+                      const prot = ensureNum(updates.protein, 'Protein');
+                      if (prot !== undefined) partial.nutrition.protein = prot;
+                      const carbs = ensureNum(updates.totalCarbs, 'Carbs');
+                      if (carbs !== undefined) partial.nutrition.carbs = carbs;
+                      const fat = ensureNum(updates.totalFat, 'Fat');
+                      if (fat !== undefined) partial.nutrition.fat = fat;
+                      const sod = ensureNum(updates.sodium, 'Sodium');
+                      if (sod !== undefined) partial.nutrition.sodium = sod;
+                      const sug = ensureNum(updates.sugars, 'Sugars');
+                      if (sug !== undefined) partial.nutrition.sugars = sug;
+                      const cal = ensureNum(updates.calcium, 'Calcium');
+                      if (cal !== undefined) partial.nutrition.calcium = cal;
+                      const ir = ensureNum(updates.iron, 'Iron');
+                      if (ir !== undefined) partial.nutrition.iron = ir;
                     if (updates.fatCategories !== undefined) partial.nutrition.fatCategories = updates.fatCategories;
                     if (updates.vitamins !== undefined) partial.nutrition.vitamins = updates.vitamins;
                     if (updates.otherInfo !== undefined) partial.nutrition.otherInfo = updates.otherInfo;
@@ -414,6 +479,10 @@ const FavoriteFoodsSection: React.FC<FavoriteFoodsSectionProps> = ({
           )}
         </div>
       </div>
+
+      {formErrors && (
+        <div role="alert" style={{ marginTop: '0.5rem', color: '#fca5a5', fontSize: '0.9rem' }}>{formErrors}</div>
+      )}
     </div>
   );
 };
