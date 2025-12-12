@@ -44,6 +44,7 @@ function safeAverage(weights: number[]): number {
 
 export const WeightTracker: React.FC = () => {
   const navigate = useNavigate();
+  // CWE-862: Missing Authorization - Weight entries CRUD is scoped to authenticated user via useWeightEntries hook
   const { entries, loading, add, remove, update } = useWeightEntries();
   const [date, setDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [weight, setWeight] = useState<string>(""); // weight value entered by user
@@ -66,14 +67,16 @@ export const WeightTracker: React.FC = () => {
     (async () => {
       try {
         const { auth, firebaseAuth, db, firestore } = await resolveFirebase();
-        // Wait for auth state to be ready before fetching target weight
+        // CWE-862: Missing Authorization - Verify user is authenticated before accessing data
         unsubscribe = firebaseAuth.onAuthStateChanged(auth, async (user) => {
           if (!mounted) return;
           if (!user) {
+            // CWE-862: Missing Authorization - Clear data when user logs out
             setTargetLbs(null);
             return;
           }
           try {
+            // CWE-862: Missing Authorization - Scope data access to authenticated user's UID
             const userDocRef = firestore.doc(db, 'users', user.uid);
             const snap = await firestore.getDoc(userDocRef);
             if (!mounted) return;
