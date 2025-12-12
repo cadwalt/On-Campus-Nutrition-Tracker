@@ -128,7 +128,7 @@ const NutritionSummary: React.FC = () => {
       }
     })();
 
-  return () => { if (unsubLocal) unsubLocal(); };
+    return () => { if (unsubLocal) unsubLocal(); };
   }, [user]);
 
   if (loading) {
@@ -160,7 +160,7 @@ const NutritionSummary: React.FC = () => {
 
   // Calculate target values using nutrition plan
   const plan = computeNutritionPlan(goals);
-  
+
   if (!plan) {
     return (
       <div className="nutrition-summary-card">
@@ -188,30 +188,41 @@ const NutritionSummary: React.FC = () => {
     return '#f59e0b'; // yellow (over)
   };
 
-  const ProgressBar: React.FC<{ percent: number; label: string; current: number; target: number; unit: string }> = 
+  const ProgressBar: React.FC<{ percent: number; label: string; current: number; target: number; unit: string }> =
     ({ percent, label, current, target, unit }) => (
       <div style={{ marginBottom: '1rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.875rem' }}>
           <span style={{ fontWeight: 500 }}>{label}</span>
           <span style={{ color: '#94a3b8' }}>{current} / {target} {unit}</span>
         </div>
-        <div style={{ 
-          width: '100%', 
-          height: '8px', 
-          background: 'rgba(255, 255, 255, 0.1)', 
-          borderRadius: '4px',
-          overflow: 'hidden'
-        }}>
-          <div style={{ 
-            width: `${Math.min(percent, 100)}%`, 
-            height: '100%', 
+
+        {/* Accessibility: give screen readers a real progressbar with value text */}
+        <div
+          role="progressbar"
+          aria-label={`${label} progress`}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.min(Math.max(percent, 0), 100)}
+          aria-valuetext={`${label}: ${current} of ${target} ${unit} (${percent}% of goal)`}
+          style={{
+            width: '100%',
+            height: '8px',
+            background: 'rgba(255, 255, 255, 0.1)',
+            borderRadius: '4px',
+            overflow: 'hidden'
+          }}
+        >
+          <div style={{
+            width: `${Math.min(percent, 100)}%`,
+            height: '100%',
             background: getProgressColor(percent),
             transition: 'width 0.3s ease'
           }} />
         </div>
-        <div style={{ 
-          marginTop: '0.25rem', 
-          fontSize: '0.75rem', 
+
+        <div style={{
+          marginTop: '0.25rem',
+          fontSize: '0.75rem',
           color: getProgressColor(percent),
           fontWeight: 500
         }}>
@@ -224,19 +235,39 @@ const NutritionSummary: React.FC = () => {
     <div className="nutrition-summary-card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h2 style={{ margin: 0 }}>Today's Nutrition Summary</h2>
-        <div style={{ 
-          padding: '0.25rem 0.75rem', 
-          background: caloriePercent >= 90 && caloriePercent <= 110 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(249, 115, 22, 0.2)',
-          borderRadius: '12px',
-          fontSize: '0.75rem',
-          fontWeight: 600,
-          color: caloriePercent >= 90 && caloriePercent <= 110 ? '#10b981' : '#f97316'
-        }}>
-          {caloriePercent >= 90 && caloriePercent <= 110 ? '✓ On Track' : caloriePercent < 90 ? 'Under Goal' : 'Over Goal'}
+
+        {/* Accessibility: announce status changes politely to screen readers */}
+        <div
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          aria-label={`Daily calorie status: ${
+            caloriePercent >= 90 && caloriePercent <= 110
+              ? 'On track'
+              : caloriePercent < 90
+              ? 'Under goal'
+              : 'Over goal'
+          }. You have consumed ${caloriePercent}% of your calorie goal.`}
+          style={{
+            padding: '0.25rem 0.75rem',
+            background: caloriePercent >= 90 && caloriePercent <= 110
+              ? 'rgba(16, 185, 129, 0.2)'
+              : 'rgba(249, 115, 22, 0.2)',
+            borderRadius: '12px',
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            color: caloriePercent >= 90 && caloriePercent <= 110 ? '#10b981' : '#f97316'
+          }}
+        >
+          {caloriePercent >= 90 && caloriePercent <= 110
+            ? '✓ On Track'
+            : caloriePercent < 90
+            ? 'Under Goal'
+            : 'Over Goal'}
         </div>
       </div>
 
-      <ProgressBar 
+      <ProgressBar
         percent={caloriePercent}
         label="Calories"
         current={todayIntake.calories}
@@ -244,7 +275,7 @@ const NutritionSummary: React.FC = () => {
         unit="cal"
       />
 
-      <ProgressBar 
+      <ProgressBar
         percent={proteinPercent}
         label="Protein"
         current={todayIntake.protein}
@@ -252,7 +283,7 @@ const NutritionSummary: React.FC = () => {
         unit="g"
       />
 
-      <ProgressBar 
+      <ProgressBar
         percent={carbsPercent}
         label="Carbs"
         current={todayIntake.carbs}
@@ -260,7 +291,7 @@ const NutritionSummary: React.FC = () => {
         unit="g"
       />
 
-      <ProgressBar 
+      <ProgressBar
         percent={fatPercent}
         label="Fat"
         current={todayIntake.fat}
@@ -268,14 +299,19 @@ const NutritionSummary: React.FC = () => {
         unit="g"
       />
 
-      <div style={{ 
-        marginTop: '1.5rem', 
-        padding: '1rem', 
-        background: 'rgba(99, 102, 241, 0.1)',
-        borderRadius: '8px',
-        fontSize: '0.875rem',
-        lineHeight: 1.6
-      }}>
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        style={{
+          marginTop: '1.5rem',
+          padding: '1rem',
+          background: 'rgba(99, 102, 241, 0.1)',
+          borderRadius: '8px',
+          fontSize: '0.875rem',
+          lineHeight: 1.6
+        }}
+      >
         <strong>Summary:</strong> You've consumed {caloriePercent}% of your daily calorie goal
         {caloriePercent < 70 && '. Consider eating more to meet your nutritional needs.'}
         {caloriePercent >= 70 && caloriePercent < 90 && '. You\'re making good progress!'}
