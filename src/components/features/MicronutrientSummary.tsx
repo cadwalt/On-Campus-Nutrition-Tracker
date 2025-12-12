@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import type { User } from 'firebase/auth';
 import { resolveFirebase } from '../../lib/resolveFirebase';
 import type { Meal } from '../../types/meal';
 import { calculateActualMicros } from '../../utils/mealCalculations';
+import { sanitizeMealInput } from '../../utils/mealValidation';
 
 type MicronutrientKey = 'sodium' | 'sugars' | 'calcium' | 'iron';
 
@@ -32,6 +33,10 @@ const MicronutrientSummary: React.FC = () => {
     calcium: 0,
     iron: 0,
   });
+  const [customNotes, setCustomNotes] = useState<string[]>([]);
+  const [currentNoteText, setCurrentNoteText] = useState('');
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     let unsub: (() => void) | null = null;
@@ -46,6 +51,33 @@ const MicronutrientSummary: React.FC = () => {
     })();
     return () => { if (unsub) unsub(); };
   }, []);
+
+  useEffect(() => {
+    // load any saved notes from local storage to avoid extra db writes
+    const saved = localStorage.getItem('micronutrient_notes');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) setCustomNotes(parsed);
+      } catch (e) {
+        console.error('Failed to parse saved notes', e);
+      }
+    }
+  }, []);
+
+  // auto-resize textarea to fit content, but prevent dragging beyond content height
+  useEffect(() => {
+    if (textareaRef.current) {
+      const textarea = textareaRef.current;
+      // reset height to auto to get accurate scrollHeight
+      textarea.style.height = 'auto';
+      const contentHeight = textarea.scrollHeight;
+      // set height to content height, with min of 80px
+      textarea.style.height = `${Math.max(80, contentHeight)}px`;
+      // cap maxHeight at content height so it can't be dragged beyond what's needed
+      textarea.style.maxHeight = `${contentHeight}px`;
+    }
+  }, [currentNoteText, editingIndex]);
 
   useEffect(() => {
     if (!user) {
@@ -134,6 +166,34 @@ const MicronutrientSummary: React.FC = () => {
     });
   }, [microsToday]);
 
+  const handleAddNote = () => {
+    if (!currentNoteText.trim()) return;
+    // sanitize note to strip script-y characters before storing (keep spacing)
+    const cleaned = sanitizeMealInput(currentNoteText.trim());
+    const updated = editingIndex !== null
+      ? customNotes.map((note, idx) => idx === editingIndex ? cleaned : note)
+      : [...customNotes, cleaned];
+    setCustomNotes(updated);
+    localStorage.setItem('micronutrient_notes', JSON.stringify(updated));
+    setCurrentNoteText('');
+    setEditingIndex(null);
+  };
+
+  const handleEditNote = (index: number) => {
+    setCurrentNoteText(customNotes[index]);
+    setEditingIndex(index);
+  };
+
+  const handleRemoveNote = (index: number) => {
+    const updated = customNotes.filter((_, idx) => idx !== index);
+    setCustomNotes(updated);
+    localStorage.setItem('micronutrient_notes', JSON.stringify(updated));
+    if (editingIndex === index) {
+      setCurrentNoteText('');
+      setEditingIndex(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="micronutrient-card">
@@ -194,6 +254,136 @@ const MicronutrientSummary: React.FC = () => {
             </div>
           </div>
         ))}
+      </div>
+
+      <div style={{ marginTop: '1.25rem' }}>
+        <label style={{ display: 'block', color: '#e2e8f0', fontWeight: 600, marginBottom: '0.35rem' }}>
+          Custom micronutrient notes
+        </label>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+          <textarea
+            ref={textareaRef}
+            value={currentNoteText}
+            onChange={(e) => setCurrentNoteText(e.target.value)}
+            placeholder="Add personal targets or reminders"
+            style={{
+              width: '100%',
+              minHeight: '80px',
+              padding: '0.75rem',
+              borderRadius: '10px',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              background: 'rgba(255, 255, 255, 0.04)',
+              color: '#e2e8f0',
+              resize: 'vertical',
+              fontFamily: 'inherit',
+            }}
+          />
+          {currentNoteText.trim() && (
+            <button
+              onClick={handleAddNote}
+              style={{
+                padding: '0.6rem 0.85rem',
+                background: 'rgba(59, 130, 246, 0.2)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: '8px',
+                color: '#60a5fa',
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {editingIndex !== null ? 'Update' : 'Add Note'}
+            </button>
+          )}
+        </div>
+        {editingIndex !== null && (
+          <button
+            onClick={() => {
+              setCurrentNoteText('');
+              setEditingIndex(null);
+            }}
+            style={{
+              marginTop: '0.5rem',
+              marginLeft: '0.5rem',
+              padding: '0.5rem 1rem',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '8px',
+              color: '#94a3b8',
+              cursor: 'pointer',
+              fontWeight: 500,
+              fontSize: '0.875rem',
+            }}
+          >
+            Cancel
+          </button>
+        )}
+        {customNotes.length > 0 && (
+          <div style={{ marginTop: '1rem' }}>
+            {customNotes.map((note, index) => (
+              <div
+                key={index}
+                style={{
+                  marginBottom: '0.75rem',
+                  padding: '0.85rem 1rem',
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  borderRadius: '10px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  gap: '0.75rem',
+                }}
+              >
+                <div
+                  style={{
+                    flex: 1,
+                    color: '#cbd5e1',
+                    lineHeight: 1.5,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                  }}
+                >
+                  {note}
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                  <button
+                    onClick={() => handleEditNote(index)}
+                    style={{
+                      padding: '0.35rem 0.65rem',
+                      background: 'rgba(59, 130, 246, 0.15)',
+                      border: '1px solid rgba(59, 130, 246, 0.25)',
+                      borderRadius: '6px',
+                      color: '#60a5fa',
+                      cursor: 'pointer',
+                      fontWeight: 500,
+                      fontSize: '0.75rem',
+                    }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleRemoveNote(index)}
+                    style={{
+                      padding: '0.35rem 0.65rem',
+                      background: 'rgba(239, 68, 68, 0.15)',
+                      border: '1px solid rgba(239, 68, 68, 0.25)',
+                      borderRadius: '6px',
+                      color: '#f87171',
+                      cursor: 'pointer',
+                      fontWeight: 500,
+                      fontSize: '0.75rem',
+                    }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

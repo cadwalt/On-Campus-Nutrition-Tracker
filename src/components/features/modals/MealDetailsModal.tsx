@@ -23,7 +23,7 @@ import type { Meal } from '../../../types/meal';
 import Toast from '../../ui/Toast';
 import { calculateActualCalories, calculateActualMacros } from '../../../utils/mealCalculations';
 import { canAccess } from '../../../utils/authorization';
-import { validateMeal, MEAL_CONSTRAINTS, sanitizeMeal, parseNumber } from '../../../utils/mealValidation';
+import { validateMeal, MEAL_CONSTRAINTS, parseNumber } from '../../../utils/mealValidation';
 
 interface MealDetailsModalProps {
   isOpen: boolean;
@@ -225,8 +225,7 @@ const MealDetailsModal: React.FC<MealDetailsModalProps> = ({ isOpen, meal, onClo
 
     // Validate using centralized validation utility (DRY principle)
     // Ensures consistent validation rules across all components
-    const sanitizedForm = sanitizeMeal(form);
-    const validationError = validateMeal(sanitizedForm);
+    const validationError = validateMeal(form);
     if (validationError) {
       setFormError({ message: validationError.message });
       showToast(validationError.message, 'error');
@@ -246,20 +245,20 @@ const MealDetailsModal: React.FC<MealDetailsModalProps> = ({ isOpen, meal, onClo
     setSubmitting(true);
     try {
       const updates: any = {
-        name: sanitizedForm.name?.trim(),
-        servingSize: sanitizedForm.servingSize?.trim(),
-        calories: Number(sanitizedForm.calories),
+        name: form.name.trim(),
+        servingSize: form.servingSize.trim(),
+        calories: Number(form.calories),
       };
 
       const numericOptional: Record<string, string> = {
-        servingsHad: sanitizedForm.servingsHad,
-        totalCarbs: sanitizedForm.totalCarbs,
-        totalFat: sanitizedForm.totalFat,
-        protein: sanitizedForm.protein,
-        sodium: sanitizedForm.sodium,
-        sugars: sanitizedForm.sugars,
-        calcium: sanitizedForm.calcium,
-        iron: sanitizedForm.iron,
+        servingsHad: form.servingsHad,
+        totalCarbs: form.totalCarbs,
+        totalFat: form.totalFat,
+        protein: form.protein,
+        sodium: form.sodium,
+        sugars: form.sugars,
+        calcium: form.calcium,
+        iron: form.iron,
       };
       Object.entries(numericOptional).forEach(([key, raw]) => {
         const parsed = parseNumber(raw);
@@ -268,9 +267,9 @@ const MealDetailsModal: React.FC<MealDetailsModalProps> = ({ isOpen, meal, onClo
       });
 
       const stringOptional: Record<string, string> = {
-        fatCategories: sanitizedForm.fatCategories,
-        vitamins: sanitizedForm.vitamins,
-        otherInfo: sanitizedForm.otherInfo,
+        fatCategories: form.fatCategories,
+        vitamins: form.vitamins,
+        otherInfo: form.otherInfo,
       };
       Object.entries(stringOptional).forEach(([key, raw]) => {
         const trimmed = raw.trim();
