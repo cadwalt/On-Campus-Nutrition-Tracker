@@ -3,10 +3,6 @@ import { getFirestoreClient, getAuthClient } from "../firebase";
 
 // Constants - avoid magic numbers
 const COLLECTION = "weight";
-<<<<<<< HEAD
-
-async function getOwnerUid(): Promise<string> {
-=======
 const KG_TO_LB = 2.20462;
 const AUTH_TIMEOUT_MS = 5000;
 const FALLBACK_OWNER = "local";
@@ -50,7 +46,6 @@ function getCurrentUserUidSync(): string | null {
  * Single responsibility: Wait for auth initialization
  */
 async function waitForAuthStateInitialization(): Promise<string> {
->>>>>>> a9315db (Weight Tracking Refactoring for Reliability)
   try {
     const auth = await getAuthClient();
     const firebaseAuth = await import('firebase/auth');
@@ -137,20 +132,6 @@ export async function getWeightEntries(ownerUid?: string): Promise<WeightEntry[]
   // Query both `owner` and `userID` fields for backward compatibility
   const qOwner = query(col, where('owner', '==', owner));
   const qUser = query(col, where('userID', '==', owner));
-<<<<<<< HEAD
-  const [snapOwner, snapUser] = await Promise.all([getDocs(qOwner), getDocs(qUser)]);
-  const map = new Map<string, any>();
-  const pushDoc = (d: any) => {
-    const data = d.data();
-    // Normalize older documents that may have weightKg
-    if (data.weightKg !== undefined && data.weightLb === undefined) {
-      data.weightLb = Math.round((data.weightKg * 2.20462) * 10) / 10;
-      delete data.weightKg;
-    }
-    if (!map.has(d.id)) map.set(d.id, { id: d.id, ...data });
-  };
-=======
->>>>>>> a9315db (Weight Tracking Refactoring for Reliability)
 
   const [snapOwner, snapUser] = await Promise.all([getDocs(qOwner), getDocs(qUser)]);
 
@@ -221,23 +202,6 @@ export async function subscribeToWeightEntries(
   let ownerDocs: any[] = [];
   let userDocs: any[] = [];
 
-<<<<<<< HEAD
-  const emit = () => {
-    const map = new Map<string, any>();
-    const push = (d: any) => {
-      const data = d.data();
-      if (data.weightKg !== undefined && data.weightLb === undefined) {
-        data.weightLb = Math.round((data.weightKg * 2.20462) * 10) / 10;
-        delete data.weightKg;
-      }
-      if (!map.has(d.id)) map.set(d.id, { id: d.id, ...data });
-    };
-    ownerDocs.forEach(push);
-    userDocs.forEach(push);
-    const items: WeightEntry[] = Array.from(map.values()).sort((a: any, b: any) => (a.date < b.date ? -1 : 1));
-    console.debug(`subscribeToWeightEntries: owner=${owner} ownerDocs=${ownerDocs.length} userDocs=${userDocs.length} merged=${items.length}`);
-    callback(items);
-=======
   /**
    * Single responsibility: Merge and emit latest data
    */
@@ -247,7 +211,6 @@ export async function subscribeToWeightEntries(
       `subscribeToWeightEntries: owner=${owner} ownerDocs=${ownerDocs.length} userDocs=${userDocs.length} merged=${merged.length}`
     );
     callback(merged);
->>>>>>> a9315db (Weight Tracking Refactoring for Reliability)
   };
 
   /**
