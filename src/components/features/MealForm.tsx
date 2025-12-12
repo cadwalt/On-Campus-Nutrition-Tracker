@@ -29,7 +29,7 @@ import type { Meal } from "../../types/meal";
 import Toast from "../ui/Toast";
 import type { FavoriteItem } from "../../types/favorite";
 import { getFavoritesForUser } from "../services/favoritesService";
-import { validateMeal, MEAL_CONSTRAINTS, sanitizeMeal, parseNumber } from "../../utils/mealValidation";
+import { validateMeal, MEAL_CONSTRAINTS, parseNumber } from "../../utils/mealValidation";
 import {
   SUGGESTION_ITEM_STYLE,
   SUGGESTION_PANEL_STYLE,

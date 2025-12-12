@@ -14,8 +14,17 @@ import type { User } from 'firebase/auth';
 import { resolveFirebase } from '../../lib/resolveFirebase';
 import type { Meal } from '../../types/meal';
 import type { NutritionGoals } from '../../types/nutrition';
-import { calculateActualCalories, calculateActualMacros } from '../../utils/mealCalculations';
+import { calculateActualCalories, calculateActualMacros, calculateActualMicros } from '../../utils/mealCalculations';
 import { computeNutritionPlan } from '../../utils/nutritionPlan';
+
+type MicronutrientKey = 'sodium' | 'sugars' | 'calcium' | 'iron';
+type MicronutrientTarget = { target: number; type: 'upper' | 'goal' };
+const MICRONUTRIENT_TARGETS: Record<MicronutrientKey, MicronutrientTarget> = {
+  sodium: { target: 2300, type: 'upper' },
+  sugars: { target: 50, type: 'upper' },
+  calcium: { target: 1000, type: 'goal' },
+  iron: { target: 18, type: 'goal' },
+};
 
 const NutritionSummary: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -24,6 +33,12 @@ const NutritionSummary: React.FC = () => {
     protein: 0,
     carbs: 0,
     fat: 0
+  });
+  const [microsToday, setMicrosToday] = useState<Record<MicronutrientKey, number>>({
+    sodium: 0,
+    sugars: 0,
+    calcium: 0,
+    iron: 0,
   });
   const [goals, setGoals] = useState<NutritionGoals | null>(null);
   const [loading, setLoading] = useState(true);
@@ -73,6 +88,7 @@ const NutritionSummary: React.FC = () => {
   useEffect(() => {
     if (!user) {
       setTodayIntake({ calories: 0, protein: 0, carbs: 0, fat: 0 });
+      setMicrosToday({ sodium: 0, sugars: 0, calcium: 0, iron: 0 });
       return;
     }
 
@@ -95,6 +111,10 @@ const NutritionSummary: React.FC = () => {
           let protein = 0;
           let carbs = 0;
           let fat = 0;
+          let sodium = 0;
+          let sugars = 0;
+          let calcium = 0;
+          let iron = 0;
 
           const toMillis = (val: any): number => {
             if (typeof val === 'number') return val;
@@ -113,6 +133,11 @@ const NutritionSummary: React.FC = () => {
               protein += macros.protein || 0;
               carbs += macros.carbs || 0;
               fat += macros.fat || 0;
+              const micros = calculateActualMicros(meal);
+              sodium += micros.sodium || 0;
+              sugars += micros.sugars || 0;
+              calcium += micros.calcium || 0;
+              iron += micros.iron || 0;
             }
           });
 
@@ -121,6 +146,12 @@ const NutritionSummary: React.FC = () => {
             protein: Math.round(protein * 10) / 10,
             carbs: Math.round(carbs * 10) / 10,
             fat: Math.round(fat * 10) / 10
+          });
+          setMicrosToday({
+            sodium: Math.round(sodium * 10) / 10,
+            sugars: Math.round(sugars * 10) / 10,
+            calcium: Math.round(calcium * 10) / 10,
+            iron: Math.round(iron * 10) / 10,
           });
         });
       } catch (err) {
@@ -180,6 +211,20 @@ const NutritionSummary: React.FC = () => {
   const proteinPercent = Math.round((todayIntake.protein / targetProtein) * 100);
   const carbsPercent = Math.round((todayIntake.carbs / targetCarbs) * 100);
   const fatPercent = Math.round((todayIntake.fat / targetFat) * 100);
+  const micronutrientPercents = (Object.keys(MICRONUTRIENT_TARGETS) as MicronutrientKey[]).map((key) => {
+    const target = MICRONUTRIENT_TARGETS[key];
+    const current = microsToday[key];
+    const raw = (current / target.target) * 100;
+    const capped = target.type === 'upper' ? Math.min(raw, 150) : raw;
+    return { key, percent: Math.round(capped), type: target.type };
+  });
+  const micronutrientGoalsMet = micronutrientPercents.reduce((sum, entry) => {
+    const met = entry.type === 'upper' ? entry.percent <= 100 : entry.percent >= 100;
+    return sum + (met ? 1 : 0);
+  }, 0);
+  const micronutrientGoalPercent = Math.round(
+    (micronutrientGoalsMet / micronutrientPercents.length) * 100
+  );
 
   const getProgressColor = (percent: number) => {
     if (percent < 70) return '#ef4444'; // red
@@ -312,6 +357,22 @@ const NutritionSummary: React.FC = () => {
           lineHeight: 1.6
         }}
       >
+      <ProgressBar 
+        percent={micronutrientGoalPercent}
+        label="Micronutrients"
+        current={micronutrientGoalsMet}
+        target={micronutrientPercents.length}
+        unit="goals met"
+      />
+
+      <div style={{ 
+        marginTop: '1.5rem', 
+        padding: '1rem', 
+        background: 'rgba(99, 102, 241, 0.1)',
+        borderRadius: '8px',
+        fontSize: '0.875rem',
+        lineHeight: 1.6
+      }}>
         <strong>Summary:</strong> You've consumed {caloriePercent}% of your daily calorie goal
         {caloriePercent < 70 && '. Consider eating more to meet your nutritional needs.'}
         {caloriePercent >= 70 && caloriePercent < 90 && '. You\'re making good progress!'}

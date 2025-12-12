@@ -5,6 +5,8 @@ import WelcomeHeader from '../components/ui/WelcomeHeader';
 // Lazy-load heavier feature components so the dashboard splits into chunks
 const NutritionSummary = React.lazy(() => import('../components/features/NutritionSummary'));
 const WaterIntakeTodayCard = React.lazy(() => import('../components/features/WaterIntakeTodayCard'));
+// load micronutrient snapshot separately to keep initial payload small
+const MicronutrientSummary = React.lazy(() => import('../components/features/MicronutrientSummary'));
 import { type User } from 'firebase/auth';
 import { resolveFirebase } from '../lib/resolveFirebase';
 import type { Meal } from '../types/meal';
@@ -189,6 +191,12 @@ const Dashboard: React.FC = () => {
             {/* Nutrition Summary - Shows intake vs goals */}
             <Suspense fallback={<div>Loading summary...</div>}>
               <NutritionSummary />
+            </Suspense>
+
+            {/* Micronutrient Snapshot */}
+            {/* lives on dashboard left column near macros for quick reference */}
+            <Suspense fallback={<div>Loading micronutrients...</div>}>
+              <MicronutrientSummary />
             </Suspense>
 
             {/* Water Intake Tracker */}
