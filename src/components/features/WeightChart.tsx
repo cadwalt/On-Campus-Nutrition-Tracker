@@ -248,7 +248,13 @@ export const WeightChart: React.FC<Props> = ({ entries, height = 160, width, ran
 
   return ( /* render graph svg */
     <div ref={containerRef} style={containerStyle}>
-      <svg width={measuredWidth} height={height} role="img" aria-label="Weight over time" style={{ display: 'block', margin: '0 auto', overflow: 'visible' }}>
+      <svg
+        width={measuredWidth}
+        height={height}
+        role="img"
+        aria-label="Weight over time chart showing your entries and target weight"
+        style={{ display: 'block', margin: '0 auto', overflow: 'visible' }}
+      >
         {/* plotting group is shifted left slightly to visually center with right-side labels */}
         <g transform={`translate(${-centerShift},0)`}>
           {/* X axis (constrained to inner area) */}
@@ -265,9 +271,26 @@ export const WeightChart: React.FC<Props> = ({ entries, height = 160, width, ran
             );
           })}
 
-          <path ref={pathRef} d={pathD} fill="none" stroke="#fff" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+          <path
+            ref={pathRef}
+            d={pathD}
+            fill="none"
+            stroke="#fff"
+            strokeWidth={2}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            aria-label="Line representing recorded weights"
+          />
           {points.map((p, i) => (
-            <circle key={i} cx={scaleX(p.x)} cy={scaleY(p.y)} r={3} fill="#fff" stroke="rgba(0,0,0,0.2)" />
+            <circle
+              key={i}
+              cx={scaleX(p.x)}
+              cy={scaleY(p.y)}
+              r={3}
+              fill="#fff"
+              stroke="rgba(0,0,0,0.2)"
+              aria-hidden="true"
+            />
           ))}
           
           {/* Target weight line */}
@@ -281,6 +304,7 @@ export const WeightChart: React.FC<Props> = ({ entries, height = 160, width, ran
               strokeWidth={2}
               strokeDasharray="5,5"
               opacity={0.7}
+              aria-label="Target weight"
             />
           )}
         </g>
