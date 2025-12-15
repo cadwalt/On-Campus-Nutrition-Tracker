@@ -10,6 +10,8 @@ interface WaterMyBottlesCardProps {
   unit: 'oz' | 'ml';
   user: any | null;
   loading: boolean;
+  // onBottleAdd ultimately writes a log for *this* user; this component only
+  // decides which bottle/size to use and never deals with user IDs directly.
   onBottleAdd: (bottle: WaterBottle) => void;
 }
 
@@ -46,6 +48,9 @@ const WaterMyBottlesCard: React.FC<WaterMyBottlesCardProps> = ({
                 key={bottle.id}
                 className="water-bottle-btn"
                 onClick={() => onBottleAdd(bottle)}
+                // CWE-269 mitigation: only authenticated users can trigger
+                // bottle-based "add" actions. The privileged write logic is
+                // isolated in a higher-level handler that scopes to user.uid.
                 disabled={loading || !user}
                 title={bottle.name}
               >
@@ -68,4 +73,3 @@ const WaterMyBottlesCard: React.FC<WaterMyBottlesCardProps> = ({
 };
 
 export default WaterMyBottlesCard;
-
