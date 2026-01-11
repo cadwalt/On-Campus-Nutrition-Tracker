@@ -6,6 +6,12 @@ A React-based web application designed to help University of Oklahoma students t
 **Instructor:** Dr. Mansoor Abdulhak  
 **Team:** Group I
 
+## 🎥 Demo
+
+Watch the demo video to see the application in action:
+
+[![Demo Video](https://img.youtube.com/vi/lEkFV0WFHX8/maxresdefault.jpg)](https://www.youtube.com/watch?v=lEkFV0WFHX8)
+
 ## 🛠️ Technology Stack
 
 - **Frontend:** React 19.1.1 with TypeScript
